@@ -1,7 +1,9 @@
-#include <iostream>
+#include "Afterglow.h"
+
+using namespace Afterglow::Core;
 
 int main()
 {
-	std::cout << "Hello World!" << std::endl;
-	std::cin.get();
+	Window& win = Window::GetInstance();
+	win.Run();
 }

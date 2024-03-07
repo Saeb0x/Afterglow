@@ -1,0 +1,3 @@
+[submodule "Afterglow/vendor/GLFW"]
+	path = Afterglow/vendor/GLFW
+	url = https://github.com/glfw/glfw.git
