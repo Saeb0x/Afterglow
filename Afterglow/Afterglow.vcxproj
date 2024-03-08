@@ -88,16 +88,24 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="src\core\LevelEditorScene.cpp" />
+    <ClCompile Include="src\core\LevelScene.cpp" />
+    <ClCompile Include="src\core\Scene.cpp" />
     <ClCompile Include="src\core\input\KeyListener.cpp" />
     <ClCompile Include="src\core\input\MouseListener.cpp" />
     <ClCompile Include="src\Main.cpp" />
     <ClCompile Include="src\core\Window.cpp" />
+    <ClCompile Include="src\core\utils\Timer.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\core\LevelEditorScene.h" />
+    <ClInclude Include="src\core\LevelScene.h" />
+    <ClInclude Include="src\core\Scene.h" />
     <ClInclude Include="src\core\input\KeyListener.h" />
     <ClInclude Include="src\Afterglow.h" />
     <ClInclude Include="src\core\input\MouseListener.h" />
     <ClInclude Include="src\core\Window.h" />
+    <ClInclude Include="src\core\utils\Timer.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

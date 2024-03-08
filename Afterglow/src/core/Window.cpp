@@ -1,11 +1,18 @@
 #include "Window.h"
 #include "input/MouseListener.h"
 #include "input/KeyListener.h"
+#include "utils/Timer.h"
+#include "LevelScene.h"
+#include "LevelEditorScene.h"
 
 #include <iostream>
+#include <cassert>
 
 namespace Afterglow {
 	namespace Core {
+
+		Scene* Window::m_CurrentScene = nullptr;
+
 		Window& Window::GetInstance()
 		{
 			static Window winInstance;
@@ -30,6 +37,23 @@ namespace Afterglow {
 		{
 			Init();
 			Loop();
+		}
+
+		void Window::ChangeScene(int newScene)
+		{
+			switch (newScene)
+			{
+			case 0:
+				m_CurrentScene = new LevelScene();
+				break;
+			case 1:
+				m_CurrentScene = new LevelEditorScene();
+				break;
+			default:
+				assert(false && "Unresolved Scene Index");
+				break;
+			}
+			
 		}
 
 		void Window::Init()
@@ -72,20 +96,33 @@ namespace Afterglow {
 
 			// Make window visible
 			glfwShowWindow(m_Window);
+
+			ChangeScene(0);
 		}
 
 		void Window::Loop()
 		{
+			float beginTime = Utils::Timer::GetTime();
+			float Dt = -1.0f;
 			while (!glfwWindowShouldClose(m_Window))
 			{
 				// Process all pending events
 				glfwPollEvents();
-				
+
 				glClearColor(0.0f, 0.0f, 1.0f, 1.0f);
 				glClear(GL_COLOR_BUFFER_BIT);
 
-				glfwSwapBuffers(m_Window);
+				if(Dt > 0)
+					m_CurrentScene->Update(Dt);
+				
+				glfwSwapBuffers(m_Window); 
+
+				float endTime = Utils::Timer::GetTime();
+				Dt = endTime - beginTime;
+				beginTime = endTime;
 			}
 		}
+
+
 	}
 }

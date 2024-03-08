@@ -1,6 +1,7 @@
 #pragma once
 
 #include <GLFW/glfw3.h>
+#include "Scene.h"
 
 namespace Afterglow {
 	namespace Core {
@@ -9,6 +10,7 @@ namespace Afterglow {
 		public:
 			static Window& GetInstance();
 			void Run();
+			static void ChangeScene(int newScene);
 		private:
 			Window();
 			~Window();
@@ -18,6 +20,7 @@ namespace Afterglow {
 			int m_Width, m_Height;
 			const char* m_Title;
 			GLFWwindow* m_Window;
+			static Scene* m_CurrentScene;
 		private:
 			void Init();
 			void Loop();
