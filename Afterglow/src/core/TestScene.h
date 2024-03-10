@@ -6,15 +6,15 @@ namespace Afterglow
 {
 	namespace Core
 	{
-		class LevelEditorScene : public Scene
+		class TestScene : public Scene
 		{
 		public:
-			LevelEditorScene();
-			~LevelEditorScene();
+			TestScene();
+			~TestScene();
 
 			void Init() override;
+		private:
 			void Update(float deltaTime) override;
 		};
 	}
 }
-

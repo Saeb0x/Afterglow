@@ -10,6 +10,7 @@ namespace Afterglow
 			Scene();
 			virtual ~Scene();
 
+			virtual void Init() = 0;
 			virtual void Update(float deltaTime) = 0;
 		};
 	}

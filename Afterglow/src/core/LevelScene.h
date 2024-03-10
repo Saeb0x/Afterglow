@@ -12,10 +12,8 @@ namespace Afterglow
 			LevelScene();
 			~LevelScene();
 
+			void Init() override;
 			void Update(float deltaTime) override;
-		private:
-			bool m_SwitchScene;
-			float m_SwitchSceneTime;
 		};
 	}
 }

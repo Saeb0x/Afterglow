@@ -1,6 +1,8 @@
 #pragma once
 
+#include <GL/glew.h>
 #include <GLFW/glfw3.h>
+
 #include "Scene.h"
 
 namespace Afterglow {
@@ -24,6 +26,7 @@ namespace Afterglow {
 		private:
 			void Init();
 			void Loop();
+			static void FramebufferSizeCallback(GLFWwindow* window, int width, int height);
 		};
 	}
 }

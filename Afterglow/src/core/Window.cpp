@@ -1,12 +1,11 @@
+#include <iostream>
+#include <cassert>
+
 #include "Window.h"
 #include "input/MouseListener.h"
 #include "input/KeyListener.h"
 #include "utils/Timer.h"
-#include "LevelScene.h"
-#include "LevelEditorScene.h"
-
-#include <iostream>
-#include <cassert>
+#include "TestScene.h"
 
 namespace Afterglow {
 	namespace Core {
@@ -29,6 +28,8 @@ namespace Afterglow {
 
 		Window::~Window() 
 		{
+			delete m_CurrentScene;
+
 			glfwDestroyWindow(m_Window);
 			glfwTerminate();
 		}
@@ -41,19 +42,19 @@ namespace Afterglow {
 
 		void Window::ChangeScene(int newScene)
 		{
+			delete m_CurrentScene;
+			m_CurrentScene = nullptr;
+
 			switch (newScene)
 			{
 			case 0:
-				m_CurrentScene = new LevelScene();
-				break;
-			case 1:
-				m_CurrentScene = new LevelEditorScene();
+				m_CurrentScene = new TestScene();
+				m_CurrentScene->Init();
 				break;
 			default:
 				assert(false && "Unresolved Scene Index");
 				break;
 			}
-			
 		}
 
 		void Window::Init()
@@ -85,6 +86,15 @@ namespace Afterglow {
 			// Make OpenGL context current
 			glfwMakeContextCurrent(m_Window);
 
+			if (glewInit() != GLEW_OK)
+			{
+				std::cerr << "Unable to initialize GLEW." << std::endl;
+				glfwDestroyWindow(m_Window);
+				glfwTerminate();
+				return;
+			}
+			std::cout << "OpenGL Version: " << glGetString(GL_VERSION) << std::endl;
+
 			// Enable V-Sync
 			glfwSwapInterval(1);
 
@@ -93,6 +103,7 @@ namespace Afterglow {
 			glfwSetMouseButtonCallback(m_Window, Input::MouseListener::MouseButtonCallback);
 			glfwSetScrollCallback(m_Window, Input::MouseListener::MouseScrollCallback);
 			glfwSetKeyCallback(m_Window, Input::KeyListener::KeyCallback);
+			glfwSetFramebufferSizeCallback(m_Window, FramebufferSizeCallback);
 
 			// Make window visible
 			glfwShowWindow(m_Window);
@@ -102,8 +113,9 @@ namespace Afterglow {
 
 		void Window::Loop()
 		{
-			float beginTime = Utils::Timer::GetTime();
 			float Dt = -1.0f;
+			float beginTime = Utils::Timer::GetTime();
+
 			while (!glfwWindowShouldClose(m_Window))
 			{
 				// Process all pending events
@@ -123,6 +135,9 @@ namespace Afterglow {
 			}
 		}
 
-
+		void Window::FramebufferSizeCallback(GLFWwindow* window, int width, int height)
+		{
+			glViewport(0, 0, width, height);
+		}
 	}
 }
