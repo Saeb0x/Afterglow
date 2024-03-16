@@ -20,16 +20,14 @@ namespace Afterglow {
 
 		Window::Window()
 		{
-			this->m_Width = 1920;
-			this->m_Height = 1080;
+			this->m_Width = 800; // 1920
+			this->m_Height = 600; // 1080
 			this->m_Title = "Afterglow";
 			this->m_Window = nullptr;
 		}
 
 		Window::~Window() 
 		{
-			delete m_CurrentScene;
-
 			glfwDestroyWindow(m_Window);
 			glfwTerminate();
 		}
@@ -71,7 +69,10 @@ namespace Afterglow {
 			glfwDefaultWindowHints();
 			glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
 			glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
-			glfwWindowHint(GLFW_MAXIMIZED, GLFW_TRUE);
+			glfwWindowHint(GLFW_MAXIMIZED, GLFW_FALSE);
+			glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+			glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+			glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 			// Create the window
 			m_Window = glfwCreateWindow(m_Width, m_Height, m_Title, NULL, NULL);
@@ -93,7 +94,7 @@ namespace Afterglow {
 				glfwTerminate();
 				return;
 			}
-			std::cout << "OpenGL Version: " << glGetString(GL_VERSION) << std::endl;
+			std::cout << glGetString(GL_VERSION) << std::endl;
 
 			// Enable V-Sync
 			glfwSwapInterval(1);
@@ -113,15 +114,15 @@ namespace Afterglow {
 
 		void Window::Loop()
 		{
+			glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 			float Dt = -1.0f;
-			float beginTime = Utils::Timer::GetTime();
 
+			float beginTime = Utils::Timer::GetTime();
 			while (!glfwWindowShouldClose(m_Window))
 			{
 				// Process all pending events
 				glfwPollEvents();
 
-				glClearColor(0.0f, 0.0f, 1.0f, 1.0f);
 				glClear(GL_COLOR_BUFFER_BIT);
 
 				if(Dt > 0)
@@ -133,6 +134,8 @@ namespace Afterglow {
 				Dt = endTime - beginTime;
 				beginTime = endTime;
 			}
+
+			delete m_CurrentScene;
 		}
 
 		void Window::FramebufferSizeCallback(GLFWwindow* window, int width, int height)
