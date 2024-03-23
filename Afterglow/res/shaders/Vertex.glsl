@@ -2,7 +2,9 @@
 
 layout (location = 0) in vec4 a_Pos;
 
+uniform mat4 u_ProjectionViewMatrix;
+
 void main()
 {
-	gl_Position = a_Pos;
+	gl_Position = u_ProjectionViewMatrix * a_Pos;
 }

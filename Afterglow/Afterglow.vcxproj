@@ -58,7 +58,7 @@
       <PreprocessorDefinitions>GLEW_STATIC;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir)vendor\GLEW\include;$(ProjectDir)vendor\GLFW\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)vendor\GLM\;$(ProjectDir)vendor\GLEW\include;$(ProjectDir)vendor\GLFW\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -76,7 +76,7 @@
       <PreprocessorDefinitions>GLEW_STATIC;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir)vendor\GLEW\include;$(ProjectDir)vendor\GLFW\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)vendor\GLM\;$(ProjectDir)vendor\GLEW\include;$(ProjectDir)vendor\GLFW\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -88,6 +88,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="src\core\OrthographicCamera.cpp" />
     <ClCompile Include="src\core\graphics\Shader.cpp" />
     <ClCompile Include="src\core\graphics\IndexBuffer.cpp" />
     <ClCompile Include="src\core\graphics\Renderer.cpp" />
@@ -105,6 +106,7 @@
     <ClCompile Include="src\core\graphics\VertexLayout.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\core\OrthographicCamera.h" />
     <ClInclude Include="src\core\graphics\Shader.h" />
     <ClInclude Include="src\core\graphics\IndexBuffer.h" />
     <ClInclude Include="src\core\graphics\Renderer.h" />

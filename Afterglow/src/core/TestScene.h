@@ -17,11 +17,11 @@ namespace Afterglow
 		private:
 			void Update(float deltaTime) override;
 		private:
-			Graphics::VertexBuffer* vbo;
-			Graphics::IndexBuffer* ibo;
-			Graphics::VertexArray* vao;
-			Graphics::VertexLayout* layout;
-			Graphics::Shader* shader;
+			Graphics::VertexBuffer* vbo = nullptr;
+			Graphics::IndexBuffer* ibo = nullptr;
+			Graphics::VertexArray* vao = nullptr;
+			Graphics::VertexLayout* layout = nullptr;
+			Graphics::Shader* shader = nullptr;
 		};
 	}
 }

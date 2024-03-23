@@ -20,8 +20,8 @@ namespace Afterglow {
 
 		Window::Window()
 		{
-			this->m_Width = 800; // 1920
-			this->m_Height = 600; // 1080
+			this->m_Width = 1920;
+			this->m_Height = 1080;
 			this->m_Title = "Afterglow";
 			this->m_Window = nullptr;
 		}

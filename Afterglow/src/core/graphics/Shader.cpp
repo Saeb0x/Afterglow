@@ -6,6 +6,8 @@
 
 #include "Renderer.h"
 
+#include <glm/gtc/type_ptr.hpp>
+
 namespace Afterglow
 {
 	namespace Core
@@ -29,6 +31,12 @@ namespace Afterglow
 			{
 				int location = GetUniformLocation(uniform);
 				glUniform4f(location, f1, f2, f3, f4);
+			}
+
+			void Shader::SetUniformMatrix4fv(const char* uniform, const glm::mat4& matrix)
+			{
+				int location = GetUniformLocation(uniform);
+				glUniformMatrix4fv(location, 1, GL_FALSE, glm::value_ptr(matrix));
 			}
 
 			void Shader::Bind() const

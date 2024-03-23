@@ -3,6 +3,8 @@
 #include <string>
 #include <unordered_map>
 
+#include <glm/glm.hpp>
+
 namespace Afterglow
 {
 	namespace Core
@@ -16,7 +18,7 @@ namespace Afterglow
 				~Shader();
 
 				void SetUniform4f(const char* uniform, float f1, float f2, float f3, float f4);
-
+				void SetUniformMatrix4fv(const char* uniform, const glm::mat4& matrix);
 				// More Uniform Setters ...
 
 				void Bind() const;

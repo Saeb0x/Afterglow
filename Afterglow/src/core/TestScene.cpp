@@ -2,6 +2,9 @@
 
 #include <iostream>
 
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+
 namespace Afterglow
 {
 	namespace Core
@@ -19,6 +22,8 @@ namespace Afterglow
 			delete vao;
 			delete ibo;
 			delete shader;
+
+			delete orthoCamera;
 		}
 
 		void TestScene::Init()
@@ -27,7 +32,7 @@ namespace Afterglow
 
 			float verticesData[8] =
 			{
-				// Position	 
+				// Position	
 				-0.5f, -0.5f,
 				 0.5f, -0.5f,
 				 0.5f,  0.5f,
@@ -55,10 +60,13 @@ namespace Afterglow
 			ibo = new IndexBuffer(indices, 6);
 			ibo->Unbind();
 
+			orthoCamera = new OrthographicCamera(-1.6f, 1.6f, -0.9f, 0.9f);
+
 			shader = new Shader("res/shaders/Vertex.glsl", "res/shaders/Fragment.glsl");
 			shader->Bind();
-			shader->SetUniform4f("u_FColor", 1.0f, 1.0f, 0.0f, 1.0f);
-
+			shader->SetUniform4f("u_FColor", 1.0f, 0.0f, 0.0f, 1.0f);
+			shader->SetUniformMatrix4fv("u_ProjectionViewMatrix", orthoCamera->GetProjectionViewMatrix());
+			
 			shader->Unbind();
 		}
 

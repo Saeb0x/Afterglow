@@ -1,3 +1,6 @@
 [submodule "Afterglow/vendor/GLFW"]
 	path = Afterglow/vendor/GLFW
 	url = https://github.com/glfw/glfw.git
+[submodule "Afterglow/vendor/GLM"]
+	path = Afterglow/vendor/GLM
+	url = https://github.com/g-truc/glm.git
