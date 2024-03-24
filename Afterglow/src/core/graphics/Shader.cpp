@@ -14,7 +14,7 @@ namespace Afterglow
 	{
 		namespace Graphics
 		{
-			Shader::Shader(const std::string& vFilePath, const std::string& fFilePath)
+			Shader::Shader(const std::string& vFilePath, const std::string& fFilePath) : m_UniformsCache()
 			{
 				std::string vertexSrc = ParseShader(vFilePath);
 				std::string fragmentSrc = ParseShader(fFilePath);
@@ -39,6 +39,12 @@ namespace Afterglow
 				glUniformMatrix4fv(location, 1, GL_FALSE, glm::value_ptr(matrix));
 			}
 
+			void Shader::SetUniform1f(const char* uniform, float f1)
+			{
+				int location = GetUniformLocation(uniform);
+				glUniform1f(location, f1);
+			}
+
 			void Shader::Bind() const
 			{
 				GLCall(glUseProgram(m_RendererID));
@@ -55,7 +61,6 @@ namespace Afterglow
 					return m_UniformsCache[uniform];
 
 				m_UniformsCache[uniform] = glGetUniformLocation(m_RendererID, uniform);
-
 				return m_UniformsCache[uniform];
 			}
 

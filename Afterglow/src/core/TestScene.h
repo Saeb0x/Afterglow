@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Scene.h"
-#include "graphics/Renderer.h"
 
 namespace Afterglow
 {

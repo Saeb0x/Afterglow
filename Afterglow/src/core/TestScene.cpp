@@ -2,16 +2,13 @@
 
 #include <iostream>
 
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-
 namespace Afterglow
 {
 	namespace Core
 	{
 		using namespace Graphics;
 
-		Renderer& renderer = Renderer::GetInstance();
+		float x, y = 0.0f;
 
 		TestScene::TestScene() : Scene() {}
 
@@ -23,20 +20,20 @@ namespace Afterglow
 			delete ibo;
 			delete shader;
 
-			delete orthoCamera;
+			delete m_OrthographicCamera;
 		}
 
 		void TestScene::Init()
 		{
 			std::cout << "I'm in the testing Scene!" << std::endl;
 
-			float verticesData[8] =
+			float verticesData[4*5] =
 			{
-				// Position	
-				-0.5f, -0.5f,
-				 0.5f, -0.5f,
-				 0.5f,  0.5f,
-				-0.5f,  0.5f
+				 // Position	 // Color
+				 0.0f,   0.0f,	 1.0f, 0.0f, 0.0f,
+				 100.0f, 0.0f,	 0.0f, 1.0f, 0.0f,
+				 100.0f, 100.0f, 0.0f, 0.0f, 1.0f,
+				 0.0f,   100.0f, 1.0f, 1.0f, 0.0f
 			};
 
 			unsigned int indices[6] =
@@ -47,10 +44,11 @@ namespace Afterglow
 
 			vao = new VertexArray();
 
-		    vbo = new VertexBuffer(verticesData, 8 * sizeof(float));
+		    vbo = new VertexBuffer(verticesData, 20 * sizeof(float));
 			
 			layout = new VertexLayout();
 			layout->Push<float>(2);
+			layout->Push<float>(3);
 
 			vao->AddBuffer(*vbo, *layout);
 
@@ -60,19 +58,21 @@ namespace Afterglow
 			ibo = new IndexBuffer(indices, 6);
 			ibo->Unbind();
 
-			orthoCamera = new OrthographicCamera(-1.6f, 1.6f, -0.9f, 0.9f);
+			m_OrthographicCamera = new OrthographicCamera(0.0f, 32.0f * 40.0f, 0.0f, 32.0f * 21.0f);
 
 			shader = new Shader("res/shaders/Vertex.glsl", "res/shaders/Fragment.glsl");
-			shader->Bind();
-			shader->SetUniform4f("u_FColor", 1.0f, 0.0f, 0.0f, 1.0f);
-			shader->SetUniformMatrix4fv("u_ProjectionViewMatrix", orthoCamera->GetProjectionViewMatrix());
-			
-			shader->Unbind();
 		}
 
 		void TestScene::Update(float deltaTime)
 		{
-			renderer.Draw(*vao, *ibo, *shader);
+			m_Renderer.Draw(*vao, *ibo, *shader);
+
+			x -= deltaTime * 50.0f;
+			y -= deltaTime * 50.0f;
+			m_OrthographicCamera->SetPosition({ x, y, 0.0f });
+			m_OrthographicCamera->SetRotation(90.0f);
+
+			shader->SetUniformMatrix4fv("u_ProjectionViewMatrix", m_OrthographicCamera->GetProjectionViewMatrix());
 		}
 	}
 }

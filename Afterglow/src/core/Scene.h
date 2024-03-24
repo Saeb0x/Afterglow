@@ -1,6 +1,7 @@
 #pragma once
 
 #include "OrthographicCamera.h"
+#include "graphics/Renderer.h"
 
 namespace Afterglow
 {
@@ -15,7 +16,8 @@ namespace Afterglow
 			virtual void Init() = 0;
 			virtual void Update(float deltaTime) = 0;
 		protected:
-			OrthographicCamera* orthoCamera;
+			OrthographicCamera* m_OrthographicCamera;
+			Graphics::Renderer& m_Renderer = Graphics::Renderer::GetInstance();
 		};
 	}
 }
