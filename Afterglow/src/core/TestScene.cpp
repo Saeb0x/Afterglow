@@ -19,6 +19,7 @@ namespace Afterglow
 			delete vao;
 			delete ibo;
 			delete shader;
+			delete texture;
 
 			delete m_OrthographicCamera;
 		}
@@ -27,13 +28,13 @@ namespace Afterglow
 		{
 			std::cout << "I'm in the testing Scene!" << std::endl;
 
-			float verticesData[4*5] =
+			float verticesData[4*7] =
 			{
-				 // Position	 // Color
-				 0.0f,   0.0f,	 1.0f, 0.0f, 0.0f,
-				 100.0f, 0.0f,	 0.0f, 1.0f, 0.0f,
-				 100.0f, 100.0f, 0.0f, 0.0f, 1.0f,
-				 0.0f,   100.0f, 1.0f, 1.0f, 0.0f
+				 // Position	 // Color		    // UV
+				 0.0f,   0.0f,	 1.0f, 0.0f, 0.0f,  0.0f, 0.0f,
+				 200.0f, 0.0f,	 0.0f, 1.0f, 0.0f,  1.0f, 0.0f, 
+				 200.0f, 200.0f, 0.0f, 0.0f, 1.0f,  1.0f, 1.0f,
+				 0.0f,   200.0f, 1.0f, 1.0f, 0.0f,  0.0f, 1.0f
 			};
 
 			unsigned int indices[6] =
@@ -44,11 +45,12 @@ namespace Afterglow
 
 			vao = new VertexArray();
 
-		    vbo = new VertexBuffer(verticesData, 20 * sizeof(float));
+		    vbo = new VertexBuffer(verticesData, 4 * 7 * sizeof(float));
 			
 			layout = new VertexLayout();
 			layout->Push<float>(2);
 			layout->Push<float>(3);
+			layout->Push<float>(2);
 
 			vao->AddBuffer(*vbo, *layout);
 
@@ -61,6 +63,12 @@ namespace Afterglow
 			m_OrthographicCamera = new OrthographicCamera(0.0f, 32.0f * 40.0f, 0.0f, 32.0f * 21.0f);
 
 			shader = new Shader("res/shaders/Vertex.glsl", "res/shaders/Fragment.glsl");
+			shader->Bind();
+
+			texture = new Texture("res/textures/logo.png");
+			texture->Bind();
+			shader->SetUniform1i("u_Texture", 0);
+			shader->Unbind();
 		}
 
 		void TestScene::Update(float deltaTime)
@@ -70,8 +78,6 @@ namespace Afterglow
 			x -= deltaTime * 50.0f;
 			y -= deltaTime * 50.0f;
 			m_OrthographicCamera->SetPosition({ x, y, 0.0f });
-			m_OrthographicCamera->SetRotation(90.0f);
-
 			shader->SetUniformMatrix4fv("u_ProjectionViewMatrix", m_OrthographicCamera->GetProjectionViewMatrix());
 		}
 	}

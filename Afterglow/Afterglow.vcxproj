@@ -58,7 +58,7 @@
       <PreprocessorDefinitions>GLEW_STATIC;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir)vendor\GLM\;$(ProjectDir)vendor\GLEW\include;$(ProjectDir)vendor\GLFW\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)vendor\stb_image\;$(ProjectDir)vendor\GLM\;$(ProjectDir)vendor\GLEW\include;$(ProjectDir)vendor\GLFW\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -76,7 +76,7 @@
       <PreprocessorDefinitions>GLEW_STATIC;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir)vendor\GLM\;$(ProjectDir)vendor\GLEW\include;$(ProjectDir)vendor\GLFW\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)vendor\stb_image\;$(ProjectDir)vendor\GLM\;$(ProjectDir)vendor\GLEW\include;$(ProjectDir)vendor\GLFW\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -104,6 +104,8 @@
     <ClCompile Include="src\core\graphics\VertexBuffer.cpp" />
     <ClCompile Include="src\core\graphics\VertexArray.cpp" />
     <ClCompile Include="src\core\graphics\VertexLayout.cpp" />
+    <ClCompile Include="src\core\graphics\Texture.cpp" />
+    <ClCompile Include="vendor\stb_image\stb_image.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\core\OrthographicCamera.h" />
@@ -122,6 +124,8 @@
     <ClInclude Include="src\core\graphics\VertexBuffer.h" />
     <ClInclude Include="src\core\graphics\VertexArray.h" />
     <ClInclude Include="src\core\graphics\VertexLayout.h" />
+    <ClInclude Include="src\core\graphics\Texture.h" />
+    <ClInclude Include="vendor\stb_image\stb_image.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="res\shaders\Fragment.glsl" />

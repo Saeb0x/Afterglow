@@ -29,20 +29,22 @@ namespace Afterglow
 
 			void Shader::SetUniform4f(const char* uniform, float f1, float f2, float f3, float f4)
 			{
-				int location = GetUniformLocation(uniform);
-				glUniform4f(location, f1, f2, f3, f4);
+				GLCall(glUniform4f(GetUniformLocation(uniform), f1, f2, f3, f4));
 			}
 
 			void Shader::SetUniformMatrix4fv(const char* uniform, const glm::mat4& matrix)
 			{
-				int location = GetUniformLocation(uniform);
-				glUniformMatrix4fv(location, 1, GL_FALSE, glm::value_ptr(matrix));
+				GLCall(glUniformMatrix4fv(GetUniformLocation(uniform), 1, GL_FALSE, glm::value_ptr(matrix)));
 			}
 
 			void Shader::SetUniform1f(const char* uniform, float f1)
 			{
-				int location = GetUniformLocation(uniform);
-				glUniform1f(location, f1);
+				GLCall(glUniform1f(GetUniformLocation(uniform), f1));
+			}
+
+			void Shader::SetUniform1i(const char* uniform, int i1)
+			{
+				GLCall(glUniform1i(GetUniformLocation(uniform), i1));
 			}
 
 			void Shader::Bind() const
@@ -60,7 +62,7 @@ namespace Afterglow
 				if (m_UniformsCache.find(uniform) != m_UniformsCache.end())
 					return m_UniformsCache[uniform];
 
-				m_UniformsCache[uniform] = glGetUniformLocation(m_RendererID, uniform);
+				GLCall(m_UniformsCache[uniform] = glGetUniformLocation(m_RendererID, uniform));
 				return m_UniformsCache[uniform];
 			}
 

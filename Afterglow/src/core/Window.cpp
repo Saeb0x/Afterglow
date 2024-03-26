@@ -7,9 +7,10 @@
 #include "utils/Timer.h"
 #include "TestScene.h"
 
-namespace Afterglow {
-	namespace Core {
-
+namespace Afterglow 
+{
+	namespace Core 
+	{
 		Scene* Window::m_CurrentScene = nullptr;
 
 		Window& Window::GetInstance()
@@ -98,7 +99,12 @@ namespace Afterglow {
 
 			// Enable V-Sync
 			glfwSwapInterval(1);
-
+			
+			// Enable Blending
+			using namespace Graphics;
+			GLCall(glEnable(GL_BLEND));
+			GLCall(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
+			
 			// Register Callbacks
 			glfwSetCursorPosCallback(m_Window, Input::MouseListener::CursorPosCallback);
 			glfwSetMouseButtonCallback(m_Window, Input::MouseListener::MouseButtonCallback);

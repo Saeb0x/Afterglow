@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Scene.h"
+#include "graphics/Texture.h"
 
 namespace Afterglow
 {
@@ -21,6 +22,7 @@ namespace Afterglow
 			Graphics::VertexArray* vao = nullptr;
 			Graphics::VertexLayout* layout = nullptr;
 			Graphics::Shader* shader = nullptr;
+			Graphics::Texture* texture = nullptr;
 		};
 	}
 }
