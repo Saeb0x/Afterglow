@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Scene.h"
-#include "graphics/Texture.h"
 
 namespace Afterglow
 {
@@ -14,7 +13,6 @@ namespace Afterglow
 			~TestScene();
 
 			void Init() override;
-		private:
 			void Update(float deltaTime) override;
 		private:
 			Graphics::VertexBuffer* vbo = nullptr;
@@ -23,6 +21,8 @@ namespace Afterglow
 			Graphics::VertexLayout* layout = nullptr;
 			Graphics::Shader* shader = nullptr;
 			Graphics::Texture* texture = nullptr;
+		private:
+			Entity::GameObject* testObj;
 		};
 	}
 }

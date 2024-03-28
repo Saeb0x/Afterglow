@@ -1,6 +1,7 @@
 #include "TestScene.h"
 
 #include <iostream>
+#include "entity/component/SpriteRenderer.h"
 
 namespace Afterglow
 {
@@ -8,7 +9,7 @@ namespace Afterglow
 	{
 		using namespace Graphics;
 
-		float x, y = 0.0f;
+		float x, y, angle = 0.0f;
 
 		TestScene::TestScene() : Scene() {}
 
@@ -22,11 +23,17 @@ namespace Afterglow
 			delete texture;
 
 			delete m_OrthographicCamera;
+
+			delete testObj;
 		}
 
 		void TestScene::Init()
 		{
 			std::cout << "I'm in the testing Scene!" << std::endl;
+
+			testObj = new Entity::GameObject("Test Object");
+			testObj->AddComponent(std::make_shared<Entity::Component::SpriteRenderer>());
+			AddGameObjectToScene(std::move(std::unique_ptr<Entity::GameObject>(testObj)));
 
 			float verticesData[4*7] =
 			{
@@ -78,7 +85,18 @@ namespace Afterglow
 			x -= deltaTime * 50.0f;
 			y -= deltaTime * 50.0f;
 			m_OrthographicCamera->SetPosition({ x, y, 0.0f });
+
+			angle += deltaTime * 0.01f;
+			if (angle >= 360.0f)
+				angle -= 360.0f;
+			m_OrthographicCamera->SetRotation(angle);
+
 			shader->SetUniformMatrix4fv("u_ProjectionViewMatrix", m_OrthographicCamera->GetProjectionViewMatrix());
+
+			for (const auto& gameObj : m_GameObjects)
+			{
+				gameObj->Update(deltaTime);
+			}
 		}
 	}
 }

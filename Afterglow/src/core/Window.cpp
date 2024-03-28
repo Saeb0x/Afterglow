@@ -2,10 +2,14 @@
 #include <cassert>
 
 #include "Window.h"
+#include "utils/Timer.h"
+
 #include "input/MouseListener.h"
 #include "input/KeyListener.h"
-#include "utils/Timer.h"
+
 #include "TestScene.h"
+#include "LevelScene.h"
+#include "LevelEditorScene.h"
 
 namespace Afterglow 
 {
@@ -46,9 +50,20 @@ namespace Afterglow
 
 			switch (newScene)
 			{
-			case 0:
+			case 2:
 				m_CurrentScene = new TestScene();
 				m_CurrentScene->Init();
+				m_CurrentScene->Start();
+				break;
+			case 1:
+				m_CurrentScene = new LevelScene();
+				m_CurrentScene->Init();
+				m_CurrentScene->Start();
+				break;
+			case 0:
+				m_CurrentScene = new LevelEditorScene();
+				m_CurrentScene->Init();
+				m_CurrentScene->Start();
 				break;
 			default:
 				assert(false && "Unresolved Scene Index");
@@ -115,7 +130,7 @@ namespace Afterglow
 			// Make window visible
 			glfwShowWindow(m_Window);
 
-			ChangeScene(0);
+			ChangeScene(2);
 		}
 
 		void Window::Loop()
