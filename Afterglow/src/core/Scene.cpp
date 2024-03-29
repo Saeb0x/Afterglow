@@ -16,15 +16,15 @@ namespace Afterglow
 			m_IsRunning = true;
 		}
 
-		void Scene::AddGameObjectToScene(std::unique_ptr<Entity::GameObject> gameObject)
+		void Scene::AddGameObjectToScene(std::shared_ptr<Entity::GameObject> gameObject)
 		{
 			if (!m_IsRunning)
 			{
-				m_GameObjects.push_back(std::move(gameObject));
+				m_GameObjects.push_back(gameObject);
 			}
 			else
 			{
-				m_GameObjects.push_back(std::move(gameObject));
+				m_GameObjects.push_back(gameObject);
 				gameObject->Start();
 			}
 		}

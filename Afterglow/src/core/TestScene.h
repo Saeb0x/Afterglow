@@ -22,7 +22,7 @@ namespace Afterglow
 			Graphics::Shader* shader = nullptr;
 			Graphics::Texture* texture = nullptr;
 		private:
-			Entity::GameObject* testObj;
+			std::shared_ptr<Entity::GameObject> m_TestObj = nullptr;
 		};
 	}
 }

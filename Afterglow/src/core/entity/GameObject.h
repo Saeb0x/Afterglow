@@ -25,7 +25,7 @@ namespace Afterglow
                 void AddComponent(std::shared_ptr<T> component) 
                 {
                     component->SetOwner(this);
-                    m_Components.push_back(std::move(component));
+                    m_Components.push_back(component);
                 }
 
                 template<typename T>

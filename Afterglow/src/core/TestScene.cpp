@@ -23,17 +23,17 @@ namespace Afterglow
 			delete texture;
 
 			delete m_OrthographicCamera;
-
-			delete testObj;
 		}
 
 		void TestScene::Init()
 		{
 			std::cout << "I'm in the testing Scene!" << std::endl;
 
-			testObj = new Entity::GameObject("Test Object");
-			testObj->AddComponent(std::make_shared<Entity::Component::SpriteRenderer>());
-			AddGameObjectToScene(std::move(std::unique_ptr<Entity::GameObject>(testObj)));
+			m_TestObj = std::make_shared<Entity::GameObject>("Test Object");
+			std::shared_ptr<Entity::Component::SpriteRenderer> spriteRenderer = std::make_shared< Entity::Component::SpriteRenderer>();
+			m_TestObj->AddComponent(spriteRenderer);
+			std::cout << "The owner of SpriteRenderer Component is " << spriteRenderer->GetOwner()->GetName() << std::endl;
+			AddGameObjectToScene(m_TestObj);
 
 			float verticesData[4*7] =
 			{

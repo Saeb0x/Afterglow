@@ -16,6 +16,7 @@ namespace Afterglow
 					BaseComponent();
 					virtual ~BaseComponent() = default;
 
+					inline GameObject* GetOwner() const { return m_Owner; }
 					inline void SetOwner(GameObject* owner) { m_Owner = owner; }
 
 					virtual void Start();
