@@ -1,5 +1,7 @@
 #include "BaseComponent.h"
 
+#include "../GameObject.h"
+
 namespace Afterglow
 {
 	namespace Core

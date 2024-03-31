@@ -13,6 +13,7 @@ namespace Afterglow {
 			static Window& GetInstance();
 			void Run();
 			static void ChangeScene(int newScene);
+			inline static Scene* GetScene() { return m_CurrentScene; }
 		private:
 			Window();
 			~Window();

@@ -2,7 +2,6 @@
 
 #include "OrthographicCamera.h"
 #include "graphics/Renderer.h"
-#include "entity/GameObject.h"
 
 namespace Afterglow
 {
@@ -19,6 +18,8 @@ namespace Afterglow
 
 			void Start();
 			void AddGameObjectToScene(std::shared_ptr<Entity::GameObject> gameObject);
+
+			inline OrthographicCamera* GetCamera() const { return m_OrthographicCamera; }
 		protected:
 			OrthographicCamera* m_OrthographicCamera;
 			Graphics::Renderer& m_Renderer = Graphics::Renderer::GetInstance();

@@ -2,6 +2,8 @@
 
 #include <iostream>
 
+#include "RenderBatch.h"
+
 namespace Afterglow {
 	namespace Core {
 		namespace Graphics
@@ -35,6 +37,45 @@ namespace Afterglow {
 				shader.Bind();
 
 				GLCall(glDrawElements(GL_TRIANGLES, ibo.GetCount(), GL_UNSIGNED_INT, nullptr));
+			}
+
+			void Renderer::Add(const std::shared_ptr<Entity::GameObject>& gameObject)
+			{
+				auto spriteRenderer = gameObject->GetComponent<Entity::Component::SpriteRenderer>();
+				if (spriteRenderer != nullptr)
+				{
+					Add(spriteRenderer);
+				}
+			}
+
+			void Renderer::Add(const std::shared_ptr<Entity::Component::SpriteRenderer>& spriteRenderer)
+			{
+				bool added = false;
+				for (const auto& batch : m_RenderBatches)
+				{
+					if (batch->HasRoom())
+					{
+						batch->AddSprite(spriteRenderer);
+						added = true;
+						break;
+					}
+				}
+
+				if (!added)
+				{
+					std::shared_ptr<RenderBatch> newBatch = std::make_shared<RenderBatch>(MAX_BATCH_SIZE);
+					newBatch->Start();
+					m_RenderBatches.push_back(newBatch);
+					newBatch->AddSprite(spriteRenderer);
+				}
+			}
+
+			void Renderer::Render()
+			{
+				for (const auto& batch : m_RenderBatches)
+				{
+					batch->Render();
+				}
 			}
 
 			Renderer::Renderer() {}

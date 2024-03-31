@@ -14,15 +14,6 @@ namespace Afterglow
 
 			void Init() override;
 			void Update(float deltaTime) override;
-		private:
-			Graphics::VertexBuffer* vbo = nullptr;
-			Graphics::IndexBuffer* ibo = nullptr;
-			Graphics::VertexArray* vao = nullptr;
-			Graphics::VertexLayout* layout = nullptr;
-			Graphics::Shader* shader = nullptr;
-			Graphics::Texture* texture = nullptr;
-		private:
-			std::shared_ptr<Entity::GameObject> m_TestObj = nullptr;
 		};
 	}
 }

@@ -2,7 +2,8 @@
 #include <string>
 #include <vector>
 
-#include "component/BaseComponent.h"
+#include "../graphics/Transform.h"
+#include "component/SpriteRenderer.h"
 
 namespace Afterglow 
 {
@@ -14,9 +15,12 @@ namespace Afterglow
             {
             public:
                 GameObject(const std::string& name);
+                GameObject(const std::string& name, std::shared_ptr<Graphics::Transform> transform);
+
                 ~GameObject();
 
                 inline const std::string& GetName() const { return m_Name; }
+                inline const std::shared_ptr<Graphics::Transform>& GetTransform() const { return m_Transform; }
 
                 void Start();
                 void Update(float deltaTime);
@@ -49,7 +53,8 @@ namespace Afterglow
                 }
             private:
                 std::string m_Name;
-                std::vector<std::shared_ptr<Component::BaseComponent>> m_Components;
+                std::vector<std::shared_ptr<Component::SpriteRenderer>> m_Components;
+                std::shared_ptr<Graphics::Transform> m_Transform;
             };
         } 
     } 

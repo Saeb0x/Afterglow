@@ -4,13 +4,14 @@ namespace Afterglow
 {
 	namespace Core
 	{
-		Scene::Scene() : m_OrthographicCamera(nullptr), m_IsRunning(false) {}
+		Scene::Scene() : m_OrthographicCamera(nullptr), m_IsRunning(false), m_GameObjects({}) {}
 
 		void Scene::Start()
 		{
 			for (const auto& gameObject : m_GameObjects)
 			{
 				gameObject->Start();
+				m_Renderer.Add(gameObject);
 			}
 
 			m_IsRunning = true;
@@ -26,6 +27,7 @@ namespace Afterglow
 			{
 				m_GameObjects.push_back(gameObject);
 				gameObject->Start();
+				m_Renderer.Add(gameObject);
 			}
 		}
 	}

@@ -1,7 +1,6 @@
 #include "TestScene.h"
 
 #include <iostream>
-#include "entity/component/SpriteRenderer.h"
 
 namespace Afterglow
 {
@@ -9,19 +8,10 @@ namespace Afterglow
 	{
 		using namespace Graphics;
 
-		float x, y, angle = 0.0f;
-
 		TestScene::TestScene() : Scene() {}
 
 		TestScene::~TestScene()
 		{
-			delete vbo;
-			delete layout;
-			delete vao;
-			delete ibo;
-			delete shader;
-			delete texture;
-
 			delete m_OrthographicCamera;
 		}
 
@@ -29,74 +19,37 @@ namespace Afterglow
 		{
 			std::cout << "I'm in the testing Scene!" << std::endl;
 
-			m_TestObj = std::make_shared<Entity::GameObject>("Test Object");
-			std::shared_ptr<Entity::Component::SpriteRenderer> spriteRenderer = std::make_shared< Entity::Component::SpriteRenderer>();
-			m_TestObj->AddComponent(spriteRenderer);
-			std::cout << "The owner of SpriteRenderer Component is " << spriteRenderer->GetOwner()->GetName() << std::endl;
-			AddGameObjectToScene(m_TestObj);
-
-			float verticesData[4*7] =
-			{
-				 // Position	 // Color		    // UV
-				 0.0f,   0.0f,	 1.0f, 0.0f, 0.0f,  0.0f, 0.0f,
-				 200.0f, 0.0f,	 0.0f, 1.0f, 0.0f,  1.0f, 0.0f, 
-				 200.0f, 200.0f, 0.0f, 0.0f, 1.0f,  1.0f, 1.0f,
-				 0.0f,   200.0f, 1.0f, 1.0f, 0.0f,  0.0f, 1.0f
-			};
-
-			unsigned int indices[6] =
-			{
-				0, 1, 2,
-				2, 3, 0
-			};
-
-			vao = new VertexArray();
-
-		    vbo = new VertexBuffer(verticesData, 4 * 7 * sizeof(float));
-			
-			layout = new VertexLayout();
-			layout->Push<float>(2);
-			layout->Push<float>(3);
-			layout->Push<float>(2);
-
-			vao->AddBuffer(*vbo, *layout);
-
-			vbo->Unbind();
-			vao->Unbind();
-
-			ibo = new IndexBuffer(indices, 6);
-			ibo->Unbind();
-
 			m_OrthographicCamera = new OrthographicCamera(0.0f, 32.0f * 40.0f, 0.0f, 32.0f * 21.0f);
 
-			shader = new Shader("res/shaders/Vertex.glsl", "res/shaders/Fragment.glsl");
-			shader->Bind();
+			int xOffset = 10;
+			int yOffset = 10;
+			float totalWidth = (float)(600 - xOffset * 2);
+			float totalHeight = (float)(300 - yOffset * 2);
+			float sizeX = totalWidth / 100.0f;
+			float sizeY = totalHeight / 100.0f;
 
-			texture = new Texture("res/textures/logo.png");
-			texture->Bind();
-			shader->SetUniform1i("u_Texture", 0);
-			shader->Unbind();
+			for (int x = 0; x < 100; x++)
+			{
+				for (int y = 0; y < 100; y++)
+				{
+					float xPos = xOffset + (x * sizeX);
+					float yPos = yOffset + (y * sizeY);
+
+					auto gameObject = std::make_shared<Entity::GameObject>(("Obj" + std::to_string(x) + "" + std::to_string(y)), std::make_shared<Transform>(glm::vec2(xPos, yPos), glm::vec2(sizeX, sizeY)));
+					gameObject->AddComponent(std::make_shared<Entity::Component::SpriteRenderer>(glm::vec4(xPos/totalWidth, yPos/totalHeight, 1, 1)));
+					AddGameObjectToScene(gameObject);
+				}
+			}
 		}
 
 		void TestScene::Update(float deltaTime)
 		{
-			m_Renderer.Draw(*vao, *ibo, *shader);
-
-			x -= deltaTime * 50.0f;
-			y -= deltaTime * 50.0f;
-			m_OrthographicCamera->SetPosition({ x, y, 0.0f });
-
-			angle += deltaTime * 0.01f;
-			if (angle >= 360.0f)
-				angle -= 360.0f;
-			m_OrthographicCamera->SetRotation(angle);
-
-			shader->SetUniformMatrix4fv("u_ProjectionViewMatrix", m_OrthographicCamera->GetProjectionViewMatrix());
-
 			for (const auto& gameObj : m_GameObjects)
 			{
 				gameObj->Update(deltaTime);
 			}
+
+			m_Renderer.Render();
 		}
 	}
 }
