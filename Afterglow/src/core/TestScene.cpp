@@ -1,5 +1,6 @@
 #include "TestScene.h"
 
+#include "utils/AssetPool.h"
 #include <iostream>
 
 namespace Afterglow
@@ -40,6 +41,12 @@ namespace Afterglow
 					AddGameObjectToScene(gameObject);
 				}
 			}
+			LoadResources();
+		}
+
+		void TestScene::LoadResources()
+		{
+			m_AssetPool.GetShader("res/shaders/vertex.glsl", "res/shaders/fragment.glsl");
 		}
 
 		void TestScene::Update(float deltaTime)

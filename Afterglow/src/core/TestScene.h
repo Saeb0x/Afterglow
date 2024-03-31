@@ -14,6 +14,8 @@ namespace Afterglow
 
 			void Init() override;
 			void Update(float deltaTime) override;
+		private:
+			void LoadResources();
 		};
 	}
 }

@@ -10,8 +10,9 @@ namespace Afterglow
 		{
 			RenderBatch::RenderBatch(unsigned int maxBatchSize) : m_MaxBatchSize(maxBatchSize), m_Sprites(maxBatchSize), m_Vertices(maxBatchSize * 4 * COUNT_PER_VERTEX)
 			{
-				m_Shader = std::make_shared<Shader>("res/shaders/Vertex.glsl", "res/shaders/Fragment.glsl");
+				m_Shader = Window::GetScene()->GetAssetPool().GetShader("res/shaders/vertex.glsl", "res/shaders/fragment.glsl");
 			}
+
 			RenderBatch::~RenderBatch() {}
 			
 			void RenderBatch::Start()

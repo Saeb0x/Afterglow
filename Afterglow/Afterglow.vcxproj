@@ -88,6 +88,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="src\core\utils\AssetPool.cpp" />
     <ClCompile Include="src\core\graphics\RenderBatch.cpp" />
     <ClCompile Include="src\core\entity\component\SpriteRenderer.cpp" />
     <ClCompile Include="src\core\entity\component\BaseComponent.cpp" />
@@ -113,6 +114,7 @@
     <ClCompile Include="vendor\stb_image\stb_image.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\core\utils\AssetPool.h" />
     <ClInclude Include="src\core\graphics\RenderBatch.h" />
     <ClInclude Include="src\core\entity\component\SpriteRenderer.h" />
     <ClInclude Include="src\core\entity\component\BaseComponent.h" />
