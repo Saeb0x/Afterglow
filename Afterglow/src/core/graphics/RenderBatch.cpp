@@ -8,7 +8,7 @@ namespace Afterglow
 	{
 		namespace Graphics
 		{
-			RenderBatch::RenderBatch(unsigned int maxBatchSize) : m_MaxBatchSize(maxBatchSize), m_Sprites(maxBatchSize), m_Vertices(maxBatchSize * 4 * COUNT_PER_VERTEX)
+			RenderBatch::RenderBatch(unsigned int maxBatchSize) : m_MaxBatchSize(maxBatchSize), m_Sprites(maxBatchSize), m_Vertices(maxBatchSize * 4 * COUNT_PER_VERTEX), m_Textures(std::vector<std::shared_ptr<Graphics::Texture>>())
 			{
 				m_Shader = Window::GetScene()->GetAssetPool().GetShader("res/shaders/vertex.glsl", "res/shaders/fragment.glsl");
 			}
@@ -17,6 +17,8 @@ namespace Afterglow
 			
 			void RenderBatch::Start()
 			{
+				// Position			Color						UVs				TextureID
+				// float float      float float float float 	float float		float
 				m_VAO = std::make_shared<VertexArray>();
 
 				m_VBO = std::make_shared<VertexBuffer>((const void*)0, static_cast<unsigned int>(m_Vertices.size() * sizeof(float)));
@@ -24,6 +26,8 @@ namespace Afterglow
 				m_Layout = std::make_shared<VertexLayout>();
 				m_Layout->Push<float>(2);
 				m_Layout->Push<float>(4);
+				m_Layout->Push<float>(2);
+				m_Layout->Push<float>(1);
 
 				m_VAO->AddBuffer(*m_VBO, *m_Layout);
 
@@ -40,6 +44,13 @@ namespace Afterglow
 				m_Shader->Bind();
 				m_Shader->SetUniformMatrix4fv("u_ProjectionViewMatrix", Window::GetScene()->GetCamera()->GetProjectionViewMatrix());
 
+				for (int i = 0; i < m_Textures.size(); i++)
+				{
+					m_Textures[i]->Bind(i);
+				}
+
+				m_Shader->SetUniformArrayi("u_Textures", m_TextureSlots, 8);
+
 				m_VAO->Bind();
 				m_VAO->AddBuffer(*m_VBO, *m_Layout);
 				
@@ -51,6 +62,12 @@ namespace Afterglow
 				m_VAO->Unbind();
 				m_VBO->Unbind();
 				m_IBO->Unbind();
+
+				for (int i = 0; i < m_Textures.size(); i++)
+				{
+					m_Textures[i]->Unbind();
+				}
+
 				m_Shader->Unbind();
 			}
 
@@ -60,6 +77,20 @@ namespace Afterglow
 				
 				m_Sprites[index] = spriteRenderer; 
 				m_SpritesCount++;
+
+				if (spriteRenderer->GetTexture())
+				{
+					auto textureToFind = spriteRenderer->GetTexture();
+					auto it = std::find_if(m_Textures.begin(), m_Textures.end(), [&](const auto& texture) {
+						return texture == textureToFind;
+						});
+
+					if (it == m_Textures.end())
+					{
+						// The texture is not in the vector, so push it back
+						m_Textures.push_back(textureToFind);
+					}
+				}
 
 				// Properties to local vertices array
 				LoadVertexProperties(index);
@@ -78,6 +109,21 @@ namespace Afterglow
 				int offset = index * 4 * COUNT_PER_VERTEX;
 
 				glm::vec4 color = sr->GetColor();
+				std::vector<glm::vec2> textureCoords = sr->GetTextureCoordinates();
+
+				int texID = 0;
+				// [0(texID=0|special for color), texture(texID=1), texture(texID=2), ...]
+				if (sr->GetTexture())
+				{
+					for (int i = 0; i < m_Textures.size(); i++)
+					{
+						if (m_Textures[i] == sr->GetTexture())
+						{
+							texID = i + 1;
+							break;
+						}
+					}
+				}
 
 				float xAdd = 1.0f;
 				float yAdd = 1.0f;
@@ -100,6 +146,13 @@ namespace Afterglow
 					m_Vertices[offset + 3] = color.y;
 					m_Vertices[offset + 4] = color.z;
 					m_Vertices[offset + 5] = color.w;
+
+					// Load UVs (Texture Coordinates)
+					m_Vertices[offset + 6] = textureCoords[i].x;
+					m_Vertices[offset + 7] = textureCoords[i].y;
+
+					// Load TextureID
+					m_Vertices[offset + 8] = (float)texID;
 
 					offset += COUNT_PER_VERTEX;
 				}

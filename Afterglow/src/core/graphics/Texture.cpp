@@ -40,7 +40,7 @@ namespace Afterglow
 
 			void Texture::Bind(unsigned int slot) const
 			{
-				GLCall(glActiveTexture(GL_TEXTURE0 + slot))
+				GLCall(glActiveTexture(GL_TEXTURE0 + slot + 1))
 				GLCall(glBindTexture(GL_TEXTURE_2D, m_RendererID));
 			}
 

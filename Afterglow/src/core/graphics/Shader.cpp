@@ -47,6 +47,11 @@ namespace Afterglow
 				GLCall(glUniform1i(GetUniformLocation(uniform), i1));
 			}
 
+			void Shader::SetUniformArrayi(const char* uniform, const int* array, int count)
+			{
+				GLCall(glUniform1iv(GetUniformLocation(uniform),count, array));
+			}
+
 			void Shader::Bind() const
 			{
 				GLCall(glUseProgram(m_RendererID));

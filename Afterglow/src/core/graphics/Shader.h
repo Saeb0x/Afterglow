@@ -21,6 +21,7 @@ namespace Afterglow
 				void SetUniformMatrix4fv(const char* uniform, const glm::mat4& matrix);
 				void SetUniform1f(const char* uniform, float f1);
 				void SetUniform1i(const char* uniform, int i1);
+				void SetUniformArrayi(const char* uniform, const int* array, int count);
 				// More Uniform Setters ...
 
 				void Bind() const;

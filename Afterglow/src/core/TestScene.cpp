@@ -22,25 +22,14 @@ namespace Afterglow
 
 			m_OrthographicCamera = new OrthographicCamera(0.0f, 32.0f * 40.0f, 0.0f, 32.0f * 21.0f);
 
-			int xOffset = 10;
-			int yOffset = 10;
-			float totalWidth = (float)(600 - xOffset * 2);
-			float totalHeight = (float)(300 - yOffset * 2);
-			float sizeX = totalWidth / 100.0f;
-			float sizeY = totalHeight / 100.0f;
+			auto logoObject = std::make_shared<Entity::GameObject>("Logo Object", std::make_shared<Graphics::Transform>(glm::vec2(100,100), glm::vec2(256, 256)));
+			logoObject->AddComponent(std::make_shared<Entity::Component::SpriteRenderer>(m_AssetPool.GetTexture("res/textures/logo.png")));
+			AddGameObjectToScene(logoObject);
 
-			for (int x = 0; x < 100; x++)
-			{
-				for (int y = 0; y < 100; y++)
-				{
-					float xPos = xOffset + (x * sizeX);
-					float yPos = yOffset + (y * sizeY);
+			auto pointerObject = std::make_shared<Entity::GameObject>("Pointer Object", std::make_shared<Graphics::Transform>(glm::vec2(400, 100), glm::vec2(256, 256)));
+			pointerObject->AddComponent(std::make_shared<Entity::Component::SpriteRenderer>(m_AssetPool.GetTexture("res/textures/pointer.png")));
+			AddGameObjectToScene(pointerObject);
 
-					auto gameObject = std::make_shared<Entity::GameObject>(("Obj" + std::to_string(x) + "" + std::to_string(y)), std::make_shared<Transform>(glm::vec2(xPos, yPos), glm::vec2(sizeX, sizeY)));
-					gameObject->AddComponent(std::make_shared<Entity::Component::SpriteRenderer>(glm::vec4(xPos/totalWidth, yPos/totalHeight, 1, 1)));
-					AddGameObjectToScene(gameObject);
-				}
-			}
 			LoadResources();
 		}
 
