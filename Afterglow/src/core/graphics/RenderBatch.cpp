@@ -71,6 +71,20 @@ namespace Afterglow
 				m_Shader->Unbind();
 			}
 
+			bool RenderBatch::HasTexture(std::shared_ptr<Graphics::Texture>& texture)
+			{
+				auto it = std::find_if(m_Textures.begin(), m_Textures.end(), [&](const auto& tex) {
+					return tex == texture;
+				});
+
+				if (it == m_Textures.end())
+				{
+					return false;
+				}
+				else
+					return true;
+			}
+
 			void RenderBatch::AddSprite(std::shared_ptr<Entity::Component::SpriteRenderer> spriteRenderer)
 			{
 				int index = m_SpritesCount;

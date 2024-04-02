@@ -25,6 +25,8 @@ namespace Afterglow
 
 				inline unsigned int GetMaxBatchSize() const { return m_MaxBatchSize; }
 				inline bool HasRoom() const { return m_HasRoom; }
+				inline bool HasTextureRoom() const { return (m_Textures.size() < 8); }
+				bool HasTexture(std::shared_ptr<Graphics::Texture>& texture);
 
 				void AddSprite(std::shared_ptr<Entity::Component::SpriteRenderer> spriteRenderer);
 			private:

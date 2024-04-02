@@ -55,9 +55,13 @@ namespace Afterglow {
 				{
 					if (batch->HasRoom())
 					{
-						batch->AddSprite(spriteRenderer);
-						added = true;
-						break;
+						std::shared_ptr<Graphics::Texture> tex = spriteRenderer->GetTexture();
+						if (!tex || (batch->HasTexture(tex) || batch->HasTextureRoom()))
+						{
+							batch->AddSprite(spriteRenderer);
+							added = true;
+							break;
+						}
 					}
 				}
 
