@@ -24,6 +24,7 @@ namespace Afterglow
 				m_Texture = texture;
 				m_TextureCoordinates = textureCoordinatesLayout;
 			}
+
 			Sprite::~Sprite() {}
 		}
 	}

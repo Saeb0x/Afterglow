@@ -27,7 +27,7 @@ namespace Afterglow
 		{
 			this->m_Width = 1920;
 			this->m_Height = 1080;
-			this->m_Title = "Afterglow";
+			this->m_Title = "Afterglow Engine";
 			this->m_Window = nullptr;
 		}
 
@@ -117,8 +117,8 @@ namespace Afterglow
 			
 			// Enable Blending
 			using namespace Graphics;
-			GLCall(glEnable(GL_BLEND));
 			GLCall(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
+			GLCall(glEnable(GL_BLEND));
 			
 			// Register Callbacks
 			glfwSetCursorPosCallback(m_Window, Input::MouseListener::CursorPosCallback);
@@ -135,7 +135,7 @@ namespace Afterglow
 
 		void Window::Loop()
 		{
-			glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+			glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
 			float Dt = -1.0f;
 
 			float beginTime = Utils::Timer::GetTime();

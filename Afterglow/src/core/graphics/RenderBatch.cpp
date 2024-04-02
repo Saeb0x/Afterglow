@@ -21,7 +21,7 @@ namespace Afterglow
 				// float float      float float float float 	float float		float
 				m_VAO = std::make_shared<VertexArray>();
 
-				m_VBO = std::make_shared<VertexBuffer>((const void*)0, static_cast<unsigned int>(m_Vertices.size() * sizeof(float)));
+				m_VBO = std::make_shared<VertexBuffer>(m_Vertices.data(), static_cast<unsigned int>(m_Vertices.size() * sizeof(float)));
 
 				m_Layout = std::make_shared<VertexLayout>();
 				m_Layout->Push<float>(2);
@@ -37,9 +37,23 @@ namespace Afterglow
 
 			void RenderBatch::Render()
 			{
-				// Rebuffer all data every frame
-				m_VBO->Bind();
-				GLCall(glBufferSubData(GL_ARRAY_BUFFER, 0, m_Vertices.size() * sizeof(float), m_Vertices.data()));
+				bool rebufferData = false;
+				for (int i = 0; i < m_SpritesCount; i++)
+				{
+					std::shared_ptr<Entity::Component::SpriteRenderer> spriteRenderer = m_Sprites[i];
+					if (spriteRenderer->GetIsDirty())
+					{
+						LoadVertexProperties(i);
+						spriteRenderer->SetDirtyFlag();
+						rebufferData = true;
+					}
+				}
+
+				if (rebufferData)
+				{
+					m_VBO->Bind();
+					GLCall(glBufferSubData(GL_ARRAY_BUFFER, 0, m_Vertices.size() * sizeof(float), m_Vertices.data()));
+				}
 
 				m_Shader->Bind();
 				m_Shader->SetUniformMatrix4fv("u_ProjectionViewMatrix", Window::GetScene()->GetCamera()->GetProjectionViewMatrix());

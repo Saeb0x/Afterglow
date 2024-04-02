@@ -20,7 +20,7 @@ namespace Afterglow
 
 				inline const std::shared_ptr<Texture>& GetTexture() const { return m_Texture; }
 				inline const std::vector<glm::vec2>& GetTextureCoordinates() const { return m_TextureCoordinates; }
-
+				
 				~Sprite();
 
 			private:

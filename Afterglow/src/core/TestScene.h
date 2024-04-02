@@ -16,6 +16,8 @@ namespace Afterglow
 			void Update(float deltaTime) override;
 		private:
 			void LoadResources();
+		private:
+			std::shared_ptr<Entity::GameObject> m_Character = nullptr;
 		};
 	}
 }

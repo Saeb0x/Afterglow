@@ -28,6 +28,20 @@ namespace Afterglow
 				m_Position = position;
 				m_Scale = scale;
 			}
+
+			std::shared_ptr<Transform> Transform::Copy() const
+			{
+				return std::make_shared<Transform>(*this);
+			}
+
+			void Transform::Copy(const std::shared_ptr<Transform>& transform)
+			{
+				*transform = *this;
+			}
+			bool Transform::operator==(const Transform& other) const
+			{
+				return m_Position == other.m_Position && m_Scale == other.m_Scale;
+			}
 		}
 	}
 }

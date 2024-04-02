@@ -1,6 +1,7 @@
 #pragma once
 
 #include <glm/glm.hpp>
+#include <memory>
 
 namespace Afterglow
 {
@@ -18,8 +19,14 @@ namespace Afterglow
 
 				void Init(const glm::vec2& position, const glm::vec2& scale);
 
-				inline const glm::vec2& GetPosition() const { return m_Position; }
-				inline const glm::vec2& GetScale() const { return m_Scale; }
+				std::shared_ptr<Transform> Copy() const;
+				void Copy(const std::shared_ptr<Transform>& transform);
+
+				inline glm::vec2& GetPosition() { return m_Position; }
+				inline glm::vec2& GetScale() { return m_Scale; }
+
+				bool operator==(const Transform& other) const;
+
 			private:
 				glm::vec2 m_Position;
 				glm::vec2 m_Scale;

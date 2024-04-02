@@ -20,7 +20,7 @@ namespace Afterglow
                 ~GameObject();
 
                 inline const std::string& GetName() const { return m_Name; }
-                inline const std::shared_ptr<Graphics::Transform>& GetTransform() const { return m_Transform; }
+                inline std::shared_ptr<Graphics::Transform>& GetTransform() { return m_Transform; }
 
                 void Start();
                 void Update(float deltaTime);
