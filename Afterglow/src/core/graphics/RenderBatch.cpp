@@ -8,9 +8,9 @@ namespace Afterglow
 	{
 		namespace Graphics
 		{
-			RenderBatch::RenderBatch(unsigned int maxBatchSize) : m_MaxBatchSize(maxBatchSize), m_Sprites(maxBatchSize), m_Vertices(maxBatchSize * 4 * COUNT_PER_VERTEX), m_Textures(std::vector<std::shared_ptr<Graphics::Texture>>())
+			RenderBatch::RenderBatch(unsigned int maxBatchSize, int zIndex) : m_MaxBatchSize(maxBatchSize), m_Sprites(maxBatchSize), m_Vertices(maxBatchSize * 4 * COUNT_PER_VERTEX), m_Textures(std::vector<std::shared_ptr<Graphics::Texture>>()), m_ZIndex(zIndex)
 			{
-				m_Shader = Window::GetScene()->GetAssetPool().GetShader("res/shaders/vertex.glsl", "res/shaders/fragment.glsl");
+				m_Shader = Window::GetScene()->GetResourcePool().GetShader("res/shaders/vertex.glsl", "res/shaders/fragment.glsl");
 			}
 
 			RenderBatch::~RenderBatch() {}
@@ -38,7 +38,7 @@ namespace Afterglow
 			void RenderBatch::Render()
 			{
 				bool rebufferData = false;
-				for (int i = 0; i < m_SpritesCount; i++)
+				for (unsigned int i = 0; i < m_SpritesCount; i++)
 				{
 					std::shared_ptr<Entity::Component::SpriteRenderer> spriteRenderer = m_Sprites[i];
 					if (spriteRenderer->GetIsDirty())

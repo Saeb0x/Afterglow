@@ -15,12 +15,13 @@ namespace Afterglow
             {
             public:
                 GameObject(const std::string& name);
-                GameObject(const std::string& name, std::shared_ptr<Graphics::Transform> transform);
+                GameObject(const std::string& name, std::shared_ptr<Graphics::Transform> transform, int zIndex);
 
                 ~GameObject();
 
                 inline const std::string& GetName() const { return m_Name; }
                 inline std::shared_ptr<Graphics::Transform>& GetTransform() { return m_Transform; }
+                inline int GetZIndex() const { return m_ZIndex; }
 
                 void Start();
                 void Update(float deltaTime);
@@ -55,6 +56,7 @@ namespace Afterglow
                 std::string m_Name;
                 std::vector<std::shared_ptr<Component::SpriteRenderer>> m_Components;
                 std::shared_ptr<Graphics::Transform> m_Transform;
+                int m_ZIndex;
             };
         } 
     } 

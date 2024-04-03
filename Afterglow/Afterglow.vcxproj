@@ -89,7 +89,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="src\core\graphics\Sprite.cpp" />
-    <ClCompile Include="src\core\utils\AssetPool.cpp" />
+    <ClCompile Include="src\core\utils\ResourcePool.cpp" />
     <ClCompile Include="src\core\graphics\RenderBatch.cpp" />
     <ClCompile Include="src\core\entity\component\SpriteRenderer.cpp" />
     <ClCompile Include="src\core\entity\component\BaseComponent.cpp" />
@@ -117,7 +117,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\core\graphics\Sprite.h" />
-    <ClInclude Include="src\core\utils\AssetPool.h" />
+    <ClInclude Include="src\core\utils\ResourcePool.h" />
     <ClInclude Include="src\core\graphics\RenderBatch.h" />
     <ClInclude Include="src\core\entity\component\SpriteRenderer.h" />
     <ClInclude Include="src\core\entity\component\BaseComponent.h" />

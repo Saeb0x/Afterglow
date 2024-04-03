@@ -11,11 +11,11 @@ namespace Afterglow
 	{
 		namespace Utils
 		{
-            class AssetPool
+            class ResourcePool
             {
             public:
 
-                static AssetPool& GetInstance();
+                static ResourcePool& GetInstance();
 
                 void AddShader(const std::string& vertexResourceName, const std::string& fragmentResourceName);
                 std::shared_ptr<Graphics::Shader> GetShader(const std::string& vertexResourceName, const std::string& fragmentResourceName);
@@ -30,10 +30,10 @@ namespace Afterglow
                 inline const std::unordered_map<std::string, std::shared_ptr<Graphics::Texture>>& GetTextures() const { return m_Textures; }
                 inline const std::unordered_map<std::string, std::shared_ptr<Graphics::TextureAtlas>>& GetTextureAtlases() const { return m_Spritesheets; }
             private:
-                AssetPool();
-                ~AssetPool();
-                AssetPool(const AssetPool&);
-                const AssetPool& operator=(const AssetPool&);
+                ResourcePool();
+                ~ResourcePool();
+                ResourcePool(const ResourcePool&);
+                const ResourcePool& operator=(const ResourcePool&);
             private:
                 std::unordered_map<std::string, std::shared_ptr<Graphics::Shader>> m_Shaders;
                 std::unordered_map<std::string, std::shared_ptr<Graphics::Texture>> m_Textures;

@@ -117,8 +117,8 @@ namespace Afterglow
 			
 			// Enable Blending
 			using namespace Graphics;
-			GLCall(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
 			GLCall(glEnable(GL_BLEND));
+			GLCall(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
 			
 			// Register Callbacks
 			glfwSetCursorPosCallback(m_Window, Input::MouseListener::CursorPosCallback);
@@ -135,7 +135,7 @@ namespace Afterglow
 
 		void Window::Loop()
 		{
-			glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+			glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 			float Dt = -1.0f;
 
 			float beginTime = Utils::Timer::GetTime();

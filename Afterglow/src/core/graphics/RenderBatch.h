@@ -17,7 +17,7 @@ namespace Afterglow
 			class RenderBatch
 			{
 			public:
-				RenderBatch(unsigned int maxBatchSize);
+				RenderBatch(unsigned int maxBatchSize, int zIndex);
 				~RenderBatch();
 
 				void Start();
@@ -29,6 +29,8 @@ namespace Afterglow
 				bool HasTexture(std::shared_ptr<Graphics::Texture>& texture);
 
 				void AddSprite(std::shared_ptr<Entity::Component::SpriteRenderer> spriteRenderer);
+
+				inline int GetZIndex() const { return m_ZIndex; }
 			private:
 				std::vector<unsigned int> GenerateIndices();
 				void LoadElementIndices(std::vector<unsigned int>& elements, unsigned int index);
@@ -50,6 +52,8 @@ namespace Afterglow
 				std::shared_ptr<VertexBuffer> m_VBO = nullptr;
 				std::shared_ptr<VertexLayout> m_Layout = nullptr;
 				std::shared_ptr<IndexBuffer> m_IBO = nullptr;
+
+				int m_ZIndex;
 			};
 		}
 	}

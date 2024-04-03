@@ -1,6 +1,7 @@
 #include "Renderer.h"
 
 #include <iostream>
+#include <algorithm>
 
 #include "RenderBatch.h"
 
@@ -53,7 +54,7 @@ namespace Afterglow {
 				bool added = false;
 				for (const auto& batch : m_RenderBatches)
 				{
-					if (batch->HasRoom())
+					if (batch->HasRoom() && batch->GetZIndex() == spriteRenderer->GetOwner()->GetZIndex())
 					{
 						std::shared_ptr<Graphics::Texture> tex = spriteRenderer->GetTexture();
 						if (!tex || (batch->HasTexture(tex) || batch->HasTextureRoom()))
@@ -67,10 +68,14 @@ namespace Afterglow {
 
 				if (!added)
 				{
-					std::shared_ptr<RenderBatch> newBatch = std::make_shared<RenderBatch>(MAX_BATCH_SIZE);
+					std::shared_ptr<RenderBatch> newBatch = std::make_shared<RenderBatch>(MAX_BATCH_SIZE, spriteRenderer->GetOwner()->GetZIndex());
 					newBatch->Start();
 					m_RenderBatches.push_back(newBatch);
 					newBatch->AddSprite(spriteRenderer);
+
+					std::sort(m_RenderBatches.begin(), m_RenderBatches.end(), [](const std::shared_ptr<RenderBatch>& batch1, const std::shared_ptr<RenderBatch>& batch2) {
+						return batch1->GetZIndex() < batch2->GetZIndex(); });
+
 				}
 			}
 

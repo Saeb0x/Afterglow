@@ -84,7 +84,7 @@
     <ClCompile Include="src\core\graphics\RenderBatch.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\core\utils\AssetPool.cpp">
+    <ClCompile Include="src\core\utils\ResourcePool.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\core\graphics\Sprite.cpp">
@@ -164,7 +164,7 @@
     <ClInclude Include="src\core\graphics\RenderBatch.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\core\utils\AssetPool.h">
+    <ClInclude Include="src\core\utils\ResourcePool.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\core\graphics\Sprite.h">
