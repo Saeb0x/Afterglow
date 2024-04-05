@@ -25,6 +25,7 @@ namespace Afterglow
 
                 void Start();
                 void Update(float deltaTime);
+                void ImGui();
             public:
                 template<typename T>
                 void AddComponent(std::shared_ptr<T> component) 

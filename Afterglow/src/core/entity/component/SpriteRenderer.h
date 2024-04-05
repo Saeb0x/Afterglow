@@ -35,6 +35,8 @@ namespace Afterglow
 
 					void Start() override;
 					void Update(float deltaTime) override;
+
+					void ImGui() override;
 				private:
 					glm::vec4 m_Color;
 					std::shared_ptr<Graphics::Texture> m_Texture;

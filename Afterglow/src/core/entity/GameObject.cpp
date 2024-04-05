@@ -29,6 +29,14 @@ namespace Afterglow
 					component->Update(deltaTime);
 				}
 			}
+
+			void GameObject::ImGui()
+			{
+				for (const auto& component : m_Components)
+				{
+					component->ImGui();
+				}
+			}
 		}
 	}
 }

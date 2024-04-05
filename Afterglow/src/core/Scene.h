@@ -22,6 +22,9 @@ namespace Afterglow
 
 			inline OrthographicCamera* GetCamera() const { return m_OrthographicCamera; }
 			inline Utils::ResourcePool& GetResourcePool() const { return m_ResourcePool; }
+			
+			void SceneImGui();
+			virtual void ImGui();
 		protected:
 			OrthographicCamera* m_OrthographicCamera;
 			Graphics::Renderer& m_Renderer = Graphics::Renderer::GetInstance();
@@ -29,6 +32,7 @@ namespace Afterglow
 		protected:
 			bool m_IsRunning;
 			std::vector<std::shared_ptr<Entity::GameObject>> m_GameObjects;
+			std::shared_ptr<Entity::GameObject> m_ActiveGameObject;
 		};
 	}
 }

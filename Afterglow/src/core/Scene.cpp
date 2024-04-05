@@ -1,10 +1,12 @@
 #include "Scene.h"
 
+#include <imgui.h>
+
 namespace Afterglow
 {
 	namespace Core
 	{
-		Scene::Scene() : m_OrthographicCamera(nullptr), m_IsRunning(false), m_GameObjects({}) {}
+		Scene::Scene() : m_OrthographicCamera(nullptr), m_IsRunning(false), m_GameObjects({}), m_ActiveGameObject(nullptr) {}
 
 		void Scene::Start()
 		{
@@ -30,5 +32,19 @@ namespace Afterglow
 				m_Renderer.Add(gameObject);
 			}
 		}
+
+		void Scene::SceneImGui()
+		{
+			if (m_ActiveGameObject)
+			{
+				ImGui::Begin("Inspector");
+				m_ActiveGameObject->ImGui();
+				ImGui::End();
+			}
+
+			ImGui();
+		}
+
+		void Scene::ImGui() {}
 	}
 }

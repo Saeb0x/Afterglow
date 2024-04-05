@@ -4,6 +4,7 @@
 #include <GLFW/glfw3.h>
 
 #include "Scene.h"
+#include "ui/ImGuiLayer.h"
 
 namespace Afterglow {
 	namespace Core {
@@ -24,6 +25,7 @@ namespace Afterglow {
 			const char* m_Title;
 			GLFWwindow* m_Window;
 			static Scene* m_CurrentScene;
+			static UI::ImGuiLayer* m_ImGuiLayer;
 		private:
 			void Init();
 			void Loop();

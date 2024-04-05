@@ -2,6 +2,7 @@
 #include "../GameObject.h"
 
 #include <iostream>
+#include <imgui.h>
 
 namespace Afterglow
 {
@@ -50,6 +51,16 @@ namespace Afterglow
 					if (!(m_LastTransform == GetOwner()->GetTransform()))
 					{
 						GetOwner()->GetTransform()->Copy(m_LastTransform);
+						m_IsDirty = true;
+					}
+				}
+
+				void SpriteRenderer::ImGui()
+				{
+					float color[4] = { m_Color.x, m_Color.y, m_Color.z, m_Color.w };
+					if (ImGui::ColorPicker4("Color Picker", color))
+					{
+						m_Color = glm::vec4({color[0], color[1], color[2], color[3]});
 						m_IsDirty = true;
 					}
 				}

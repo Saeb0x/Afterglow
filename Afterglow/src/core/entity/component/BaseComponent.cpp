@@ -13,6 +13,7 @@ namespace Afterglow
 				BaseComponent::BaseComponent() : m_Owner(nullptr) {}
 
 				void BaseComponent::Start() {}
+				void BaseComponent::ImGui() {}
 			}
 		}
 	}

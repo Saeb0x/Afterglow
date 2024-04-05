@@ -2,6 +2,7 @@
 
 #include "utils/ResourcePool.h"
 #include <iostream>
+#include <imgui.h>
 
 namespace Afterglow
 {
@@ -25,13 +26,15 @@ namespace Afterglow
 
 			std::shared_ptr<Graphics::TextureAtlas> spritesheet = m_ResourcePool.GetSpriteSheet("res/textures/spritesheet.png");
 
-			m_Character = std::make_shared<Entity::GameObject>("Main Character", std::make_shared<Graphics::Transform>(glm::vec2(100,100), glm::vec2(256, 256)), -1);
+			m_Character = std::make_shared<Entity::GameObject>("Main Character", std::make_shared<Graphics::Transform>(glm::vec2(100,100), glm::vec2(256, 256)), 1);
 			m_Character->AddComponent(std::make_shared<Entity::Component::SpriteRenderer>(spritesheet->GetSprite(0)));
 			AddGameObjectToScene(m_Character);
 
-			auto pointerObject = std::make_shared<Entity::GameObject>("Pointer Object", std::make_shared<Graphics::Transform>(glm::vec2(400, 100), glm::vec2(256, 256)), 1);
-			pointerObject->AddComponent(std::make_shared<Entity::Component::SpriteRenderer>(std::make_shared<Graphics::Sprite>(m_ResourcePool.GetTexture("res/textures/pointer.png"))));
+			auto pointerObject = std::make_shared<Entity::GameObject>("Pointer Object", std::make_shared<Graphics::Transform>(glm::vec2(400, 100), glm::vec2(256, 256)), -1);
+			pointerObject->AddComponent(std::make_shared<Entity::Component::SpriteRenderer>(glm::vec4({1.0f, 0.0f, 0.0f, 1.0f})));
 			AddGameObjectToScene(pointerObject);
+
+			m_ActiveGameObject = pointerObject;
 		}
 
 		void TestScene::LoadResources()
@@ -51,6 +54,13 @@ namespace Afterglow
 			}
 
 			m_Renderer.Render();
+		}
+
+		void TestScene::ImGui()
+		{
+			ImGui::Begin("Test Window");
+			ImGui::Text("Some text");
+			ImGui::End();
 		}
 	}
 }

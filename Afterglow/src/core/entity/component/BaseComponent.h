@@ -21,6 +21,7 @@ namespace Afterglow
 
 					virtual void Start();
 					virtual void Update(float deltaTime) = 0;
+					virtual void ImGui();
 				private:
 					GameObject* m_Owner;
 				};

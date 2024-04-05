@@ -16,6 +16,7 @@ namespace Afterglow
 	namespace Core 
 	{
 		Scene* Window::m_CurrentScene = nullptr;
+		UI::ImGuiLayer* Window::m_ImGuiLayer = nullptr;
 
 		Window& Window::GetInstance()
 		{
@@ -131,6 +132,8 @@ namespace Afterglow
 			glfwShowWindow(m_Window);
 
 			ChangeScene(2);
+
+			m_ImGuiLayer = &UI::ImGuiLayer::GetInstance(m_Window, true);
 		}
 
 		void Window::Loop()
@@ -149,6 +152,7 @@ namespace Afterglow
 				if(Dt > 0)
 					m_CurrentScene->Update(Dt);
 				
+				m_ImGuiLayer->Update(Dt, *m_CurrentScene);
 				glfwSwapBuffers(m_Window); 
 
 				float endTime = Utils::Timer::GetTime();
