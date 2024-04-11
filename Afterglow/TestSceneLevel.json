@@ -1,0 +1,101 @@
+[
+    {
+        "Name": "Main Character",
+        "Z-Index": 1,
+        "Transform": {
+            "Position": {
+                "x": 542.9891357421875,
+                "y": 100.0
+            },
+            "Scale": {
+                "x": 256.0,
+                "y": 256.0
+            }
+        },
+        "Sprite Renderer": {
+            "Color": {
+                "r": 1.0,
+                "g": 1.0,
+                "b": 1.0,
+                "a": 1.0
+            },
+            "Sprite": {
+                "Texture": {
+                    "ID": 1,
+                    "Path": "res/textures/spritesheet.png",
+                    "Width": 384,
+                    "Height": 32
+                },
+                "Texture Coordinates": [
+                    {
+                        "x": 0.0833333358168602,
+                        "y": 1.0
+                    },
+                    {
+                        "x": 0.0833333358168602,
+                        "y": 0.0
+                    },
+                    {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    {
+                        "x": 0.0,
+                        "y": 1.0
+                    }
+                ]
+            }
+        }
+    },
+    {
+        "Name": "Pointer Object",
+        "Z-Index": -1,
+        "Transform": {
+            "Position": {
+                "x": 400.0,
+                "y": 100.0
+            },
+            "Scale": {
+                "x": 256.0,
+                "y": 256.0
+            }
+        },
+        "Sprite Renderer": {
+            "Color": {
+                "r": 0.0,
+                "g": 0.1044776439666748,
+                "b": 1.0,
+                "a": 1.0
+            },
+            "Sprite": {
+                "Texture Coordinates": [
+                    {
+                        "x": 1.0,
+                        "y": 1.0
+                    },
+                    {
+                        "x": 1.0,
+                        "y": 0.0
+                    },
+                    {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    {
+                        "x": 0.0,
+                        "y": 1.0
+                    }
+                ]
+            }
+        },
+        "Rigid Body": {
+            "ColliderType": 5,
+            "Friction": 0.800000011920929,
+            "Velocity": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+            }
+        }
+    }
+]

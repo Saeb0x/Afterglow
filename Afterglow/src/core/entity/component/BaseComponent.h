@@ -1,5 +1,8 @@
 #pragma once
 
+#include <rapidjson/document.h>
+#include <memory>
+
 namespace Afterglow
 {
 	namespace Core
@@ -22,6 +25,8 @@ namespace Afterglow
 					virtual void Start();
 					virtual void Update(float deltaTime) = 0;
 					virtual void ImGui();
+
+					virtual void Serialize(rapidjson::Value& object, rapidjson::Document& document);
 				private:
 					GameObject* m_Owner;
 				};

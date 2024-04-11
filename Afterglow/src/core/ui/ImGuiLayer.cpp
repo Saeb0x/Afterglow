@@ -19,6 +19,8 @@ namespace Afterglow
 				ImGui::CreateContext();
 				ImGuiIO& io = ImGui::GetIO(); (void)io;	
 
+				io.IniFilename = "afterglow_ui_configuration.ini";
+
 				io.Fonts->AddFontFromFileTTF("res/fonts/bahnschrift.ttf", 16.0f);
 
 				if (m_DarkMode)

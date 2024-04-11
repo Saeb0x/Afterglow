@@ -21,8 +21,11 @@ namespace Afterglow
 
 				std::shared_ptr<Transform> Copy() const;
 				void Copy(const std::shared_ptr<Transform>& transform);
-
+				
+				inline void SetPosition(const glm::vec2& position) { m_Position = position; }
 				inline glm::vec2& GetPosition() { return m_Position; }
+				
+				void SetScale(const glm::vec2& scale) { m_Scale = scale; }
 				inline glm::vec2& GetScale() { return m_Scale; }
 
 				bool operator==(const Transform& other) const;

@@ -53,23 +53,21 @@ namespace Afterglow
 			{
 			case 2:
 				m_CurrentScene = new TestScene();
-				m_CurrentScene->Init();
-				m_CurrentScene->Start();
 				break;
 			case 1:
 				m_CurrentScene = new LevelScene();
-				m_CurrentScene->Init();
-				m_CurrentScene->Start();
 				break;
 			case 0:
 				m_CurrentScene = new LevelEditorScene();
-				m_CurrentScene->Init();
-				m_CurrentScene->Start();
 				break;
 			default:
 				assert(false && "Unresolved Scene Index");
 				break;
 			}
+
+			m_CurrentScene->Load();
+			m_CurrentScene->Init();
+			m_CurrentScene->Start();
 		}
 
 		void Window::Init()
@@ -131,9 +129,9 @@ namespace Afterglow
 			// Make window visible
 			glfwShowWindow(m_Window);
 
-			ChangeScene(2);
-
 			m_ImGuiLayer = &UI::ImGuiLayer::GetInstance(m_Window, true);
+
+			ChangeScene(2);
 		}
 
 		void Window::Loop()
@@ -159,6 +157,7 @@ namespace Afterglow
 				Dt = endTime - beginTime;
 				beginTime = endTime;
 			}
+			m_CurrentScene->SaveExit();
 
 			delete m_CurrentScene;
 		}

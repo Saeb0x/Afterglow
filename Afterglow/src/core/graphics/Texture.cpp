@@ -38,7 +38,7 @@ namespace Afterglow
 				GLCall(glDeleteTextures(1, &m_RendererID));
 			}
 
-			void Texture::Bind(unsigned int slot) const
+			void Texture::Bind(unsigned int slot)
 			{
 				GLCall(glActiveTexture(GL_TEXTURE0 + slot + 1))
 				GLCall(glBindTexture(GL_TEXTURE_2D, m_RendererID));

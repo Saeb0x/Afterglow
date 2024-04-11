@@ -1,6 +1,7 @@
 #include "GameObject.h"
 
 #include "component/BaseComponent.h"
+#include "../SerializationManager.h"
 
 namespace Afterglow
 {
@@ -36,6 +37,18 @@ namespace Afterglow
 				{
 					component->ImGui();
 				}
+			}
+
+			void GameObject::Serialize(rapidjson::Value& object, rapidjson::Document& document)
+			{
+				for (const auto& component : m_Components)
+				{
+					component->Serialize(object, document);
+				}
+			}
+
+			void GameObject::Deserialize()
+			{
 			}
 		}
 	}

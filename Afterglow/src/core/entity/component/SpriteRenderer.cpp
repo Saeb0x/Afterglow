@@ -18,7 +18,7 @@ namespace Afterglow
 					m_Sprite = std::make_shared<Graphics::Sprite>(nullptr);
 				}
 
-				SpriteRenderer::SpriteRenderer(const std::shared_ptr<Graphics::Sprite>& sprite) : m_LastTransform(nullptr), m_IsDirty(true)
+				SpriteRenderer::SpriteRenderer(const std::shared_ptr<Graphics::Sprite>& sprite) : BaseComponent(), m_LastTransform(nullptr), m_IsDirty(true)
 				{
 					m_Sprite = sprite;
 					m_Color = glm::vec4{ 1.0f, 1.0f, 1.0f, 1.0f };
@@ -63,6 +63,51 @@ namespace Afterglow
 						m_Color = glm::vec4({color[0], color[1], color[2], color[3]});
 						m_IsDirty = true;
 					}
+				}
+
+				void SpriteRenderer::Serialize(rapidjson::Value& object, rapidjson::Document& document)
+				{
+					if (!document.IsArray()) {
+						std::cerr << "RapidJSON Document is not an array" << std::endl;
+						return;
+					}
+
+					rapidjson::Value spriteRenderer(rapidjson::kObjectType);
+
+					// Serialize Z-Index
+					object.AddMember("Z-Index", GetOwner()->GetZIndex(), document.GetAllocator());
+
+					// Serialize Transform
+					rapidjson::Value transform(rapidjson::kObjectType);
+
+					rapidjson::Value position(rapidjson::kObjectType);
+					position.AddMember("x", GetOwner()->GetTransform()->GetPosition().x, document.GetAllocator());
+					position.AddMember("y", GetOwner()->GetTransform()->GetPosition().y, document.GetAllocator());
+
+					rapidjson::Value scale(rapidjson::kObjectType);
+					scale.AddMember("x", GetOwner()->GetTransform()->GetScale().x, document.GetAllocator());
+					scale.AddMember("y", GetOwner()->GetTransform()->GetScale().y, document.GetAllocator());
+
+					transform.AddMember("Position", position, document.GetAllocator());
+					transform.AddMember("Scale", scale, document.GetAllocator());
+
+					object.AddMember("Transform", transform, document.GetAllocator());
+
+					// Serialize Color
+					rapidjson::Value color(rapidjson::kObjectType);
+					color.AddMember("r", m_Color.r, document.GetAllocator());
+					color.AddMember("g", m_Color.g, document.GetAllocator());
+					color.AddMember("b", m_Color.b, document.GetAllocator());
+					color.AddMember("a", m_Color.a, document.GetAllocator());
+					spriteRenderer.AddMember("Color", color, document.GetAllocator());
+
+					// Serialize Sprite (if available)
+					if (m_Sprite) {
+						m_Sprite->Serialize(spriteRenderer, document);
+					}
+
+					// Add the spriteRenderer object to the main object
+					object.AddMember("Sprite Renderer", spriteRenderer, document.GetAllocator());
 				}
 			}
 		}

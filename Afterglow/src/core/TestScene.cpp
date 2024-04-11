@@ -1,6 +1,9 @@
 #include "TestScene.h"
 
 #include "utils/ResourcePool.h"
+#include "SerializationManager.h"
+#include "entity/component/RigidBody.h"
+
 #include <iostream>
 #include <imgui.h>
 
@@ -9,6 +12,8 @@ namespace Afterglow
 	namespace Core
 	{
 		using namespace Graphics;
+
+		std::shared_ptr<Entity::Component::SpriteRenderer> spriteRenderer = nullptr;
 
 		TestScene::TestScene() : Scene() {}
 
@@ -20,18 +25,34 @@ namespace Afterglow
 		void TestScene::Init()
 		{
 			std::cout << "I'm in the testing Scene!" << std::endl;
+			
+			m_OrthographicCamera = new OrthographicCamera(0.0f, 32.0f * 40.0f, 0.0f, 32.0f * 21.0f);
 			LoadResources();
 
-			m_OrthographicCamera = new OrthographicCamera(0.0f, 32.0f * 40.0f, 0.0f, 32.0f * 21.0f);
+			if (m_LevelLoaded)
+			{
+				if (m_GameObjects.at(1) != nullptr)
+				{
+					m_ActiveGameObject = m_GameObjects.at(1);
+				}
+				return;
+			}
 
 			std::shared_ptr<Graphics::TextureAtlas> spritesheet = m_ResourcePool.GetSpriteSheet("res/textures/spritesheet.png");
 
 			m_Character = std::make_shared<Entity::GameObject>("Main Character", std::make_shared<Graphics::Transform>(glm::vec2(100,100), glm::vec2(256, 256)), 1);
 			m_Character->AddComponent(std::make_shared<Entity::Component::SpriteRenderer>(spritesheet->GetSprite(0)));
+
 			AddGameObjectToScene(m_Character);
 
 			auto pointerObject = std::make_shared<Entity::GameObject>("Pointer Object", std::make_shared<Graphics::Transform>(glm::vec2(400, 100), glm::vec2(256, 256)), -1);
-			pointerObject->AddComponent(std::make_shared<Entity::Component::SpriteRenderer>(glm::vec4({1.0f, 0.0f, 0.0f, 1.0f})));
+			
+			spriteRenderer = std::make_shared<Entity::Component::SpriteRenderer>(glm::vec4({ 1.0f, 0.0f, 0.0f, 1.0f }));
+			pointerObject->AddComponent(spriteRenderer);
+
+			auto rigidBody = std::make_shared<Entity::Component::RigidBody>();
+			pointerObject->AddComponent(rigidBody);
+
 			AddGameObjectToScene(pointerObject);
 
 			m_ActiveGameObject = pointerObject;
@@ -46,7 +67,7 @@ namespace Afterglow
 
 		void TestScene::Update(float deltaTime)
 		{
-			m_Character->GetTransform()->GetPosition().x += 30 * deltaTime;
+			m_GameObjects.at(0)->GetTransform()->GetPosition().x += 30 * deltaTime;
 
 			for (const auto& gameObj : m_GameObjects)
 			{

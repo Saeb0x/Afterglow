@@ -14,6 +14,7 @@ namespace Afterglow
 
 				void BaseComponent::Start() {}
 				void BaseComponent::ImGui() {}
+				void BaseComponent::Serialize(rapidjson::Value& object, rapidjson::Document& document) {}
 			}
 		}
 	}

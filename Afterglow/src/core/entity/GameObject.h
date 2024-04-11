@@ -26,6 +26,8 @@ namespace Afterglow
                 void Start();
                 void Update(float deltaTime);
                 void ImGui();
+                void Serialize(rapidjson::Value& object, rapidjson::Document& document);
+                void Deserialize();
             public:
                 template<typename T>
                 void AddComponent(std::shared_ptr<T> component) 
@@ -55,7 +57,7 @@ namespace Afterglow
                 }
             private:
                 std::string m_Name;
-                std::vector<std::shared_ptr<Component::SpriteRenderer>> m_Components;
+                std::vector<std::shared_ptr<Component::BaseComponent>> m_Components;
                 std::shared_ptr<Graphics::Transform> m_Transform;
                 int m_ZIndex;
             };

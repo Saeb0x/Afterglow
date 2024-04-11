@@ -5,6 +5,7 @@
 #include <glm/glm.hpp>
 #include <memory>
 #include <vector>
+#include <rapidjson/document.h>
 
 namespace Afterglow
 {
@@ -21,6 +22,8 @@ namespace Afterglow
 				inline const std::shared_ptr<Texture>& GetTexture() const { return m_Texture; }
 				inline const std::vector<glm::vec2>& GetTextureCoordinates() const { return m_TextureCoordinates; }
 				
+				void Serialize(rapidjson::Value& object, rapidjson::Document& document);
+
 				~Sprite();
 
 			private:
