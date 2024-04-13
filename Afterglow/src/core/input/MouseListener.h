@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../Window.h"
 #include <GLFW/glfw3.h>
 #include <array>
 
@@ -25,6 +26,9 @@ namespace Afterglow {
 				static float GetScrollY();
 				static bool IsDragging();
 				static bool IsMouseButtonPressed(int button);
+
+				static float GetOrthoX();
+				static float GetOrthoY();
 			private:
 				MouseListener();
 				~MouseListener();

@@ -1,5 +1,7 @@
 #include "MouseListener.h"
 
+#include "iostream"
+
 namespace Afterglow {
 	namespace Core {
 		namespace Input {
@@ -108,6 +110,28 @@ namespace Afterglow {
 				}
 				else
 					return false;
+			}
+
+			float MouseListener::GetOrthoX()
+			{
+				float currentX = GetX();
+				currentX = (currentX / (float)Window::GetWidth()) * 2.0f - 1.0f;
+
+				glm::vec4 tmp = glm::vec4({currentX, 0.0f, 0.0f, 1.0f});
+				tmp = Window::GetScene()->GetCamera()->GetInverseProjectionMatrix() * Window::GetScene()->GetCamera()->GetInverseViewMatrix()  * tmp;
+
+				return tmp.x;
+			}
+
+			float MouseListener::GetOrthoY()
+			{
+				float currentY = GetY();
+				currentY = (currentY / (float)Window::GetHeight()) * 2.0f - 1.0f;
+
+				glm::vec4 tmp = glm::vec4({ currentY, 0.0f, 0.0f, 1.0f });
+				tmp = Window::GetScene()->GetCamera()->GetInverseProjectionMatrix() * Window::GetScene()->GetCamera()->GetInverseViewMatrix() * tmp;
+
+				return tmp.y;
 			}
 		}
 	}

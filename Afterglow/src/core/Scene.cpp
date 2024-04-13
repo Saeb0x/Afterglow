@@ -51,14 +51,14 @@ namespace Afterglow
 
 		void Scene::SaveExit()
 		{
-			SerializationManager::GetInstance().Serialize(m_GameObjects, "TestSceneLevel.json");
+			SerializationManager::GetInstance().Serialize(m_GameObjects, "level.json");
 		}
 
 		void Scene::Load()
 		{
 			// Read the JSON file into a string
 			std::string jsonString;
-			std::ifstream inFile("TestSceneLevel.json");
+			std::ifstream inFile("level.json");
 			if (inFile.is_open()) {
 				std::stringstream buffer;
 				buffer << inFile.rdbuf();

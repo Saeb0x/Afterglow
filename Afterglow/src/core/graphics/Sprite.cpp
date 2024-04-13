@@ -6,7 +6,7 @@ namespace Afterglow
 	{
 		namespace Graphics
 		{
-			Sprite::Sprite(const std::shared_ptr<Texture>& texture)
+			Sprite::Sprite(const std::shared_ptr<Texture>& texture) : m_Width(0), m_Height(0)
 			{
 				m_Texture = texture;
 				m_TextureCoordinates = std::vector<glm::vec2>(
@@ -19,7 +19,7 @@ namespace Afterglow
 				);
 			}
 
-			Sprite::Sprite(const std::shared_ptr<Texture>& texture, const std::vector<glm::vec2>& textureCoordinatesLayout)
+			Sprite::Sprite(const std::shared_ptr<Texture>& texture, const std::vector<glm::vec2>& textureCoordinatesLayout) : m_Width(0), m_Height(0)
 			{
 				m_Texture = texture;
 				m_TextureCoordinates = textureCoordinatesLayout;

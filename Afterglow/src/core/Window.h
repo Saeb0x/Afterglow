@@ -15,6 +15,8 @@ namespace Afterglow {
 			void Run();
 			static void ChangeScene(int newScene);
 			inline static Scene* GetScene() { return m_CurrentScene; }
+			inline static int GetWidth() { return GetInstance().m_Width; }
+			inline static int GetHeight() { return GetInstance().m_Height; }
 		private:
 			Window();
 			~Window();

@@ -36,6 +36,7 @@ namespace Afterglow
 						});
 
 					std::shared_ptr<Sprite> sprite = std::make_shared<Sprite>(m_Texture, texCoords);
+					sprite->SetWidth(spriteWidth); sprite->SetHeight(spriteHeight);
 					m_Sprites.push_back(sprite);
 
 					currentX += spriteWidth + spacing;

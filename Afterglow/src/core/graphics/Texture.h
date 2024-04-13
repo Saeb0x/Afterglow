@@ -19,7 +19,6 @@ namespace Afterglow
 
 				void SetWidth(int width) { m_Width = width; }
 				void SetHeight(int height) { m_Height = height; }
-				void SetID(unsigned int rendererID) { m_RendererID = rendererID; }
 
 				inline int GetWidth() const { return m_Width; }
 				inline int GetHeight() const { return m_Height; }

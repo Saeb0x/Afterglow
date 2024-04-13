@@ -22,6 +22,8 @@ namespace Afterglow
 			inline const glm::mat4& GetViewMatrix() const { return m_ViewMatrix; }
 			inline const glm::mat4& GetProjectionViewMatrix() const { return m_ProjectionViewMatrix; }
 
+			inline glm::mat4 GetInverseProjectionMatrix() const { return glm::inverse(m_ProjectionMatrix); }
+			inline glm::mat4 GetInverseViewMatrix() const { return glm::inverse(m_ViewMatrix); }
 		private:
 			void RecalculateViewMatrix();
 		private:

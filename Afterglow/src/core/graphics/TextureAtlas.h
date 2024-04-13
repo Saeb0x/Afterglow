@@ -18,6 +18,7 @@ namespace Afterglow
 				~TextureAtlas();
 
 				inline const std::shared_ptr<Sprite>& GetSprite(int index) const { return m_Sprites[index]; }
+				inline unsigned int GetCount() const { return (unsigned int)m_Sprites.size(); }
 			private:
 				std::shared_ptr<Texture> m_Texture;
 				std::vector<std::shared_ptr<Sprite>> m_Sprites = std::vector<std::shared_ptr<Sprite>>({});

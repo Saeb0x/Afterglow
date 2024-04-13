@@ -20,6 +20,8 @@ namespace Afterglow
 			void LoadResources();
 		private:
 			std::shared_ptr<Entity::GameObject> m_Character = nullptr;
+			std::shared_ptr<Entity::Component::SpriteRenderer> spriteRenderer = nullptr;
+			std::shared_ptr<Graphics::TextureAtlas> decorationTileset = nullptr;
 		};
 	}
 }
