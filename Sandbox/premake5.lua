@@ -22,7 +22,8 @@ project "Sandbox"
 	}
 
 	defines {
-		"_CRT_SECURE_NO_WARNINGS"
+		"_CRT_SECURE_NO_WARNINGS",
+		"AG_PLATFORMS_WINDOWS"
 	}
 
 	filter "system:windows"

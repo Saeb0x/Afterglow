@@ -2,7 +2,9 @@
 
 #include <iostream>
 
-namespace Afterglow
-{
-	void Hi();
-}
+// To be used by AFTERGLOW applications
+#include "Afterglow/Application.h"
+
+// ------ Entry Point -----------------
+#include "Afterglow/EntryPoint.h"
+// ------------------------------------
