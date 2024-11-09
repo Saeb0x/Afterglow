@@ -7,6 +7,9 @@ project "Afterglow"
 	targetdir("../bin/" ..outputDir.. "/%{prj.name}")
 	objdir("../bin-int/" ..outputDir.. "/%{prj.name}")
 
+	pchheader "agpch.h"
+	pchsource "Src/agpch.cpp"
+
 	include "Vendor/Dependencies.lua"
 
 	files {
