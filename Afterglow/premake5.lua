@@ -7,13 +7,16 @@ project "Afterglow"
 	targetdir("../bin/" ..outputDir.. "/%{prj.name}")
 	objdir("../bin-int/" ..outputDir.. "/%{prj.name}")
 
+	include "Vendor/Dependencies.lua"
+
 	files {
 		"Src/**.h",
 		"Src/**.cpp"
 	}
 
 	includedirs {
-		"Src"
+		"Src",
+		"%{includeDirs.spdlog}"
 	}
 
 	links {

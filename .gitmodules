@@ -1,0 +1,3 @@
+[submodule "Afterglow/Vendor/spdlog"]
+	path = Afterglow/Vendor/spdlog
+	url = https://github.com/gabime/spdlog.git

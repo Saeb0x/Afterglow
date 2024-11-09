@@ -11,7 +11,7 @@ namespace Afterglow
 		void Run();
 	};
 
-	// To be defined by CLIENT APP
+	// To be defined by CLIENT app
 	Application* CreateApplication();
 }
 
