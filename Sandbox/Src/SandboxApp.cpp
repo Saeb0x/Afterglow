@@ -12,7 +12,4 @@ public:
 	}
 };
 
-Afterglow::Application* Afterglow::CreateApplication()
-{
-	return new Sandbox;
-}
+AFTERGLOW_ENTRY(Sandbox);
