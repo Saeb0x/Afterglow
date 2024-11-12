@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Events/Event.h"
+
 namespace Afterglow
 {
 	class Application
