@@ -1,5 +1,6 @@
 ﻿#pragma once
 
+#include "agpch.h"
 #include "Event.h"
 
 namespace Afterglow
@@ -17,6 +18,13 @@ namespace Afterglow
 	{
 	public:
 		MouseButtonPressEvent(int mouseButton) : MouseButtonEvent(mouseButton) {}
+
+		inline std::string ToString() const override
+		{
+			std::stringstream ss;
+			ss << "Mouse Button Press Event: " << m_MouseButton << std::endl;
+			return ss.str();
+		}
 		DEFINE_EVENT_TYPE(MouseButtonPress)
 	};
 
@@ -24,6 +32,13 @@ namespace Afterglow
 	{
 	public:
 		MouseButtonReleaseEvent(int mouseButton) : MouseButtonEvent(mouseButton) {}
+
+		inline std::string ToString() const override
+		{
+			std::stringstream ss;
+			ss << "Mouse Button Release Event: " << m_MouseButton << std::endl;
+			return ss.str();
+		}
 		DEFINE_EVENT_TYPE(MouseButtonRelease)
 	};
 
@@ -36,6 +51,13 @@ namespace Afterglow
 		inline float GetMouseY() const { return m_MouseY; }
 
 		DEFINE_EVENT_TYPE(MouseMove)
+
+		inline std::string ToString() const override
+		{
+			std::stringstream ss;
+			ss << "Mouse Move Event: (" << m_MouseX << " ," << m_MouseY << ")";
+			return ss.str();
+		}
 	private:
 		float m_MouseX, m_MouseY;
 	};

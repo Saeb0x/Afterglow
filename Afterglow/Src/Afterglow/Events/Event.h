@@ -1,5 +1,7 @@
 #pragma once
 
+#include "agpch.h"
+
 namespace Afterglow
 {
 	enum class EventType
@@ -17,8 +19,9 @@ namespace Afterglow
 
 		virtual EventType GetEventType() const = 0;
 		virtual const char* GetName() const = 0;
+		virtual std::string ToString() const { return GetName(); }
 		inline bool IsHandled() const { return m_IsHandled; }
-	protected:
+	public:
 		bool m_IsHandled = false;
 	};
 

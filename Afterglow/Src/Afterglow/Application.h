@@ -1,6 +1,9 @@
 #pragma once
 
-#include "Events/Event.h"
+#include "Events/WindowEvents.h"
+#include "Events/MouseEvents.h"
+#include "Events/KeyEvents.h"
+#include "Window.h"
 
 namespace Afterglow
 {
@@ -11,6 +14,14 @@ namespace Afterglow
 		virtual ~Application();
 
 		void Run();
+
+		void OnEvent(Event& e);
+	private:
+		bool OnMouseMove(MouseMoveEvent& event);
+		bool OnWindowsClose(WindowCloseEvent& event);
+	private:
+		std::unique_ptr<Window> m_Window;
+		bool m_Running;
 	};
 
 	Application* CreateApplication();
@@ -23,7 +34,7 @@ namespace Afterglow
 	    }                                                        \
 	    int main(int argc, char** argv) {                        \
 	        Afterglow::Log::Init();                              \
-	        AG_INFO("Afterglow Engine Initialized!");            \
+	        AG_INFO("Initialized Log!");						 \
 	        auto app = Afterglow::CreateApplication();           \
 	        app->Run();                                          \
 	        delete app;                                          \

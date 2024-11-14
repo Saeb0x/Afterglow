@@ -20,6 +20,12 @@ namespace Afterglow
 
 		inline int GetRepeatCount() const { return m_RepeatCount; }
 
+		inline std::string ToString() const override
+		{
+			std::stringstream ss;
+			ss << "Key Press Event: " << m_KeyCode << std::endl;
+			return ss.str();
+		}
 		DEFINE_EVENT_TYPE(KeyPress)
 	private:
 		int m_RepeatCount;
@@ -30,6 +36,12 @@ namespace Afterglow
 	public:
 		KeyReleaseEvent(int keyCode) : KeyEvent(keyCode) {}
 
+		inline std::string ToString() const override
+		{
+			std::stringstream ss;
+			ss << "Key Release Event: " << m_KeyCode << std::endl;
+			return ss.str();
+		}
 		DEFINE_EVENT_TYPE(KeyRelease)
 	};
 }

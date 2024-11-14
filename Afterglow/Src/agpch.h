@@ -12,6 +12,9 @@
 #include <vector>
 #include <unordered_map>
 
+#include "Afterglow/Log.h"
+#include "Afterglow/Core.h"
+
 #ifdef AG_PLATFORMS_WINDOWS
 	#include <Windows.h>
 #endif

@@ -15,6 +15,10 @@ outputDir = "%{cfg.system}-%{cfg.architecture}-%{cfg.buildcfg}"
 include "Afterglow"
 include "Sandbox"
 
+group "Dependencies"
+	include "Afterglow/Vendor/glfw.lua"
+group ""
+
 if _ACTION == "clean" then
 	os.rmdir("bin")
 	os.rmdir("bin-int")
@@ -26,4 +30,7 @@ if _ACTION == "clean" then
 
 	os.remove("Afterglow/Afterglow.vcxproj")
 	os.remove("Afterglow/Afterglow.vcxproj.filters")
+
+	os.remove("Afterglow/Vendor/GLFW.vcxproj")
+	os.remove("Afterglow/Vendor/GLFW.vcxproj.filters")
 end

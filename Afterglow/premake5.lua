@@ -19,11 +19,13 @@ project "Afterglow"
 
 	includedirs {
 		"Src",
-		"%{includeDirs.spdlog}"
+		"%{includeDirs.spdlog}",
+		"%{includeDirs.GLFW}"
 	}
 
 	links {
-		"opengl32.lib"
+		"GLFW",
+		"opengl32.lib",
 	}
 
 	defines {
