@@ -4,8 +4,8 @@ workspace "Afterglow"
 
 	configurations {
 		"Development",
-		"Test",
-		"Ship"
+		"Testing",
+		"Shipping"
 	}
 
 outputDir = "%{cfg.system}-%{cfg.buildcfg}-%{cfg.architecture}"

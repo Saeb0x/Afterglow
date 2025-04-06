@@ -1,7 +1,12 @@
 # Files
-*.user
 
 # Directories
-.vs/
 bin/
 bin-int/
+
+# Visual Studio
+.vs/
+**.sln
+**.vcxproj
+**.vcxproj.user
+**.vcxproj.filters
