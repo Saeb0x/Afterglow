@@ -1,7 +1,5 @@
 #include <Afterglow.h>
 
-#include "iostream"
-
 class Sandbox : public Afterglow::Application
 {
 public:
@@ -14,7 +12,10 @@ public:
 	}
 
 	void Init() override {
-		std::cout << "Sandbox Initialization..." << std::endl;
+		AG_LOG_INFO("Engine says hello");
+
+		AG_APP_LOG_WARNING("WARNING");
+		AG_APP_LOG_ERROR("ERROR");
 	}
 };
 

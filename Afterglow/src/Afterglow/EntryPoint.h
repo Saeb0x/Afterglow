@@ -6,6 +6,8 @@
 
 #define IMPLEMENT_AFTERGLOW_APP(ApplicationType) \
     int main(int argc, char** argv) { \
+        Afterglow::Log::Init(); \
+                                \
         ApplicationType* App = new ApplicationType(); \
         App->Init(); \
         App->Run(); \

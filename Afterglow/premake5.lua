@@ -15,7 +15,8 @@ project "Afterglow"
 	}
 
 	includedirs {
-		"src"
+		"src",
+		"vendor/spdlog/include"
 	}
 
 	defines {

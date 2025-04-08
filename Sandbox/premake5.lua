@@ -14,7 +14,7 @@ project "Sandbox"
 
 	includedirs {
 		"%{wks.location}/Afterglow/src",
-		"%{wks.location}/Afterglow/vendor"
+		"%{wks.location}/Afterglow/vendor/spdlog/include"
 	}
 
 	links {
