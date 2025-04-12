@@ -6,4 +6,5 @@
 
 #include "Afterglow/Core.h"
 #include "Afterglow/Application.h"
+
 #include "Afterglow/Logger/Logger.h"

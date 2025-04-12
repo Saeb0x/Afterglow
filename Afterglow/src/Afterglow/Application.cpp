@@ -1,3 +1,4 @@
+#include "agpch.h"
 #include "Application.h"
 
 namespace Afterglow

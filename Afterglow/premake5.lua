@@ -9,6 +9,9 @@ project "Afterglow"
 	targetdir ("%{wks.location}/bin/" .. outputDir .. "/%{prj.name}")
 	objdir ("%{wks.location}/bin-int/" .. outputDir .. "/%{prj.name}")
 
+	pchheader "agpch.h"
+	pchsource "src/agpch.cpp"
+
 	files {
 		"src/**.h",
 		"src/**.cpp"
