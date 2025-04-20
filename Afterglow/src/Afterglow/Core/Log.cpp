@@ -1,5 +1,5 @@
 #include "agpch.h"
-#include "Logger.h"
+#include "Log.h"
 
 #include <spdlog/sinks/stdout_color_sinks.h>
 

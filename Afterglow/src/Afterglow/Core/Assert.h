@@ -9,5 +9,5 @@
         } \
     } while (0)
 
-#define AG_ASSERT_STATIC(expression, msg) \
-    static_assert(expression, msg)
+#define AG_ASSERT_STATIC(expression, message) \
+    static_assert(expression, message)

@@ -1,10 +1,10 @@
 #pragma once
 
 // ------------ Entry Point ------------
-#include "Afterglow/EntryPoint.h"
+#include "Afterglow/Core/EntryPoint.h"
 // -------------------------------------
 
-#include "Afterglow/Core.h"
-#include "Afterglow/Application.h"
+#include "Afterglow/Core/Assert.h"
+#include "Afterglow/Core/Application.h"
 
-#include "Afterglow/Logger/Logger.h"
+#include "Afterglow/Core/Log.h"
