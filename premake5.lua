@@ -11,7 +11,7 @@ workspace "Afterglow"
 outputDir = "%{cfg.system}-%{cfg.buildcfg}-%{cfg.architecture}"
 
 group "Dependencies"
-
+	include "Afterglow/Vendor/Dependencies.lua"
 group ""
 
 group "Core"

@@ -19,15 +19,18 @@ project "Afterglow"
 
 	includedirs {
 		"src",
-		"vendor/spdlog/include"
+		"vendor/spdlog/include",
+		"%{includeDir.glfw}"
 	}
 
 	defines {
-		"_CRT_SECURE_NO_WARNINGS"
+		"_CRT_SECURE_NO_WARNINGS",
+		"AG_ENABLE_ASSERTIONS"
 	}
 
 	links {
-		"opengl32.lib"
+		"opengl32.lib",
+		"GLFW"
 	}
 
 	filter "system:windows"

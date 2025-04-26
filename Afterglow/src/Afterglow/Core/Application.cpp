@@ -1,17 +1,18 @@
 #include "agpch.h"
 #include "Application.h"
 
-#include "Afterglow/Events/WindowEvents.h"
-#include "Log.h"
-
 namespace Afterglow
 {
+	Application::Application()
+	{
+		m_Window = std::unique_ptr<Window>(Window::Create());
+	}
+	
 	void Application::Run()
 	{
-		WindowCloseEvent e;
-
-		AG_LOG_WARNING(e.ToString());
-
-		while (true);
+		while (m_Running)
+		{
+			m_Window->OnUpdate();
+		}
 	}
 }

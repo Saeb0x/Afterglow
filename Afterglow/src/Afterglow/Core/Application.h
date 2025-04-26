@@ -1,14 +1,19 @@
 #pragma once
 
+#include "Window.h"
+
 namespace Afterglow
 {
 	class Application
 	{
 	public:
-		Application() = default;
+		Application();
 		virtual ~Application() = default;
 
-		virtual void Init() = 0;
 		virtual void Run();
+		
+	private:
+		bool m_Running = true;
+		std::unique_ptr<Window> m_Window;
 	};
 }

@@ -9,7 +9,6 @@
         Afterglow::Log::Init(); \
                                 \
         ApplicationType* App = new ApplicationType(); \
-        App->Init(); \
         App->Run(); \
         delete App; \
         return 0; \

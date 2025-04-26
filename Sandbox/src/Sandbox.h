@@ -12,8 +12,4 @@ public:
 	~Sandbox() {
 
 	}
-
-	void Init() override {
-
-	}
 };
