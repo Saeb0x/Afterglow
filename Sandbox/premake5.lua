@@ -17,6 +17,10 @@ project "Sandbox"
 		"%{wks.location}/Afterglow/vendor/spdlog/include"
 	}
 
+	defines {
+		"_CRT_SECURE_NO_WARNINGS"
+	}
+
 	links {
 		"Afterglow"
 	}
@@ -29,7 +33,10 @@ project "Sandbox"
 		}
 
 	filter "configurations:Development"
-		defines "AG_DEVELOPMENT"
+		defines {
+			"AG_DEVELOPMENT",
+			"AG_ENABLE_ASSERTIONS"
+		}
 		runtime "Debug"
 		symbols "on"
 

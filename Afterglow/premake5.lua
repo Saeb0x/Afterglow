@@ -24,8 +24,7 @@ project "Afterglow"
 	}
 
 	defines {
-		"_CRT_SECURE_NO_WARNINGS",
-		"AG_ENABLE_ASSERTIONS"
+		"_CRT_SECURE_NO_WARNINGS"
 	}
 
 	links {
@@ -41,7 +40,10 @@ project "Afterglow"
 		}
 
 	filter "configurations:Development"
-		defines "AG_DEVELOPMENT"
+		defines {
+			"AG_DEVELOPMENT",
+			"AG_ENABLE_ASSERTIONS"
+		}
 		runtime "Debug"
 		symbols "on"
 
