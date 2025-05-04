@@ -16,6 +16,5 @@
         static_assert(expression, message)
 #else
     #define AG_ASSERT(expression, message) 
-
     #define AG_ASSERT_STATIC(expression, message) 
 #endif

@@ -1,5 +1,8 @@
 #pragma once
 
+#include "Afterglow/Core/Base.h"
+#include <string>
+
 namespace Afterglow
 {
 	enum class EventType
@@ -13,11 +16,11 @@ namespace Afterglow
 	enum EventCategory
 	{
 		None = 0,
-		EventCategoryApplication = 1 << 0,
-		EventCategoryWindow = 1 << 1,
-		EventCategoryInput = 1 << 2,
-		EventCategoryKeyboard = 1 << 3,
-		EventCategoryMouse = 1 << 4
+		EventCategoryApplication = BIT(0),
+		EventCategoryWindow = BIT(1),
+		EventCategoryInput = BIT(2),
+		EventCategoryKeyboard = BIT(3),
+		EventCategoryMouse = BIT(4)
 	};
 
 	class Event

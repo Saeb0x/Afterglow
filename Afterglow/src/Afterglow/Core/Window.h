@@ -1,6 +1,6 @@
 #pragma once
 
-#include "agpch.h"
+#include <string>
 
 namespace Afterglow
 {

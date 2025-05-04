@@ -5,11 +5,6 @@
 class Sandbox : public Afterglow::Application
 {
 public:
-	Sandbox() {
-
-	}
-
-	~Sandbox() {
-
-	}
+	Sandbox() {}
+	~Sandbox() {}
 };

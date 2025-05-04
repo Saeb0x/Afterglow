@@ -14,13 +14,12 @@ namespace Afterglow
 		template <typename EventTypeT, typename EventHandlerFunc>
 		bool Dispatch(const EventHandlerFunc& handler)
 		{
-			if (m_Event.GetType == EventTypeT::StaticType())
+			if (m_Event.GetType() == EventTypeT::StaticType())
 			{
-				m_Event.IsHandled = handler(static_cast<EventTyepT&>(m_Event));
+				m_Event.m_IsHandled = handler(static_cast<EventTypeT&>(m_Event));
 				return true;
 			}
 
-			AG_LOG_WARNING("Event Dispatcher: type mismatch...");
 			return false;
 		}
 

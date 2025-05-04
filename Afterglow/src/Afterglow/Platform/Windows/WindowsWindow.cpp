@@ -4,6 +4,10 @@
 #include "Afterglow/Core/Log.h"
 #include "Afterglow/Core/Assert.h"
 
+#include "Afterglow/Events/EventBus.h"
+#include "Afterglow/Events/WindowEvents.h"
+#include "Afterglow/Events/MouseEvents.h"
+
 namespace Afterglow
 {
 	static bool s_GLFWInitialized = false;
@@ -44,6 +48,38 @@ namespace Afterglow
 		glfwMakeContextCurrent(m_Window);
 		glfwSetWindowUserPointer(m_Window, &m_Data);
 		SetVSync(true);
+
+		// GLFW Callbacks.
+		glfwSetErrorCallback([](int error_code, const char* description)
+			{
+				AG_LOG_ERROR("GLFW error {0}: {1}", error_code, description);
+			}
+		);
+
+		glfwSetWindowCloseCallback(m_Window, [](GLFWwindow* window)
+			{
+				WindowCloseEvent e;
+				EventBus::GetInstance().Publish(e);
+			}
+		);
+
+		glfwSetWindowSizeCallback(m_Window, [](GLFWwindow* window, int width, int height)
+			{
+				WindowProps& props = *(WindowProps*)glfwGetWindowUserPointer(window);
+				props.Width = width;
+				props.Height = height;
+
+				WindowResizeEvent e((unsigned int)width, (unsigned int)height);
+				EventBus::GetInstance().Publish(e);
+			}
+		);
+
+		glfwSetCursorPosCallback(m_Window, [](GLFWwindow* window, double xpos, double ypos)
+			{
+				MouseMovedEvent e((float)xpos, (float)ypos);
+				EventBus::GetInstance().Publish(e);
+			}
+		);
 	}
 
 	void WindowsWindow::Shutdown()
