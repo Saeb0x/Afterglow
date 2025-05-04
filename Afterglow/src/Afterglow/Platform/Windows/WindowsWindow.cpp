@@ -66,10 +66,4 @@ namespace Afterglow
 
 		m_Data.VSync = enabled;
 	}
-
-	
-
-
-
-
 }

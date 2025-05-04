@@ -19,7 +19,7 @@ project "Afterglow"
 
 	includedirs {
 		"src",
-		"vendor/spdlog/include",
+		"%{includeDir.spdlog}",
 		"%{includeDir.glfw}"
 	}
 

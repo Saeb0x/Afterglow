@@ -1,6 +1,7 @@
 includeDir = {}
 
-includeDir["glfw"] = "Vendor/glfw/include"
+includeDir["spdlog"] = "vendor/spdlog/include"
+includeDir["glfw"] = "vendor/glfw/include"
 
 project "GLFW"
 	kind "StaticLib"
@@ -15,6 +16,7 @@ project "GLFW"
 	files {
 		"GLFW/include/GLFW/glfw3.h",
 		"GLFW/include/GLFW/glfw3native.h",
+
 		"GLFW/src/context.c",
 		"GLFW/src/init.c",
 		"GLFW/src/input.c",
