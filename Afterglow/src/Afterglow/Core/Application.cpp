@@ -14,14 +14,15 @@ namespace Afterglow
 	Application::Application()
 	{
 		m_Window = std::unique_ptr<Window>(Window::Create());
-		
-		// Subscribe to all events, then dispatch them internally. We keep the index to unsubscribe :)
-		m_WindowCloseListener = EventBus::GetInstance().Subscribe<Event>(BIND_FN(Application::OnEvent));
+
+		// Subscribe to all events, then dispatch them internally.
+		m_EventSubscriptionIndex = EventBus::GetInstance().Subscribe<Afterglow::Event>(BIND_FN(Application::OnEvent));
 	}
 
 	Application::~Application()
 	{
-		EventBus::GetInstance().Unsubscribe<WindowCloseEvent>(m_WindowCloseListener);
+		// We need to unsubscribe based on the index we got when we subscribed. This WILL change in the future :)
+		EventBus::GetInstance().Unsubscribe<Event>(m_EventSubscriptionIndex);
 	}
 	
 	void Application::Run()

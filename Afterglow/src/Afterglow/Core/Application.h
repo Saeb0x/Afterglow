@@ -3,6 +3,8 @@
 #include <memory>
 
 #include "Window.h"
+
+#include "Afterglow/Events/Event.h"
 #include "Afterglow/Events/WindowEvents.h"
 
 namespace Afterglow
@@ -17,16 +19,13 @@ namespace Afterglow
 		
 		void OnEvent(Event& e);
 
-#pragma region Events
 	private:
 		bool OnWindowClose(WindowCloseEvent& e);
 		bool OnWindowResize(WindowResizeEvent& e);
-#pragma endregion
 
 	private:
 		bool m_Running = true;
+		size_t m_EventSubscriptionIndex;
 		std::unique_ptr<Window> m_Window;
-
-		size_t m_WindowCloseListener;
 	};
 }

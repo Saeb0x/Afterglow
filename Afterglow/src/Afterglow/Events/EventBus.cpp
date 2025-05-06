@@ -3,9 +3,6 @@
 
 namespace Afterglow
 {
-	EventBus::EventBus() = default;
-	EventBus::~EventBus() = default;
-
 	EventBus& Afterglow::EventBus::GetInstance()
 	{
 		static EventBus instance;
