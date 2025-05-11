@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Event.h"
-#include "Afterglow/Core/Log.h"
 
 namespace Afterglow
 {

@@ -5,5 +5,4 @@
 // -------------------------------------
 
 #include "Afterglow/Core/Application.h"
-#include "Afterglow/Core/Log.h"
-#include "Afterglow/Core/Assert.h"
+#include "Afterglow/Core/Base.h"

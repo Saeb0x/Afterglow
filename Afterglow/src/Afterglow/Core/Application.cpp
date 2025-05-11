@@ -1,7 +1,7 @@
 #include "agpch.h"
 #include "Application.h"
 
-#include "Afterglow/Core/Log.h"
+#include "Base.h"
 
 #include "Afterglow/Events/EventBus.h"
 #include "Afterglow/Events/EventDispatcher.h"

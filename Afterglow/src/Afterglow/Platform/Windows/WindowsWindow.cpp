@@ -1,8 +1,7 @@
 #include "agpch.h"
 #include "WindowsWindow.h"
 
-#include "Afterglow/Core/Log.h"
-#include "Afterglow/Core/Assert.h"
+#include "Afterglow/Core/Base.h"
 
 #include "Afterglow/Events/EventBus.h"
 #include "Afterglow/Events/WindowEvents.h"
