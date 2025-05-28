@@ -5,7 +5,7 @@
 
 namespace Afterglow
 {
-	class Log
+	class Log final
 	{
 	public:
 		static void Init();
@@ -15,6 +15,14 @@ namespace Afterglow
 	private:
 		static std::shared_ptr<spdlog::logger> s_CoreLogger;
 		static std::shared_ptr<spdlog::logger> s_ClientLogger; 
+
+	private:
+		Log() = delete;
+		~Log() = delete;
+		Log(const Log&) = delete;
+		Log(Log&&) = delete;
+		Log& operator=(const Log&) = delete;
+		Log& operator=(Log&&) = delete;
 	};
 }
 
