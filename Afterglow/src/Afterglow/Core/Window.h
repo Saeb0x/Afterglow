@@ -15,6 +15,7 @@ namespace Afterglow
 			: Title(title), Width(width), Height(height), VSync(false) {}
 	};
 
+	// Interface representing a desktop system based Window.
 	class Window
 	{
 	public:

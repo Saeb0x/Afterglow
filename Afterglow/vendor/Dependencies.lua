@@ -7,29 +7,29 @@ project "GLFW"
 	kind "StaticLib"
 	location "glfw"
 	language "C"
-	staticruntime "On"
-	warnings "Off"
+	staticruntime "on"
+	warnings "off"
 
 	targetdir ("%{wks.location}/bin/" .. outputDir .. "/%{prj.name}")
 	objdir ("%{wks.location}/bin-int/" .. outputDir .. "/%{prj.name}")
 
 	files {
-		"GLFW/include/GLFW/glfw3.h",
-		"GLFW/include/GLFW/glfw3native.h",
+		"glfw/include/GLFW/glfw3.h",
+		"glfw/include/GLFW/glfw3native.h",
 
-		"GLFW/src/context.c",
-		"GLFW/src/init.c",
-		"GLFW/src/input.c",
-		"GLFW/src/monitor.c",
+		"glfw/src/context.c",
+		"glfw/src/init.c",
+		"glfw/src/input.c",
+		"glfw/src/monitor.c",
 
-		"GLFW/src/null_init.c",
-		"GLFW/src/null_joystick.c",
-		"GLFW/src/null_monitor.c",
-		"GLFW/src/null_window.c",
+		"glfw/src/null_init.c",
+		"glfw/src/null_joystick.c",
+		"glfw/src/null_monitor.c",
+		"glfw/src/null_window.c",
 
-		"GLFW/src/platform.c",
-		"GLFW/src/vulkan.c",
-		"GLFW/src/window.c"
+		"glfw/src/platform.c",
+		"glfw/src/vulkan.c",
+		"glfw/src/window.c"
 	}
 
 	filter "system:windows"
@@ -57,7 +57,7 @@ project "GLFW"
 		runtime "Debug"
 		symbols "on"
 
-	filter "configurations:Testing"
+	filter "configurations:Test"
 		runtime "Release"
 		optimize "on"
 

@@ -33,19 +33,22 @@ project "Sandbox"
 		}
 
 	filter "configurations:Development"
+		runtime "Debug"
+		symbols "on"
+
 		defines {
 			"AG_DEVELOPMENT",
 			"AG_ENABLE_ASSERTIONS"
 		}
-		runtime "Debug"
-		symbols "on"
 
 	filter "configurations:Testing"
-		defines "AG_TESTING"
 		runtime "Release"
 		optimize "on"
 
+		defines "AG_TEST"
+
 	filter "configurations:Shipping"
-		defines "AG_SHIPPING"
 		runtime "Release"
 		optimize "on"
+
+		defines "AG_SHIPPING"

@@ -3,9 +3,9 @@ project "Afterglow"
 	language "C++"
 	cppdialect "C++17"
 
-	-- Gives /MTd for Development and /MT for Testing and Shipping.
+	-- Gives /MTd for Development and /MT for Test and Shipping.
 	staticruntime "on"
-
+	
 	targetdir ("%{wks.location}/bin/" .. outputDir .. "/%{prj.name}")
 	objdir ("%{wks.location}/bin-int/" .. outputDir .. "/%{prj.name}")
 
@@ -40,19 +40,22 @@ project "Afterglow"
 		}
 
 	filter "configurations:Development"
+		runtime "Debug"
+		symbols "on"
+
 		defines {
 			"AG_DEVELOPMENT",
 			"AG_ENABLE_ASSERTIONS"
 		}
-		runtime "Debug"
-		symbols "on"
 
-	filter "configurations:Testing"
-		defines "AG_TESTING"
+	filter "configurations:Test"
 		runtime "Release"
 		optimize "on"
+
+		defines "AG_TEST"
 
 	filter "configurations:Shipping"
-		defines "AG_SHIPPING"
 		runtime "Release"
 		optimize "on"
+
+		defines "AG_SHIPPING"

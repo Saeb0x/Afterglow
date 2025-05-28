@@ -4,7 +4,7 @@ workspace "Afterglow"
 
 	configurations {
 		"Development",
-		"Testing",
+		"Test",
 		"Shipping"
 	}
 
