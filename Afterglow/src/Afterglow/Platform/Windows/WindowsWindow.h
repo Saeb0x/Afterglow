@@ -16,7 +16,7 @@ namespace Afterglow
 
 		inline unsigned int GetWidth() const override { return m_Data.Width; }
 		inline unsigned int GetHeight() const override { return m_Data.Height; }
-		inline bool IsVSync() const override { return m_Data.VSync; }
+		inline bool IsVSyncEnabled() const override { return m_Data.VSync; }
 
 		void SetVSync(bool enabled) override;
 

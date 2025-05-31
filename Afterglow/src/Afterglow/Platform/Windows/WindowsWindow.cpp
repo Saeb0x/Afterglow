@@ -46,7 +46,7 @@ namespace Afterglow
 		m_Window = glfwCreateWindow((int)m_Data.Width, (int)m_Data.Height, m_Data.Title.c_str(), nullptr, nullptr);
 		glfwMakeContextCurrent(m_Window);
 		glfwSetWindowUserPointer(m_Window, &m_Data);
-		SetVSync(true);
+		glfwSwapInterval(m_Data.VSync);
 
 		// GLFW Callbacks.
 		glfwSetErrorCallback([](int error_code, const char* description)
@@ -94,11 +94,14 @@ namespace Afterglow
 
 	void WindowsWindow::SetVSync(bool enabled)
 	{
-		if (enabled)
-			glfwSwapInterval(1);
-		else
-			glfwSwapInterval(0);
+		if (m_Data.VSync != enabled)
+		{
+			if (enabled)
+				glfwSwapInterval(1);
+			else
+				glfwSwapInterval(0);
 
-		m_Data.VSync = enabled;
+			m_Data.VSync = enabled;
+		}
 	}
 }
