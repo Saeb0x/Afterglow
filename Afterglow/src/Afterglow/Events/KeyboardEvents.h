@@ -8,12 +8,13 @@ namespace Afterglow
 	class KeyEvent : public Event
 	{
 	public:
-		const int GetKeyCode() const { return m_KeyCode; }
+		inline virtual int GetCategoryFlags() const override { return (EventCategoryInput | EventCategoryKeyboard); }
+		inline const int GetKeyCode() const { return m_KeyCode; }
 
-		EVENT_CLASS_CATEGORY(EventCategoryInput | EventCategoryKeyboard)
 	protected:
 		KeyEvent(const int keyCode)
-			: m_KeyCode(keyCode) {
+			: m_KeyCode(keyCode) 
+		{
 		}
 
 		int m_KeyCode;
@@ -23,18 +24,22 @@ namespace Afterglow
 	{
 	public:
 		KeyPressedEvent(const int keyCode, bool isRepeat) :
-			KeyEvent(keyCode), m_IsRepeat(isRepeat) {}
+			KeyEvent(keyCode), m_IsRepeat(isRepeat) 
+		{
+		}
 
-		inline bool IsRepeat() const { return m_IsRepeat; }
+		inline virtual EventType GetType() const override { return EventType::KeyPressed; }
+		inline virtual const char* GetName() const override { return "KeyPressedEvent"; }
 
-		virtual std::string ToString() const override
+		inline virtual std::string ToString() const override
 		{
 			std::stringstream ss;
 			ss << "KeyPressedEvent: " << m_KeyCode << " (repeat = " << m_IsRepeat << ")";
 			return ss.str();
 		}
 
-		EVENT_CLASS_TYPE(KeyPressed)
+		inline bool IsRepeat() const { return m_IsRepeat; }
+
 	private:
 		bool m_IsRepeat;
 	};
@@ -43,17 +48,18 @@ namespace Afterglow
 	{
 	public:
 		KeyReleasedEvent(const int keyCode)
-			: KeyEvent(keyCode) {
+			: KeyEvent(keyCode) 
+		{
 		}
 
-		virtual std::string ToString() const override
+		inline virtual EventType GetType() const override { return EventType::KeyReleased; }
+		inline virtual const char* GetName() const override { return "KeyReleasedEvent"; }
+
+		inline virtual std::string ToString() const override
 		{
 			std::stringstream ss;
 			ss << "KeyReleasedEvent: " << m_KeyCode;
 			return ss.str();
 		}
-
-		EVENT_CLASS_TYPE(KeyReleased)
 	};
-
 }

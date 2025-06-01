@@ -6,6 +6,7 @@
 #include "Afterglow/Events/EventBus.h"
 #include "Afterglow/Events/WindowEvents.h"
 #include "Afterglow/Events/MouseEvents.h"
+#include "Afterglow/Events/KeyboardEvents.h"
 
 namespace Afterglow
 {
@@ -77,6 +78,34 @@ namespace Afterglow
 			{
 				MouseMovedEvent e((float)xpos, (float)ypos);
 				EventBus::GetInstance().Publish(e);
+			}
+		);
+
+		glfwSetKeyCallback(m_Window, [](GLFWwindow* window, int key, int scancode, int action, int mods)
+			{
+				switch (action)
+				{
+					case GLFW_RELEASE:
+					{
+						KeyReleasedEvent KREvent((const int)key);
+						EventBus::GetInstance().Publish(KREvent);
+						break;
+					}
+					case GLFW_PRESS:
+					{
+						KeyPressedEvent KPEvent((const int)key, false);
+						EventBus::GetInstance().Publish(KPEvent);
+						break;
+					}
+					case GLFW_REPEAT:
+					{
+						KeyPressedEvent KPREvent((const int)key, true);
+						EventBus::GetInstance().Publish(KPREvent);
+						break;
+					}
+					default:
+					break;
+				}
 			}
 		);
 	}

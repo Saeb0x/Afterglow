@@ -7,73 +7,145 @@
 
 namespace Afterglow
 {
-	/* 
-		 Events in Afterglow allow parts of the codebase to communicate without tight 
-		 coupling. The EventBus lets listeners subscribe to specific event types and broadcasts 
-		 events to all matching subscribers when published.
-	*/
-	
-	using EventCallbackFn = std::function<void(Event&)>;
-	
-	class EventBus
+	class EventBus;
+
+	/**
+	 * @brief RAII wrapper for event subscriptions. Automatically unsubscribes when destroyed.
+	 */
+	class EventSubscription
+	{
+	public:
+		EventSubscription() = default;
+		EventSubscription(EventBus* bus, std::type_index eventType, size_t id)
+			: m_EventBus(bus), m_EventType(eventType), m_Id(id), m_Valid(true)
+		{
+		}
+
+		~EventSubscription() 
+		{ 
+			Unsubscribe(); 
+		}
+
+		// Move-only semantics.
+		EventSubscription(const EventSubscription&) = delete;
+		EventSubscription& operator=(const EventSubscription&) = delete;
+
+		EventSubscription(EventSubscription&& other) noexcept
+			: m_EventBus(other.m_EventBus), m_EventType(other.m_EventType),
+			m_Id(other.m_Id), m_Valid(other.m_Valid)
+		{
+			other.m_Valid = false;
+		}
+
+		EventSubscription& operator=(EventSubscription&& other) noexcept
+		{
+			if (this != &other)
+			{
+				Unsubscribe();
+				m_EventBus = other.m_EventBus;
+				m_EventType = other.m_EventType;
+				m_Id = other.m_Id;
+				m_Valid = other.m_Valid;
+				other.m_Valid = false;
+			}
+
+			return *this;
+		}
+
+		void Unsubscribe();
+		inline std::type_index GetEventType() const { return m_EventType; }
+		inline size_t GetId() const { return m_Id; }
+		inline bool IsValid() const { return m_Valid; }
+	private:
+		EventBus* m_EventBus = nullptr;
+		std::type_index m_EventType = typeid(void);
+		size_t m_Id = 0;
+		bool m_Valid = false;
+	};
+
+	/**
+	 * @brief Events in Afterglow allow parts of the codebase to communicate without tight coupling. The EventBus lets listeners subscribe to specific event types and broadcasts events to all matching subscribers when published.
+	 */
+	class EventBus final
 	{
 	public:
 		static EventBus& GetInstance();
 
-		// Returns an index we can later use to unsubscribe.
 		template<typename EventType>
-		size_t Subscribe(EventCallbackFn callback)
+		EventSubscription Subscribe(std::function<bool(const EventType&)> callback)
 		{
 			auto& callbacksVec = m_CallbacksByEventType[typeid(EventType)];
-			callbacksVec.push_back([callback](Event& e)
+			size_t id = m_NextId++;
+
+			callbacksVec.emplace_back(CallbackEntry
 				{
-					callback(static_cast<EventType&>(e));
+				id,
+				[callback](const Event& e) 
+					{
+						callback(static_cast<const EventType&>(e));
+					}
 				}
 			);
 
-			return callbacksVec.size() - 1;
+			return EventSubscription(this, typeid(EventType), id);
 		}
 
-		template<typename EventType>
-		void Unsubscribe(size_t listenerIndex)
+		// We publish to exact-type listeners. May extend this to base-type listeners as well. 
+		void Publish(const Event& e)
 		{
-			auto it = m_CallbacksByEventType.find(typeid(EventType));
+			auto it = m_CallbacksByEventType.find(typeid(e));
+			if (it != m_CallbacksByEventType.end())
+			{
+				//. Copy the vector in case callbacks modify subscriptions during iteration.
+				auto callbacks = it->second;
+				for (const auto& entry : callbacks)
+				{
+					entry.callback(e);
+				}
+			}
+		}
+
+	private:
+		void UnsubscribeById(std::type_index eventType, size_t id)
+		{
+			auto it = m_CallbacksByEventType.find(eventType);
 			if (it == m_CallbacksByEventType.end()) return;
 
 			auto& callbacksVec = it->second;
-			if (listenerIndex < callbacksVec.size())
-				callbacksVec.erase(callbacksVec.begin() + listenerIndex);
+			callbacksVec.erase(
+				std::remove_if(callbacksVec.begin(), callbacksVec.end(),
+					[id](const CallbackEntry& entry) 
+					{ 
+						return entry.id == id; 
+					}
+				),
+				callbacksVec.end()
+			);
 
-			// If no more listeners, drop the key entirely.
+			// Clean up the Event if it has no listeners.
 			if (callbacksVec.empty())
 				m_CallbacksByEventType.erase(it);
 		}
 
-		void Publish(Event& e)
-		{
-			// We publish to base-type listeners then exact-type listeners.
-			auto baseType = m_CallbacksByEventType.find(typeid(Event));
-			if (baseType != m_CallbacksByEventType.end()) {
-				for (auto& listener : baseType->second) {
-					listener(e);
-				}
-			}
+	private:
+		friend class EventSubscription;
 
-			auto exactType = m_CallbacksByEventType.find(typeid(e));
-			if (exactType != m_CallbacksByEventType.end()) {
-				for (auto& listener : baseType->second) {
-					listener(e);
-				}
-			}
-		}
+		struct CallbackEntry
+		{
+			size_t id;
+			std::function<void(const Event&)> callback;
+		};
+
+	private:
+		std::unordered_map<std::type_index, std::vector<CallbackEntry>> m_CallbacksByEventType;
+		size_t m_NextId = 0;
 
 	private:
 		EventBus() = default;
 		~EventBus() = default;
 		EventBus(const EventBus&) = delete;
-		const EventBus& operator=(const EventBus&) = delete;
-
-	private:
-		std::unordered_map<std::type_index, std::vector<EventCallbackFn>> m_CallbacksByEventType;
+		EventBus(EventBus&&) = delete;
+		EventBus& operator=(const EventBus&) = delete;
+		EventBus& operator=(EventBus&&) = delete;
 	};
 }

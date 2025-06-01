@@ -3,9 +3,7 @@
 
 #include "Base.h"
 
-#include "Afterglow/Events/EventBus.h"
 #include "Afterglow/Events/EventDispatcher.h"
-#include "Afterglow/Events/MouseEvents.h"
 
 namespace Afterglow
 {
@@ -15,14 +13,12 @@ namespace Afterglow
 	{
 		m_Window = std::unique_ptr<Window>(Window::Create());
 
-		// Subscribe to all events, then dispatch them internally.
-		m_EventSubscriptionIndex = EventBus::GetInstance().Subscribe<Afterglow::Event>(BIND_FN(Application::OnEvent));
+		Subscribe<WindowCloseEvent>(BIND_FN(Application::OnWindowClose));
+		Subscribe<MouseMovedEvent>(BIND_FN(Application::OnMouseMoved));
 	}
 
 	Application::~Application()
 	{
-		// We need to unsubscribe based on the index we got when we subscribed. This WILL change in the future :)
-		EventBus::GetInstance().Unsubscribe<Event>(m_EventSubscriptionIndex);
 	}
 	
 	void Application::Run()
@@ -35,27 +31,17 @@ namespace Afterglow
 
 	void Application::OnEvent(Event& e)
 	{
-		EventDispatcher disp(e);
-		disp.Dispatch<WindowCloseEvent>(BIND_FN(Application::OnWindowClose));
-		disp.Dispatch<WindowResizeEvent>(BIND_FN(Application::OnWindowResize));
-		
-		disp.Dispatch<MouseMovedEvent>([](MouseMovedEvent& e)
-			{
-				AG_LOG_INFO("{0}", e.ToString());
-				return true;
-			}
-		);
 	}
 
-	bool Application::OnWindowClose(WindowCloseEvent& e)
+	bool Application::OnWindowClose(const WindowCloseEvent& e)
 	{
 		m_Running = false;
 		return true;
 	}
 
-	bool Application::OnWindowResize(WindowResizeEvent& e)
+	bool Application::OnMouseMoved(const MouseMovedEvent& e)
 	{
-		AG_LOG_INFO("{0}", e.ToString());
+		AG_LOG_INFO(e.ToString());
 		return true;
 	}
 }

@@ -8,7 +8,7 @@ namespace Afterglow
 	enum class EventType
 	{
 		None = 0,
-		WindowClose, WindowResize, WindowMinimize, WindowMaximize, WindowFocus, WindowLostFocus, WindowMoved,
+		WindowClose, WindowResize, WindowMinimize, WindowMaximize, WindowFocus, WindowLostFocus,
 		KeyPressed, KeyReleased,
 		MouseButtonPressed, MouseButtonReleased, MouseMoved, MouseScrolled
 	};
@@ -33,7 +33,7 @@ namespace Afterglow
 		virtual const char* GetName() const = 0;
 		virtual std::string ToString() const { return GetName(); }
 
-		inline bool IsInCategory(EventCategory category) 
+		inline bool IsInCategory(EventCategory category) const
 		{
 			return GetCategoryFlags() & category;
 		}
@@ -42,12 +42,4 @@ namespace Afterglow
 	protected:
 		bool m_IsHandled = false;
 	};
-
-#define EVENT_CLASS_TYPE(type) \
-	static EventType StaticType() { return EventType::type; } \
-	virtual EventType GetType() const override { return StaticType(); } \
-	virtual const char* GetName() const override { return #type; }
-
-#define EVENT_CLASS_CATEGORY(category) \
-	virtual int GetCategoryFlags() const override { return category; }
 }

@@ -9,20 +9,23 @@ namespace Afterglow
 	{
 	public:
 		WindowResizeEvent(unsigned int width, unsigned int height)
-			: m_Width(width), m_Height(height) {}
+			: m_Width(width), m_Height(height) 
+		{
+		}
 
-		unsigned int GetWidth() const { return m_Width; }
-		unsigned int GetHeight() const { return m_Height; }
+		inline virtual EventType GetType() const override { return EventType::WindowResize; }
+		inline virtual const char* GetName() const override { return "WindowResizeEvent"; }
+		inline virtual int GetCategoryFlags() const override { return EventCategoryWindow; }
 
-		virtual std::string ToString() const override 
+		inline virtual std::string ToString() const override
 		{
 			std::stringstream ss;
 			ss << "WindowResizeEvent: " << m_Width << ", " << m_Height;
 			return ss.str();
 		}
 
-		EVENT_CLASS_TYPE(WindowResize)
-		EVENT_CLASS_CATEGORY(EventCategoryWindow)
+		unsigned int GetWidth() const { return m_Width; }
+		unsigned int GetHeight() const { return m_Height; }
 	private:
 		unsigned int m_Width, m_Height;
 	};
@@ -33,7 +36,15 @@ namespace Afterglow
 	public:
 		WindowCloseEvent() = default;
 
-		EVENT_CLASS_TYPE(WindowClose)
-		EVENT_CLASS_CATEGORY(EventCategoryWindow)
+		inline virtual EventType GetType() const override { return EventType::WindowClose; }
+		inline virtual const char* GetName() const override { return "WindowCloseEvent"; }
+		inline virtual int GetCategoryFlags() const override { return EventCategoryWindow; }
+
+		inline virtual std::string ToString() const override
+		{
+			std::stringstream ss;
+			ss << "WindowCloseEvent";
+			return ss.str();
+		}
 	};
 }

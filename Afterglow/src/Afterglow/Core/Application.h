@@ -4,12 +4,14 @@
 
 #include "Window.h"
 
-#include "Afterglow/Events/Event.h"
+#include "Afterglow/Events/IEventSubscriber.h"
 #include "Afterglow/Events/WindowEvents.h"
+#include "Afterglow/Events/MouseEvents.h"
+#include "Afterglow/Events/KeyboardEvents.h"
 
 namespace Afterglow
 {
-	class Application
+	class Application : public IEventSubscriber
 	{
 	public:
 		Application();
@@ -20,12 +22,11 @@ namespace Afterglow
 		void OnEvent(Event& e);
 
 	private:
-		bool OnWindowClose(WindowCloseEvent& e);
-		bool OnWindowResize(WindowResizeEvent& e);
+		bool OnWindowClose(const WindowCloseEvent& e);
+		bool OnMouseMoved(const MouseMovedEvent& e);
 
 	private:
 		bool m_Running = true;
-		size_t m_EventSubscriptionIndex;
 		std::unique_ptr<Window> m_Window;
 	};
 }

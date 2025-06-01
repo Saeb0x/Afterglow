@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Event.h"
+#include <typeindex>
 
 namespace Afterglow
 {
@@ -8,14 +9,16 @@ namespace Afterglow
 	{
 	public:
 		EventDispatcher(Event& event)
-			: m_Event(event) {}
-
-		template <typename EventTypeT, typename EventHandlerFunc>
-		bool Dispatch(const EventHandlerFunc& handler)
+			: m_Event(event) 
 		{
-			if (m_Event.GetType() == EventTypeT::StaticType())
+		}
+
+		template <typename EventType>
+		bool Dispatch(std::function<bool(const EventType&)> handler)
+		{
+			if (typeid(m_Event) == typeid(EventType))
 			{
-				m_Event.m_IsHandled = handler(static_cast<EventTypeT&>(m_Event));
+				m_Event.m_IsHandled = handler(static_cast<const EventType&>(m_Event));
 				return true;
 			}
 
