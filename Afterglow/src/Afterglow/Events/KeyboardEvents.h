@@ -23,8 +23,8 @@ namespace Afterglow
 	class KeyPressedEvent : public KeyEvent
 	{
 	public:
-		KeyPressedEvent(const int keyCode, bool isRepeat) :
-			KeyEvent(keyCode), m_IsRepeat(isRepeat) 
+		KeyPressedEvent(const int keyCode, bool repeated) :
+			KeyEvent(keyCode), m_Repeat(repeated)
 		{
 		}
 
@@ -34,14 +34,14 @@ namespace Afterglow
 		inline virtual std::string ToString() const override
 		{
 			std::stringstream ss;
-			ss << "KeyPressedEvent: " << m_KeyCode << " (repeat = " << m_IsRepeat << ")";
+			ss << "KeyPressedEvent: " << m_KeyCode << " (repeat = " << m_Repeat << ")";
 			return ss.str();
 		}
 
-		inline bool IsRepeat() const { return m_IsRepeat; }
+		inline bool IsRepeat() const { return m_Repeat; }
 
 	private:
-		bool m_IsRepeat;
+		bool m_Repeat;
 	};
 
 	class KeyReleasedEvent : public KeyEvent

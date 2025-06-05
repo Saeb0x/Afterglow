@@ -18,7 +18,7 @@ namespace Afterglow
 		{
 			if (typeid(m_Event) == typeid(EventType))
 			{
-				m_Event.m_IsHandled = handler(static_cast<const EventType&>(m_Event));
+				m_Event.m_Handled = handler(static_cast<const EventType&>(m_Event));
 				return true;
 			}
 

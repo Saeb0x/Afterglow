@@ -2,8 +2,8 @@
 #include "Application.h"
 
 #include "Base.h"
-
-#include "Afterglow/Events/EventDispatcher.h"
+#include "Afterglow/Events/WindowEvents.h"
+#include "Afterglow/Events/MouseEvents.h"
 
 namespace Afterglow
 {

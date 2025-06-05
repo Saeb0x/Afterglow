@@ -3,14 +3,13 @@
 #include <memory>
 
 #include "Window.h"
-
 #include "Afterglow/Events/IEventSubscriber.h"
-#include "Afterglow/Events/WindowEvents.h"
-#include "Afterglow/Events/MouseEvents.h"
-#include "Afterglow/Events/KeyboardEvents.h"
 
 namespace Afterglow
 {
+	class WindowCloseEvent;
+	class MouseMovedEvent;
+
 	class Application : public IEventSubscriber
 	{
 	public:

@@ -96,7 +96,7 @@ namespace Afterglow
 			auto it = m_CallbacksByEventType.find(typeid(e));
 			if (it != m_CallbacksByEventType.end())
 			{
-				//. Copy the vector in case callbacks modify subscriptions during iteration.
+				// Copy the vector in case callbacks modify subscriptions during iteration.
 				auto callbacks = it->second;
 				for (const auto& entry : callbacks)
 				{

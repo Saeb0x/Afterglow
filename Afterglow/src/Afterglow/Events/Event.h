@@ -38,8 +38,8 @@ namespace Afterglow
 			return GetCategoryFlags() & category;
 		}
 		
-		inline bool IsHandled() const { return m_IsHandled; }
+		inline bool IsHandled() const { return m_Handled; }
 	protected:
-		bool m_IsHandled = false;
+		bool m_Handled = false;
 	};
 }
