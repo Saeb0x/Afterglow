@@ -2,19 +2,17 @@
 #include "Application.h"
 
 #include "Base.h"
+#include "Afterglow/Events/EventDispatcher.h"
 #include "Afterglow/Events/WindowEvents.h"
 #include "Afterglow/Events/MouseEvents.h"
 
 namespace Afterglow
 {
-	#define BIND_FN(x) std::bind(&x, this, std::placeholders::_1)
-
 	Application::Application()
 	{
 		m_Window = std::unique_ptr<Window>(Window::Create());
 
-		Subscribe<WindowCloseEvent>(BIND_FN(Application::OnWindowClose));
-		Subscribe<MouseMovedEvent>(BIND_FN(Application::OnMouseMoved));
+		Subscribe<Event>(agBIND_FN(Application::OnEvent));
 	}
 
 	Application::~Application()
@@ -25,23 +23,50 @@ namespace Afterglow
 	{
 		while (m_Running)
 		{
+			for (Layer* layer : m_LayerStack)
+				layer->OnUpdate();
+				
 			m_Window->OnUpdate();
 		}
 	}
 
 	void Application::OnEvent(Event& e)
 	{
+		EventDispatcher disp(e);
+
+		disp.Dispatch<WindowCloseEvent>(agBIND_FN(Application::OnWindowClose));
+		disp.Dispatch<MouseMovedEvent>(agBIND_FN(Application::OnMouseMoved));
+
+		for (auto it = m_LayerStack.end(); it != m_LayerStack.begin();)
+		{
+			(*--it)->OnEvent(e);
+			if (e.IsHandled())
+				break;
+		}
 	}
 
-	bool Application::OnWindowClose(const WindowCloseEvent& e)
+	void Application::PushLayer(Layer* layer)
+	{
+		m_LayerStack.PushLayer(layer);
+	}
+
+	void Application::PushOverlay(Layer* layer)
+	{
+		m_LayerStack.PushOverlay(layer);
+	}
+
+	bool Application::OnWindowClose(WindowCloseEvent& e)
 	{
 		m_Running = false;
+		AG_LOG_TRACE(e.ToString());
+
 		return true;
 	}
 
-	bool Application::OnMouseMoved(const MouseMovedEvent& e)
+	bool Application::OnMouseMoved(MouseMovedEvent& e)
 	{
-		AG_LOG_INFO(e.ToString());
+		AG_LOG_TRACE(e.ToString());
+
 		return true;
 	}
 }

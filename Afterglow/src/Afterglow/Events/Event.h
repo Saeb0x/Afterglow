@@ -16,11 +16,11 @@ namespace Afterglow
 	enum EventCategory
 	{
 		None = 0,
-		EventCategoryApplication = BIT(0),
-		EventCategoryWindow = BIT(1),
-		EventCategoryInput = BIT(2),
-		EventCategoryKeyboard = BIT(3),
-		EventCategoryMouse = BIT(4)
+		EventCategoryApplication = agBIT(0),
+		EventCategoryWindow = agBIT(1),
+		EventCategoryInput = agBIT(2),
+		EventCategoryKeyboard = agBIT(3),
+		EventCategoryMouse = agBIT(4)
 	};
 
 	class Event

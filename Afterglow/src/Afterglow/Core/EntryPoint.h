@@ -4,7 +4,7 @@
 	#error Afterglow only supports Windows for now.
 #endif
 
-#define IMPLEMENT_AFTERGLOW_APP(ApplicationType)  \
+#define agIMPLEMENT_APP(ApplicationType)  \
     int main(int argc, char** argv) {              \
         Afterglow::Log::Init();                     \
                                                      \
