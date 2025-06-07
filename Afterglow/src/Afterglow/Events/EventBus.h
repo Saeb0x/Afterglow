@@ -72,7 +72,7 @@ namespace Afterglow
 		static EventBus& GetInstance();
 
 		template<typename EventType>
-		EventSubscription Subscribe(std::function<bool(const EventType&)> callback)
+		EventSubscription Subscribe(std::function<void(EventType&)> callback)
 		{
 			auto& callbacksVec = m_CallbacksByEventType[typeid(EventType)];
 			size_t id = m_NextId++;
@@ -80,9 +80,9 @@ namespace Afterglow
 			callbacksVec.emplace_back(CallbackEntry
 				{
 				id,
-				[callback](const Event& e) 
+				[callback](Event& e) 
 					{
-						callback(static_cast<const EventType&>(e));
+						callback(static_cast<EventType&>(e));
 					}
 				}
 			);
@@ -90,13 +90,23 @@ namespace Afterglow
 			return EventSubscription(this, typeid(EventType), id);
 		}
 
-		// We publish to exact-type listeners. May extend this to base-type listeners as well. 
-		void Publish(const Event& e)
+		// We publish to base-type then exact-type listeners.
+		void Publish(Event& e)
 		{
-			auto it = m_CallbacksByEventType.find(typeid(e));
+			auto it = m_CallbacksByEventType.find(typeid(Event));
 			if (it != m_CallbacksByEventType.end())
 			{
 				// Copy the vector in case callbacks modify subscriptions during iteration.
+				auto callbacks = it->second;
+				for (const auto& entry : callbacks)
+				{
+					entry.callback(e);
+				}
+			}
+
+			it = m_CallbacksByEventType.find(typeid(e));
+			if (it != m_CallbacksByEventType.end())
+			{
 				auto callbacks = it->second;
 				for (const auto& entry : callbacks)
 				{
@@ -133,7 +143,7 @@ namespace Afterglow
 		struct CallbackEntry
 		{
 			size_t id;
-			std::function<void(const Event&)> callback;
+			std::function<void(Event&)> callback;
 		};
 
 	private:

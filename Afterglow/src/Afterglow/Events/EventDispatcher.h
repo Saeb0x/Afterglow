@@ -14,11 +14,11 @@ namespace Afterglow
 		}
 
 		template <typename EventType>
-		bool Dispatch(std::function<bool(const EventType&)> handler)
+		bool Dispatch(std::function<bool(EventType&)> handler)
 		{
 			if (typeid(m_Event) == typeid(EventType))
 			{
-				m_Event.m_Handled = handler(static_cast<const EventType&>(m_Event));
+				m_Event.m_Handled = handler(static_cast<EventType&>(m_Event));
 				return true;
 			}
 

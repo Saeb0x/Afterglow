@@ -14,7 +14,7 @@ namespace Afterglow
 
 	protected:
 		template<typename EventType>
-		void Subscribe(std::function<bool(const EventType&)> callback)
+		void Subscribe(std::function<void(EventType&)> callback)
 		{
 			auto subscription = EventBus::GetInstance().Subscribe<EventType>(callback);
 			m_Subscriptions.push_back(std::move(subscription));
