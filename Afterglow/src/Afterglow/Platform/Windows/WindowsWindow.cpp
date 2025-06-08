@@ -14,7 +14,12 @@ namespace Afterglow
 
 	Window* Window::Create(const WindowProps& props)
 	{
+#if AG_PLATFORM_WINDOWS
 		return new WindowsWindow(props);
+#else
+		AG_ASSERT_STATIC(false, "Afterglow only supports Windows for now.");
+		return nullptr;
+#endif
 	}
 
 	WindowsWindow::WindowsWindow(const WindowProps& props)
