@@ -2,6 +2,7 @@ includeDir = {}
 
 includeDir["spdlog"] = "vendor/spdlog/include"
 includeDir["glfw"] = "vendor/glfw/include"
+includeDir["glad"] = "vendor/glad/include"
 
 project "GLFW"
 	kind "StaticLib"
@@ -51,6 +52,45 @@ project "GLFW"
 		defines {
 			"_CRT_SECURE_NO_WARNINGS",
 			"_GLFW_WIN32"
+		}
+
+	filter "configurations:Development"
+		runtime "Debug"
+		symbols "on"
+
+	filter "configurations:Test"
+		runtime "Release"
+		optimize "on"
+
+	filter "configurations:Shipping"
+		runtime "Release"
+		optimize "on"
+
+project "GLAD"
+	kind "StaticLib"
+	location "glad"
+	language "C"
+	staticruntime "on"
+	warnings "off"
+
+	targetdir ("%{wks.location}/bin/" .. outputDir .. "/%{prj.name}")
+	objdir ("%{wks.location}/bin-int/" .. outputDir .. "/%{prj.name}")
+
+	files {
+		"glad/include/glad/glad.h",
+		"glad/include/KHR/khrplatform.h",
+		"glad/src/glad.c"
+	}
+
+	includedirs {
+		"glad/include"
+	}
+
+	filter "system:windows"
+		systemversion "latest"
+
+		defines {
+			"_CRT_SECURE_NO_WARNINGS"
 		}
 
 	filter "configurations:Development"

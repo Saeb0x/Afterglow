@@ -8,6 +8,8 @@
 #include "Afterglow/Events/MouseEvents.h"
 #include "Afterglow/Events/KeyboardEvents.h"
 
+#include "glad/glad.h"
+
 namespace Afterglow
 {
 	static bool s_GLFWInitialized = false;
@@ -51,6 +53,10 @@ namespace Afterglow
 
 		m_Window = glfwCreateWindow((int)m_Data.Width, (int)m_Data.Height, m_Data.Title.c_str(), nullptr, nullptr);
 		glfwMakeContextCurrent(m_Window);
+
+		int gladInit = gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
+		AG_ASSERT(gladInit, "Failed to initialize GLAD");
+
 		glfwSetWindowUserPointer(m_Window, &m_Data);
 		glfwSwapInterval(m_Data.VSync);
 

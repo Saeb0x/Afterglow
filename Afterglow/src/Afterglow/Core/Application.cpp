@@ -6,6 +6,8 @@
 #include "Afterglow/Events/WindowEvents.h"
 #include "Afterglow/Events/MouseEvents.h"
 
+#include <glad/glad.h>
+
 namespace Afterglow
 {
 	Application::Application()
@@ -23,6 +25,9 @@ namespace Afterglow
 	{
 		while (m_Running)
 		{
+			glClearColor(0, 0, 0.3f, 1);
+			glClear(GL_COLOR_BUFFER_BIT);
+
 			for (Layer* layer : m_LayerStack)
 				layer->OnUpdate();
 				
