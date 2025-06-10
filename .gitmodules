@@ -4,3 +4,7 @@
 [submodule "Afterglow/Vendor/glfw"]
 	path = Afterglow/Vendor/glfw
 	url = https://github.com/glfw/glfw.git
+[submodule "Afterglow/vendor/imgui"]
+	path = Afterglow/vendor/imgui
+	url = https://github.com/ocornut/imgui.git
+	branch = docking

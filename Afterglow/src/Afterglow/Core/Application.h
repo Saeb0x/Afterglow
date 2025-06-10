@@ -24,6 +24,11 @@ namespace Afterglow
 		void PushLayer(Layer* layer);
 		void PushOverlay(Layer* layer);
 
+		static Application& Get() { return *s_Instance; }
+		inline Window& GetWindow() const { return *m_Window; }
+
+		Application(const Application&) = delete;
+		Application& operator=(const Application&) = delete;
 	private:
 		bool OnWindowClose(WindowCloseEvent& e);
 		bool OnMouseMoved(MouseMovedEvent& e);
@@ -32,5 +37,6 @@ namespace Afterglow
 		bool m_Running = true;
 		std::unique_ptr<Window> m_Window;
 		LayerStack m_LayerStack;
+		static Application* s_Instance;
 	};
 }

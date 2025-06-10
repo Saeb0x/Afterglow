@@ -21,7 +21,8 @@ project "Afterglow"
 		"src",
 		"%{includeDir.spdlog}",
 		"%{includeDir.glfw}",
-		"%{includeDir.glad}"
+		"%{includeDir.glad}",
+		"%{includeDir.imgui}"
 	}
 
 	defines {
@@ -32,7 +33,8 @@ project "Afterglow"
 	links {
 		"opengl32.lib",
 		"GLFW",
-		"GLAD"
+		"GLAD",
+		"IMGUI"
 	}
 
 	filter "system:windows"

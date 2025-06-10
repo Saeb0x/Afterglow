@@ -2,9 +2,12 @@
 
 #include <Afterglow.h>
 
-class Sandbox : public Afterglow::Application
+class Sandbox final : public Afterglow::Application
 {
 public:
-	Sandbox() {}
+	Sandbox()
+	{
+		PushOverlay(new Afterglow::ImGuiLayer());
+	}
 	~Sandbox() {}
 };

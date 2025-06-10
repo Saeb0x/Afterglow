@@ -3,6 +3,7 @@ includeDir = {}
 includeDir["spdlog"] = "vendor/spdlog/include"
 includeDir["glfw"] = "vendor/glfw/include"
 includeDir["glad"] = "vendor/glad/include"
+includeDir["imgui"] = "vendor/imgui"
 
 project "GLFW"
 	kind "StaticLib"
@@ -92,6 +93,59 @@ project "GLAD"
 		defines {
 			"_CRT_SECURE_NO_WARNINGS"
 		}
+
+	filter "configurations:Development"
+		runtime "Debug"
+		symbols "on"
+
+	filter "configurations:Test"
+		runtime "Release"
+		optimize "on"
+
+	filter "configurations:Shipping"
+		runtime "Release"
+		optimize "on"
+
+project "IMGUI"
+	kind "StaticLib"
+	location "imgui"
+	language "C++"
+	staticruntime "on"
+	warnings "off"
+
+	targetdir ("%{wks.location}/bin/" .. outputDir .. "/%{prj.name}")
+	objdir ("%{wks.location}/bin-int/" .. outputDir .. "/%{prj.name}")
+
+	files {
+		"imgui/imconfig.h",
+		"imgui/imgui.h",
+		"imgui/imgui.cpp",
+		"imgui/imgui_draw.cpp",
+		"imgui/imgui_internal.h",
+		"imgui/imgui_tables.cpp",
+		"imgui/imgui_widgets.cpp",
+		"imgui/imstb_rectpack.h",
+		"imgui/imstb_textedit.h",
+		"imgui/imstb_truetype.h",
+		"imgui/imgui_demo.cpp",
+		
+		"imgui/backends/imgui_impl_glfw.h",
+		"imgui/backends/imgui_impl_glfw.cpp",
+		"imgui/backends/imgui_impl_opengl3.h",
+		"imgui/backends/imgui_impl_opengl3.cpp"
+	}
+
+	includedirs {
+		"imgui",
+		"glfw/include"
+	}
+
+	links {
+		"GLFW"
+	}
+
+	filter "system:windows"
+		systemversion "latest"
 
 	filter "configurations:Development"
 		runtime "Debug"

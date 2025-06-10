@@ -10,8 +10,13 @@
 
 namespace Afterglow
 {
+	Application* Application::s_Instance = nullptr;
+
 	Application::Application()
 	{
+		AG_ASSERT(!s_Instance, "Application already exists!");
+		s_Instance = this;
+
 		m_Window = std::unique_ptr<Window>(Window::Create());
 
 		Subscribe<Event>(agBIND_FN(Application::OnEvent));
@@ -19,6 +24,7 @@ namespace Afterglow
 
 	Application::~Application()
 	{
+		s_Instance = nullptr;
 	}
 	
 	void Application::Run()
@@ -53,11 +59,13 @@ namespace Afterglow
 	void Application::PushLayer(Layer* layer)
 	{
 		m_LayerStack.PushLayer(layer);
+		layer->OnAttach();
 	}
 
 	void Application::PushOverlay(Layer* layer)
 	{
 		m_LayerStack.PushOverlay(layer);
+		layer->OnAttach();
 	}
 
 	bool Application::OnWindowClose(WindowCloseEvent& e)
