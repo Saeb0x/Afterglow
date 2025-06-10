@@ -1,8 +1,8 @@
 [submodule "Afterglow/vendor/spdlog"]
 	path = Afterglow/vendor/spdlog
 	url = https://github.com/gabime/spdlog.git
-[submodule "Afterglow/Vendor/glfw"]
-	path = Afterglow/Vendor/glfw
+[submodule "Afterglow/vendor/glfw"]
+	path = Afterglow/vendor/glfw
 	url = https://github.com/glfw/glfw.git
 [submodule "Afterglow/vendor/imgui"]
 	path = Afterglow/vendor/imgui
