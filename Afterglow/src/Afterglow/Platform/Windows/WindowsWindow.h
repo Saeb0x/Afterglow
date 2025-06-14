@@ -20,7 +20,7 @@ namespace Afterglow
 
 		void SetVSync(bool enabled) override;
 
-		inline GLFWwindow* GetNativeWindow() const override { return m_Window; };
+		inline void* GetNativeWindow() const override { return m_Window; };
 
 	private:
 		void Init(const WindowProps& props);

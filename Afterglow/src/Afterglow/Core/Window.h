@@ -2,8 +2,6 @@
 
 #include <string>
 
-struct GLFWwindow;
-
 namespace Afterglow
 {
 	struct WindowProps
@@ -33,6 +31,6 @@ namespace Afterglow
 
 		static Window* Create(const WindowProps& props = WindowProps());
 
-		inline virtual GLFWwindow* GetNativeWindow() const { return nullptr; }
+		virtual void* GetNativeWindow() const = 0;
 	};
 }

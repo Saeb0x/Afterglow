@@ -20,7 +20,7 @@ namespace Afterglow
 		ImGui::StyleColorsDark();
 
 		Application& app = Application::Get();
-		GLFWwindow* window = app.GetWindow().GetNativeWindow();
+		auto window = static_cast<GLFWwindow*>(app.GetWindow().GetNativeWindow());
 		ImGui_ImplGlfw_InitForOpenGL(window, true);
 		ImGui_ImplOpenGL3_Init("#version 460");  
 	}
