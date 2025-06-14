@@ -16,9 +16,6 @@ namespace Afterglow
 		IMGUI_CHECKVERSION();
 		ImGui::CreateContext();
 		ImGuiIO& io = ImGui::GetIO(); (void)io;
-		io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  // Keyboard Controls.
-		io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;      // Docking.
-		io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;    // Multi-Viewport.
 
 		ImGui::StyleColorsDark();
 
@@ -60,14 +57,6 @@ namespace Afterglow
 
 		ImGui::Render();
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-
-		if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
-		{
-			GLFWwindow* backup_current_context = glfwGetCurrentContext();
-			ImGui::UpdatePlatformWindows();
-			ImGui::RenderPlatformWindowsDefault();
-			glfwMakeContextCurrent(backup_current_context);
-		}
 	}
 
 	void ImGuiLayer::OnEvent(Event& event)
