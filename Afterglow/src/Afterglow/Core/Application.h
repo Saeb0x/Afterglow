@@ -14,8 +14,12 @@ namespace Afterglow
 	class Application : public IEventSubscriber
 	{
 	public:
-		Application();
+		Application(const WindowProps& windowProps);
 		virtual ~Application();
+		Application(const Application&) = delete;
+		Application& operator=(const Application&) = delete;
+		Application(const Application&&) = delete;
+		Application& operator=(Application&&) = delete;
 
 		virtual void Run();
 		
@@ -27,16 +31,16 @@ namespace Afterglow
 		static Application& Get() { return *s_Instance; }
 		inline Window& GetWindow() const { return *m_Window; }
 
-		Application(const Application&) = delete;
-		Application& operator=(const Application&) = delete;
 	private:
 		bool OnWindowClose(WindowCloseEvent& e);
 		bool OnMouseMoved(MouseMovedEvent& e);
 
-	private:
+	protected:
 		bool m_Running = true;
 		std::unique_ptr<Window> m_Window;
 		LayerStack m_LayerStack;
+
+	private:
 		static Application* s_Instance;
 	};
 }

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <memory>
+
 #define FMT_UNICODE 0
 #include <spdlog/spdlog.h>
 
@@ -12,17 +14,13 @@ namespace Afterglow
 
 		inline static std::shared_ptr<spdlog::logger>& GetCoreLogger() { return s_CoreLogger; }
 		inline static std::shared_ptr<spdlog::logger>& GetClientLogger() { return s_ClientLogger; }
+	
+	private:
+		Log() = delete;
+	
 	private:
 		static std::shared_ptr<spdlog::logger> s_CoreLogger;
 		static std::shared_ptr<spdlog::logger> s_ClientLogger; 
-
-	private:
-		Log() = delete;
-		~Log() = delete;
-		Log(const Log&) = delete;
-		Log(Log&&) = delete;
-		Log& operator=(const Log&) = delete;
-		Log& operator=(Log&&) = delete;
 	};
 }
 

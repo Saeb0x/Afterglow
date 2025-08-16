@@ -22,12 +22,13 @@ class Sandbox final : public Afterglow::Application
 {
 public:
 	Sandbox()
+		: Afterglow::Application(Afterglow::WindowProps())
 	{
 		PushLayer(new DebugLayer());
 		PushOverlay(new Afterglow::ImGuiLayer());
 	}
 
-	~Sandbox()
+	~Sandbox() override
 	{
 	}
 };

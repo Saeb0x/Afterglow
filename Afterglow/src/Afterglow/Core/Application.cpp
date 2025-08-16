@@ -12,14 +12,14 @@ namespace Afterglow
 {
 	Application* Application::s_Instance = nullptr;
 
-	Application::Application()
+	Application::Application(const WindowProps& windowProps)
 	{
 		AG_ASSERT(!s_Instance, "Application already exists!");
 		s_Instance = this;
 
-		m_Window = std::unique_ptr<Window>(Window::Create());
+		m_Window = std::unique_ptr<Window>(Window::Create(windowProps));
 
-		Subscribe<Event>(agBIND_FN(Application::OnEvent));
+		Subscribe<Event>(AG_BIND_FN(Application::OnEvent));
 	}
 
 	Application::~Application()
@@ -45,8 +45,8 @@ namespace Afterglow
 	{
 		EventDispatcher disp(e);
 
-		disp.Dispatch<WindowCloseEvent>(agBIND_FN(Application::OnWindowClose));
-		disp.Dispatch<MouseMovedEvent>(agBIND_FN(Application::OnMouseMoved));
+		disp.Dispatch<WindowCloseEvent>(AG_BIND_FN(Application::OnWindowClose));
+		disp.Dispatch<MouseMovedEvent>(AG_BIND_FN(Application::OnMouseMoved));
 
 		for (auto it = m_LayerStack.end(); it != m_LayerStack.begin();)
 		{
@@ -71,15 +71,13 @@ namespace Afterglow
 	bool Application::OnWindowClose(WindowCloseEvent& e)
 	{
 		m_Running = false;
-		AG_LOG_TRACE(e.ToString());
+		AG_LOG_WARNING("{0}.", e.ToString());
 
 		return true;
 	}
 
 	bool Application::OnMouseMoved(MouseMovedEvent& e)
 	{
-		AG_LOG_TRACE(e.ToString());
-
 		return true;
 	}
 }

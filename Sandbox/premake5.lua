@@ -2,10 +2,10 @@ project "Sandbox"
 	kind "ConsoleApp"
 	language "C++"
 	cppdialect "C++17"
-	staticruntime "on"
+	staticruntime "Off"
 
-	targetdir ("%{wks.location}/bin/" .. outputDir .. "/%{prj.name}")
-	objdir ("%{wks.location}/bin-int/" .. outputDir .. "/%{prj.name}")
+	targetdir ("%{wks.location}/bin/" ..outputDir.. "/%{prj.name}")
+	objdir ("%{wks.location}/bin-int/" ..outputDir.. "/%{prj.name}")
 
 	files {
 		"src/**.h",
@@ -13,6 +13,7 @@ project "Sandbox"
 	}
 
 	includedirs {
+		"src",
 		"%{wks.location}/Afterglow/src",
 		"%{wks.location}/Afterglow/vendor/spdlog/include"
 	}
@@ -27,28 +28,19 @@ project "Sandbox"
 
 	filter "system:windows"
 		systemversion "latest"
-
-		defines {
-			"AG_PLATFORM_WINDOWS"
-		}
+		defines "AG_PLATFORM_WINDOWS"
 
 	filter "configurations:Development"
 		runtime "Debug"
-		symbols "on"
-
-		defines {
-			"AG_DEVELOPMENT",
-			"AG_ENABLE_ASSERTIONS"
-		}
+		symbols "On"
+		defines "AG_DEVELOPMENT"
 
 	filter "configurations:Testing"
 		runtime "Release"
-		optimize "on"
-
+		optimize "On"
 		defines "AG_TEST"
 
 	filter "configurations:Shipping"
 		runtime "Release"
-		optimize "on"
-
+		optimize "On"
 		defines "AG_SHIPPING"

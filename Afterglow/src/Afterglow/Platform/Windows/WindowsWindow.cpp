@@ -19,7 +19,7 @@ namespace Afterglow
 #if AG_PLATFORM_WINDOWS
 		return new WindowsWindow(props);
 #else
-		AG_ASSERT_STATIC(false, "Afterglow only supports Windows for now.");
+		AG_ASSERT(false, "Afterglow only supports Windows for now.");
 		return nullptr;
 #endif
 	}
@@ -53,12 +53,12 @@ namespace Afterglow
 
 		m_Window = glfwCreateWindow((int)m_Data.Width, (int)m_Data.Height, m_Data.Title.c_str(), nullptr, nullptr);
 		glfwMakeContextCurrent(m_Window);
+		glfwSwapInterval(m_Data.VSync);
 
 		int gladInit = gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
 		AG_ASSERT(gladInit, "Failed to initialize GLAD");
 
 		glfwSetWindowUserPointer(m_Window, &m_Data);
-		glfwSwapInterval(m_Data.VSync);
 
 		// GLFW Callbacks.
 		glfwSetErrorCallback([](int error_code, const char* description)

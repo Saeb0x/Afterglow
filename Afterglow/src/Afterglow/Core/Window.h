@@ -11,7 +11,7 @@ namespace Afterglow
 		unsigned int Height;
 		bool VSync;
 
-		WindowProps(const std::string& title = "Afterglow Engine", unsigned int width = 1280, unsigned int height = 720, bool vSync = false)
+		WindowProps(const std::string& title = "Afterglow Engine", unsigned int width = 1280, unsigned int height = 720, bool vSync = true)
 			: Title(title), Width(width), Height(height), VSync(vSync) {}
 	};
 
@@ -25,11 +25,11 @@ namespace Afterglow
 
 		virtual unsigned int GetWidth() const = 0;
 		virtual unsigned int GetHeight() const = 0;
-		virtual bool IsVSyncEnabled() const = 0;
 
 		virtual void SetVSync(bool enabled) = 0;
+		virtual bool IsVSyncEnabled() const = 0;
 
-		static Window* Create(const WindowProps& props = WindowProps());
+		static Window* Create(const WindowProps& props);
 
 		virtual void* GetNativeWindow() const = 0;
 	};

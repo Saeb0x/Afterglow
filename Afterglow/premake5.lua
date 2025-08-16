@@ -2,12 +2,10 @@ project "Afterglow"
 	kind "StaticLib"
 	language "C++"
 	cppdialect "C++17"
-
-	-- Gives /MTd for Development and /MT for Test and Shipping.
-	staticruntime "on"
+	staticruntime "Off"
 	
-	targetdir ("%{wks.location}/bin/" .. outputDir .. "/%{prj.name}")
-	objdir ("%{wks.location}/bin-int/" .. outputDir .. "/%{prj.name}")
+	targetdir ("%{wks.location}/bin/" ..outputDir.. "/%{prj.name}")
+	objdir ("%{wks.location}/bin-int/" ..outputDir.. "/%{prj.name}")
 
 	pchheader "agpch.h"
 	pchsource "src/agpch.cpp"
@@ -19,10 +17,10 @@ project "Afterglow"
 
 	includedirs {
 		"src",
-		"%{includeDir.spdlog}",
-		"%{includeDir.glfw}",
-		"%{includeDir.glad}",
-		"%{includeDir.imgui}"
+		"%{includeDirs.spdlog}",
+		"%{includeDirs.glfw}",
+		"%{includeDirs.glad}",
+		"%{includeDirs.imgui}"
 	}
 
 	defines {
@@ -31,7 +29,6 @@ project "Afterglow"
 	}
 
 	links {
-		"opengl32.lib",
 		"GLFW",
 		"GLAD",
 		"IMGUI"
@@ -39,28 +36,19 @@ project "Afterglow"
 
 	filter "system:windows"
 		systemversion "latest"
-
-		defines {
-			"AG_PLATFORM_WINDOWS"
-		}
+		defines "AG_PLATFORM_WINDOWS"
 
 	filter "configurations:Development"
 		runtime "Debug"
-		symbols "on"
-
-		defines {
-			"AG_DEVELOPMENT",
-			"AG_ENABLE_ASSERTIONS"
-		}
+		symbols "On"
+		defines "AG_DEVELOPMENT"
 
 	filter "configurations:Test"
 		runtime "Release"
-		optimize "on"
-
+		optimize "On"
 		defines "AG_TEST"
 
 	filter "configurations:Shipping"
 		runtime "Release"
-		optimize "on"
-
+		optimize "On"
 		defines "AG_SHIPPING"

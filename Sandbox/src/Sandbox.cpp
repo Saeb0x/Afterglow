@@ -1,3 +1,3 @@
 #include "Sandbox.h"
 
-agIMPLEMENT_APP(Sandbox);
+AG_IMPLEMENT_APP(Sandbox);

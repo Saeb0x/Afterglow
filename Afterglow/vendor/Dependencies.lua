@@ -1,19 +1,19 @@
-includeDir = {}
+includeDirs = {}
 
-includeDir["spdlog"] = "vendor/spdlog/include"
-includeDir["glfw"] = "vendor/glfw/include"
-includeDir["glad"] = "vendor/glad/include"
-includeDir["imgui"] = "vendor/imgui"
+includeDirs["spdlog"] = "vendor/spdlog/include"
+includeDirs["glfw"] = "vendor/glfw/include"
+includeDirs["glad"] = "vendor/glad/include"
+includeDirs["imgui"] = "vendor/imgui"
 
 project "GLFW"
-	kind "StaticLib"
 	location "glfw"
+	kind "StaticLib"
 	language "C"
-	staticruntime "on"
-	warnings "off"
+	staticruntime "Off"
+	warnings "Off"
 
-	targetdir ("%{wks.location}/bin/" .. outputDir .. "/%{prj.name}")
-	objdir ("%{wks.location}/bin-int/" .. outputDir .. "/%{prj.name}")
+	targetdir ("%{wks.location}/bin/" ..outputDir.. "/%{prj.name}")
+	objdir ("%{wks.location}/bin-int/" ..outputDir.. "/%{prj.name}")
 
 	files {
 		"glfw/include/GLFW/glfw3.h",
@@ -55,27 +55,46 @@ project "GLFW"
 			"_GLFW_WIN32"
 		}
 
+	filter "system:macosx"
+		pic "On"
+
+		files {
+			"glfw/src/cocoa_init.m",
+			"glfw/src/cocoa_monitor.m",
+			"glfw/src/cocoa_window.m",
+			"glfw/src/cocoa_joystick.m", 
+			"glfw/src/cocoa_time.c",
+			"glfw/src/nsgl_context.m",
+			"glfw/src/posix_thread.c",
+			"glfw/src/posix_module.c",
+			"glfw/src/osmesa_context.c",
+			"glfw/src/egl_context.c"
+		}
+
+		defines "_GLFW_COCOA"
+
 	filter "configurations:Development"
 		runtime "Debug"
-		symbols "on"
+		symbols "On"
 
 	filter "configurations:Test"
 		runtime "Release"
-		optimize "on"
+		optimize "Speed"
 
 	filter "configurations:Shipping"
 		runtime "Release"
-		optimize "on"
+		symbols "Off"
+		optimize "Speed"
 
 project "GLAD"
-	kind "StaticLib"
 	location "glad"
+	kind "StaticLib"
 	language "C"
-	staticruntime "on"
-	warnings "off"
+	staticruntime "Off"
+	warnings "Off"
 
-	targetdir ("%{wks.location}/bin/" .. outputDir .. "/%{prj.name}")
-	objdir ("%{wks.location}/bin-int/" .. outputDir .. "/%{prj.name}")
+	targetdir ("%{wks.location}/bin/" ..outputDir.. "/%{prj.name}")
+	objdir ("%{wks.location}/bin-int/" ..outputDir.. "/%{prj.name}")
 
 	files {
 		"glad/include/glad/glad.h",
@@ -90,31 +109,28 @@ project "GLAD"
 	filter "system:windows"
 		systemversion "latest"
 
-		defines {
-			"_CRT_SECURE_NO_WARNINGS"
-		}
-
 	filter "configurations:Development"
 		runtime "Debug"
 		symbols "on"
 
 	filter "configurations:Test"
 		runtime "Release"
-		optimize "on"
+		optimize "Speed"
 
 	filter "configurations:Shipping"
 		runtime "Release"
-		optimize "on"
+		symbols "Off"
+		optimize "Speed"
 
 project "IMGUI"
-	kind "StaticLib"
 	location "imgui"
+	kind "StaticLib"
 	language "C++"
-	staticruntime "on"
-	warnings "off"
+	staticruntime "Off"
+	warnings "Off"
 
-	targetdir ("%{wks.location}/bin/" .. outputDir .. "/%{prj.name}")
-	objdir ("%{wks.location}/bin-int/" .. outputDir .. "/%{prj.name}")
+	targetdir ("%{wks.location}/bin/" ..outputDir.. "/%{prj.name}")
+	objdir ("%{wks.location}/bin-int/" ..outputDir.. "/%{prj.name}")
 
 	files {
 		"imgui/imconfig.h",
@@ -149,12 +165,13 @@ project "IMGUI"
 
 	filter "configurations:Development"
 		runtime "Debug"
-		symbols "on"
+		symbols "On"
 
 	filter "configurations:Test"
 		runtime "Release"
-		optimize "on"
+		optimize "Speed"
 
 	filter "configurations:Shipping"
 		runtime "Release"
-		optimize "on"
+		symbols "Off"
+		optimize "Speed"
