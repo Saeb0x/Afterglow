@@ -8,3 +8,6 @@
 	path = Afterglow/vendor/imgui
 	url = https://github.com/ocornut/imgui.git
 	branch = docking
+[submodule "Afterglow/vendor/curl"]
+	path = Afterglow/vendor/curl
+	url = https://github.com/curl/curl.git

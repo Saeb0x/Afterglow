@@ -12,7 +12,13 @@ project "Afterglow"
 
 	files {
 		"src/**.h",
-		"src/**.cpp"
+		"src/**.cpp",
+	}
+
+	-- Exclude networking headers/sources by default.
+	removefiles {
+		"src/Afterglow/Core/Networking/**.h",
+		"src/Afterglow/Core/Networking/**.cpp"
 	}
 
 	includedirs {
@@ -33,6 +39,26 @@ project "Afterglow"
 		"GLAD",
 		"IMGUI"
 	}
+
+	if _OPTIONS["WithNetworking"] then
+		files {
+			"src/Afterglow/Core/networking/**.h",
+			"src/Afterglow/Core/networking/**cpp"
+		}
+
+		includedirs {
+			"%{includeDirs.curl}"
+		}
+
+		defines {
+			"AG_ENABLE_NETWORKING",
+			"CURL_STATICLIB"
+		}
+
+		links {
+			"CURL"
+		}
+	end
 
 	filter "system:windows"
 		systemversion "latest"

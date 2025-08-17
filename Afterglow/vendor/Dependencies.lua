@@ -4,6 +4,7 @@ includeDirs["spdlog"] = "vendor/spdlog/include"
 includeDirs["glfw"] = "vendor/glfw/include"
 includeDirs["glad"] = "vendor/glad/include"
 includeDirs["imgui"] = "vendor/imgui"
+includeDirs["curl"] = "vendor/curl/include"
 
 project "GLFW"
 	location "glfw"
@@ -175,3 +176,58 @@ project "IMGUI"
 		runtime "Release"
 		symbols "Off"
 		optimize "Speed"
+
+if _OPTIONS["WithNetworking"] then 
+	project "CURL"
+		location "curl"
+		kind "StaticLib"
+		language "C"
+		staticruntime "Off"
+		warnings "Off"
+
+		targetdir ("%{wks.location}/bin/" ..outputDir.. "/%{prj.name}")
+		objdir ("%{wks.location}/bin-int/" ..outputDir.. "/%{prj.name}")
+
+		files {
+			"curl/lib/**.h",
+			"curl/lib/**.c",
+			"curl/src/**.h",
+			"curl/src/**.c",
+			"curl/include/**.h"
+		}
+
+		includedirs {
+			"curl/include",
+			"curl/lib"
+		}
+
+		defines {
+			"BUILDING_LIBCURL",
+			"CURL_STATICLIB",
+			"USE_SCHANNEL",   
+			"USE_WINDOWS_SSPI",
+			"CURL_DISABLE_LDAP"
+		}
+
+		filter "system:windows"
+			systemversion "latest"
+        
+			links {
+				"ws2_32.lib",
+				"crypt32.lib",
+				"secur32.lib"
+			}
+
+		filter "configurations:Development"
+			runtime "Debug"
+			symbols "On"
+
+		filter "configurations:Test"
+			runtime "Release"
+			optimize "Speed"
+
+		filter "configurations:Shipping"
+			runtime "Release"
+			symbols "Off"
+			optimize "Speed"
+end

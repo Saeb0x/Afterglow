@@ -10,6 +10,12 @@ workspace "Afterglow"
 
 outputDir = "%{cfg.system}-%{cfg.buildcfg}-%{cfg.architecture}"
 
+-- Optional networking flag.
+newoption {
+	trigger = "WithNetworking",
+	description = "Enable networking features in Afterglow."
+}
+
 group "Dependencies"
 	include "Afterglow/vendor/Dependencies.lua"
 group ""
