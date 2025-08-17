@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Log.h"
+
 #ifndef AG_PLATFORM_WINDOWS
 	#error Afterglow only supports Windows for now.
 #endif

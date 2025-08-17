@@ -1,7 +1,9 @@
 #pragma once
 
 #include "Event.h"
+
 #include <typeindex>
+#include <functional>
 
 namespace Afterglow
 {

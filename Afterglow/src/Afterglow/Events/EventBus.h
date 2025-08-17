@@ -4,6 +4,8 @@
 
 #include <typeindex>
 #include <vector>
+#include <unordered_map>
+#include <functional>
 
 namespace Afterglow
 {

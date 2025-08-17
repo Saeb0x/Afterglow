@@ -29,9 +29,10 @@ namespace Afterglow
 	
 	void Application::Run()
 	{
+		glClearColor(0, 0, 0.3f, 1);
+
 		while (m_Running)
 		{
-			glClearColor(0, 0, 0.3f, 1);
 			glClear(GL_COLOR_BUFFER_BIT);
 
 			for (Layer* layer : m_LayerStack)

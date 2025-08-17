@@ -8,7 +8,7 @@
 #include "Afterglow/Events/MouseEvents.h"
 #include "Afterglow/Events/KeyboardEvents.h"
 
-#include "glad/glad.h"
+#include <glad/glad.h>
 
 namespace Afterglow
 {
@@ -39,24 +39,24 @@ namespace Afterglow
 		m_Data.Title = props.Title;
 		m_Data.Width = props.Width;
 		m_Data.Height = props.Height;
-		m_Data.VSync = props.VSync;
 
 		AG_LOG_INFO("Creating Window \"{0}\" ({1}, {2}).", m_Data.Title, m_Data.Width, m_Data.Height);
 
 		if (!s_GLFWInitialized)
 		{
 			int initSuccess = glfwInit();
-			AG_ASSERT(initSuccess, "Could not initialize GLFW.");
+			AG_ASSERT(initSuccess, "Failed to initialize GLFW!");
 
 			s_GLFWInitialized = true;
 		}
 
 		m_Window = glfwCreateWindow((int)m_Data.Width, (int)m_Data.Height, m_Data.Title.c_str(), nullptr, nullptr);
 		glfwMakeContextCurrent(m_Window);
-		glfwSwapInterval(m_Data.VSync);
+		glfwSwapInterval(props.VSync);
+		SetVSync(props.VSync);
 
 		int gladInit = gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
-		AG_ASSERT(gladInit, "Failed to initialize GLAD");
+		AG_ASSERT(gladInit, "Failed to initialize GLAD!");
 
 		glfwSetWindowUserPointer(m_Window, &m_Data);
 
