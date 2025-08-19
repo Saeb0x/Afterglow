@@ -1,6 +1,6 @@
 #pragma once
 
-#include "NetworkingCommon.h"
+#include "Afterglow/Core/Networking/NetworkingCommon.h"
 
 namespace Afterglow
 {

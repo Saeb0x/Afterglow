@@ -17,8 +17,8 @@ project "Afterglow"
 
 	-- Exclude networking headers/sources by default.
 	removefiles {
-		"src/Afterglow/Core/Networking/**.h",
-		"src/Afterglow/Core/Networking/**.cpp"
+		"src/Afterglow/Networking/**.h",
+		"src/Afterglow/Networking/**.cpp"
 	}
 
 	includedirs {
@@ -42,8 +42,8 @@ project "Afterglow"
 
 	if _OPTIONS["WithNetworking"] then
 		files {
-			"src/Afterglow/Core/networking/**.h",
-			"src/Afterglow/Core/networking/**cpp"
+			"src/Afterglow/Networking/**.h",
+			"src/Afterglow/Networking/**cpp"
 		}
 
 		includedirs {
@@ -51,7 +51,7 @@ project "Afterglow"
 		}
 
 		defines {
-			"AG_ENABLE_NETWORKING",
+			"AG_NETWORKING",
 			"CURL_STATICLIB"
 		}
 
@@ -62,19 +62,32 @@ project "Afterglow"
 
 	filter "system:windows"
 		systemversion "latest"
-		defines "AG_PLATFORM_WINDOWS"
+		
+		defines {
+			"AG_PLATFORM_WINDOWS"
+		}
 
 	filter "configurations:Development"
 		runtime "Debug"
 		symbols "On"
-		defines "AG_DEVELOPMENT"
+		
+		defines { 
+			"AG_DEVELOPMENT"
+		}
 
 	filter "configurations:Test"
 		runtime "Release"
 		optimize "On"
-		defines "AG_TEST"
+		
+		defines {
+			"AG_TEST"
+		}
 
 	filter "configurations:Shipping"
 		runtime "Release"
-		optimize "On"
-		defines "AG_SHIPPING"
+		symbols "Off"
+		optimize "Full"
+		
+		defines { 
+			"AG_SHIPPING"
+		}

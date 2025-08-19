@@ -74,6 +74,27 @@ project "GLFW"
 
 		defines "_GLFW_COCOA"
 
+	filter "system:linux"
+		systemversion "latest"
+		pic "On"
+
+		files {
+			"glfw/src/x11_init.c",
+			"glfw/src/x11_monitor.c",
+			"glfw/src/x11_window.c",
+			"glfw/src/linux_joystick.c",
+			"glfw/src/xkb_unicode.c",
+			"glfw/src/posix_module.c",
+			"glfw/src/posix_time.c",
+			"glfw/src/posix_thread.c",
+			"glfw/src/posix_module.c",
+			"glfw/src/glx_context.c",
+			"glfw/src/egl_context.c",
+			"glfw/src/osmesa_context.c"
+		}
+
+		defines "_GLFW_X11"
+
 	filter "configurations:Development"
 		runtime "Debug"
 		symbols "On"
@@ -137,28 +158,14 @@ project "IMGUI"
 		"imgui/imconfig.h",
 		"imgui/imgui.h",
 		"imgui/imgui.cpp",
+		"imgui/imgui_demo.cpp",
 		"imgui/imgui_draw.cpp",
 		"imgui/imgui_internal.h",
 		"imgui/imgui_tables.cpp",
 		"imgui/imgui_widgets.cpp",
 		"imgui/imstb_rectpack.h",
 		"imgui/imstb_textedit.h",
-		"imgui/imstb_truetype.h",
-		"imgui/imgui_demo.cpp",
-		
-		"imgui/backends/imgui_impl_glfw.h",
-		"imgui/backends/imgui_impl_glfw.cpp",
-		"imgui/backends/imgui_impl_opengl3.h",
-		"imgui/backends/imgui_impl_opengl3.cpp"
-	}
-
-	includedirs {
-		"imgui",
-		"glfw/include"
-	}
-
-	links {
-		"GLFW"
+		"imgui/imstb_truetype.h"
 	}
 
 	filter "system:windows"

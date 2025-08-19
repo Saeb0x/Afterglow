@@ -7,21 +7,12 @@ namespace Afterglow
 	class ImGuiLayer : public Layer
 	{
 	public:
-		ImGuiLayer()
-			: Layer("ImGuiLayer")
-		{
-		}
-
-		~ImGuiLayer()
-		{
-		}
-
+		ImGuiLayer();
+		~ImGuiLayer() override;
+	
 		void OnAttach() override;
 		void OnDetach() override;
-		void OnUpdate() override;
-		void OnEvent(Event& event) override;
 
-	private:
 		void Begin();
 		void End();
 	};

@@ -7,11 +7,11 @@ namespace Afterglow
 	class Input
 	{
 	public:
-		inline static bool IsKeyPressed(int keyCode) { return s_Instance->IsKeyPressedImpl(keyCode); }
-		inline static bool IsMouseButtonPressed(int mouseButton) { return s_Instance->IsMouseButtonPressedImpl(mouseButton); }
-		inline static std::pair<float, float> GetMousePosition() { return s_Instance->GetMousePositionImpl(); }
-		inline static float GetMouseX() { return s_Instance->GetMouseXImpl(); };
-		inline static float GetMouseY() { return s_Instance->GetMouseYImpl(); };
+		static bool IsKeyPressed(int keyCode) { return s_Instance->IsKeyPressedImpl(keyCode); }
+		static bool IsMouseButtonPressed(int mouseButton) { return s_Instance->IsMouseButtonPressedImpl(mouseButton); }
+		static std::pair<float, float> GetMousePosition() { return s_Instance->GetMousePositionImpl(); }
+		static float GetMouseX() { return s_Instance->GetMouseXImpl(); };
+		static float GetMouseY() { return s_Instance->GetMouseYImpl(); };
 
 	protected:
 		virtual bool IsKeyPressedImpl(int keyCode) const = 0;

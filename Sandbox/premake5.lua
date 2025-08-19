@@ -15,7 +15,8 @@ project "Sandbox"
 	includedirs {
 		"src",
 		"%{wks.location}/Afterglow/src",
-		"%{wks.location}/Afterglow/vendor/spdlog/include"
+		"%{wks.location}/Afterglow/%{includeDirs.spdlog}",
+		"%{wks.location}/Afterglow/%{includeDirs.imgui}"
 	}
 
 	defines {
@@ -28,19 +29,32 @@ project "Sandbox"
 
 	filter "system:windows"
 		systemversion "latest"
-		defines "AG_PLATFORM_WINDOWS"
+		
+		defines {
+			"AG_PLATFORM_WINDOWS"
+		}
 
 	filter "configurations:Development"
 		runtime "Debug"
 		symbols "On"
-		defines "AG_DEVELOPMENT"
+		
+		defines { 
+			"AG_DEVELOPMENT"
+		}
 
 	filter "configurations:Testing"
 		runtime "Release"
 		optimize "On"
-		defines "AG_TEST"
+		
+		defines { 
+			"AG_TEST"
+		}
 
 	filter "configurations:Shipping"
 		runtime "Release"
-		optimize "On"
-		defines "AG_SHIPPING"
+		symbols "Off"
+		optimize "Full"
+		
+		defines { 
+			"AG_SHIPPING"
+		}

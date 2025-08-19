@@ -3,14 +3,16 @@
 
 #include "Afterglow/Core/Application.h"
 #include "Afterglow/Core/Assert.h"
+
 #include <GLFW/glfw3.h>
 
 namespace Afterglow
 {
-#if defined(AG_PLATFORM_WINDOWS)
-	Input* Input::s_Instance = new WindowsInput();
+#ifdef AG_PLATFORM_WINDOWS
+	static WindowsInput s_WindowInput;
+	Input* Input::s_Instance = &s_WindowInput;
 #else
-	AG_ASSERT_STATIC(false, "Afterglow only supports Windows for now.");
+	AG_ASSERT(false, "Afterglow only supports Windows for now.");
 	Input* Input::s_Instance = nullptr;
 #endif
 
@@ -42,16 +44,12 @@ namespace Afterglow
 
 	float WindowsInput::GetMouseXImpl() const
 	{
-		auto window = static_cast<GLFWwindow*>(Application::Get().GetWindow().GetNativeWindow());
-
 		auto [x, y] = GetMousePositionImpl();
 		return x;
 	}
 
 	float WindowsInput::GetMouseYImpl() const
 	{
-		auto window = static_cast<GLFWwindow*>(Application::Get().GetWindow().GetNativeWindow());
-
 		auto [x, y] = GetMousePositionImpl();
 		return y;
 	}

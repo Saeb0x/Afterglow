@@ -7,8 +7,4 @@ namespace Afterglow
 		: m_DebugName(debugName)
 	{
 	}
-
-	Layer::~Layer()
-	{
-	}
 }

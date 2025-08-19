@@ -1,27 +1,42 @@
 #include "agpch.h"
 #include "ImGuiLayer.h"
-
 #include "Afterglow/Core/Application.h"
 
-#include <imgui.h>
 #include <GLFW/glfw3.h>
-#include <backends/imgui_impl_glfw.h>
+#include <imgui.h>
 #include <backends/imgui_impl_opengl3.h>
+#include <backends/imgui_impl_glfw.h>
 
 namespace Afterglow
 {
+	ImGuiLayer::ImGuiLayer()
+		: Layer("ImGui")
+	{
+	}
+
+	ImGuiLayer::~ImGuiLayer()
+	{
+	}
+	
 	void ImGuiLayer::OnAttach()
 	{
+		// Dear ImGui context setup.
 		IMGUI_CHECKVERSION();
 		ImGui::CreateContext();
 		ImGuiIO& io = ImGui::GetIO(); (void)io;
 
+		io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;			// Enable Docking.
+		io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;			// Enable Multi-Viewport/Platform Windows.
+
+		// Dear ImGui style.
 		ImGui::StyleColorsDark();
 
 		Application& app = Application::Get();
 		auto window = static_cast<GLFWwindow*>(app.GetWindow().GetNativeWindow());
+
+		// Platform/Renderer bindings.
 		ImGui_ImplGlfw_InitForOpenGL(window, true);
-		ImGui_ImplOpenGL3_Init("#version 460");  
+		ImGui_ImplOpenGL3_Init("#version 460");
 	}
 
 	void ImGuiLayer::OnDetach()
@@ -29,16 +44,6 @@ namespace Afterglow
 		ImGui_ImplOpenGL3_Shutdown();
 		ImGui_ImplGlfw_Shutdown();
 		ImGui::DestroyContext();
-	}
-
-	void ImGuiLayer::OnUpdate()
-	{
-		Begin();
-
-		static bool showWindow = true;
-		ImGui::ShowDemoWindow(&showWindow);
-
-		End();
 	}
 
 	void ImGuiLayer::Begin()
@@ -56,9 +61,13 @@ namespace Afterglow
 
 		ImGui::Render();
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-	}
 
-	void ImGuiLayer::OnEvent(Event& event)
-	{
+		if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+		{
+			GLFWwindow* backup_current_context = glfwGetCurrentContext();
+			ImGui::UpdatePlatformWindows();
+			ImGui::RenderPlatformWindowsDefault();
+			glfwMakeContextCurrent(backup_current_context);
+		}
 	}
 }

@@ -2,24 +2,23 @@
 #include "Application.h"
 
 #include "Base.h"
-#include "Afterglow/Events/EventDispatcher.h"
-#include "Afterglow/Events/WindowEvents.h"
-#include "Afterglow/Events/MouseEvents.h"
+#include "Events/WindowEvents.h"
+#include "Events/InputEvents.h"
 
 #include <glad/glad.h>
 
 namespace Afterglow
 {
-	Application* Application::s_Instance = nullptr;
-
 	Application::Application(const WindowProps& windowProps)
 	{
 		AG_ASSERT(!s_Instance, "Application already exists!");
 		s_Instance = this;
 
 		m_Window = std::unique_ptr<Window>(Window::Create(windowProps));
+		m_Window->SetEventCallback(AG_BIND_FUNC(Application::OnEvent));
 
-		Subscribe<Event>(AG_BIND_FN(Application::OnEvent));
+		m_ImGuiLayer = new ImGuiLayer();
+		PushOverlay(m_ImGuiLayer);
 	}
 
 	Application::~Application()
@@ -31,54 +30,60 @@ namespace Afterglow
 	{
 		glClearColor(0, 0, 0.3f, 1);
 
-		while (m_Running)
+		while (b_Running)
 		{
 			glClear(GL_COLOR_BUFFER_BIT);
 
-			for (Layer* layer : m_LayerStack)
-				layer->OnUpdate();
+			{
+				for (Layer* layer : m_LayerStack)
+					layer->OnUpdate();
+			}
+			
+			m_ImGuiLayer->Begin();
+			{
+				for (Layer* layer : m_LayerStack)
+					layer->OnImGuiRender();
+			}
+			m_ImGuiLayer->End();
 
 			m_Window->OnUpdate();
 		}
+	}
+
+	void Application::Close()
+	{
+		b_Running = false;
 	}
 
 	void Application::OnEvent(Event& e)
 	{
 		EventDispatcher disp(e);
 
-		disp.Dispatch<WindowCloseEvent>(AG_BIND_FN(Application::OnWindowClose));
-		disp.Dispatch<MouseMovedEvent>(AG_BIND_FN(Application::OnMouseMoved));
+		disp.Dispatch<WindowCloseEvent>([this](Event& e)
+			{
+				b_Running = false;
+				AG_LOG_WARNING(e.ToString());
 
-		for (auto it = m_LayerStack.end(); it != m_LayerStack.begin();)
+				return true;
+			}
+		);
+
+		for (auto it = m_LayerStack.rbegin(); it != m_LayerStack.rend(); ++it)
 		{
-			(*--it)->OnEvent(e);
-			if (e.IsHandled())
+			if (e.b_Handled)
 				break;
+
+			(*it)->OnEvent(e);
 		}
 	}
 
 	void Application::PushLayer(Layer* layer)
 	{
 		m_LayerStack.PushLayer(layer);
-		layer->OnAttach();
 	}
 
 	void Application::PushOverlay(Layer* layer)
 	{
 		m_LayerStack.PushOverlay(layer);
-		layer->OnAttach();
-	}
-
-	bool Application::OnWindowClose(WindowCloseEvent& e)
-	{
-		m_Running = false;
-		AG_LOG_WARNING("{0}.", e.ToString());
-
-		return true;
-	}
-
-	bool Application::OnMouseMoved(MouseMovedEvent& e)
-	{
-		return true;
 	}
 }

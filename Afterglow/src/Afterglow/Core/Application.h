@@ -3,15 +3,13 @@
 #include <memory>
 
 #include "Window.h"
+#include "Events/Event.h"
+#include "ImGui/ImGuiLayer.h"
 #include "LayerStack.h"
-#include "Afterglow/Events/IEventSubscriber.h"
 
 namespace Afterglow
 {
-	class WindowCloseEvent;
-	class MouseMovedEvent;
-
-	class Application : public IEventSubscriber
+	class Application
 	{
 	public:
 		Application(const WindowProps& windowProps);
@@ -22,6 +20,7 @@ namespace Afterglow
 		Application& operator=(Application&&) = delete;
 
 		virtual void Run();
+		void Close();
 		
 		void OnEvent(Event& e);
 
@@ -29,18 +28,15 @@ namespace Afterglow
 		void PushOverlay(Layer* layer);
 
 		static Application& Get() { return *s_Instance; }
-		inline Window& GetWindow() const { return *m_Window; }
+		Window& GetWindow() const { return *m_Window; }
 
 	private:
-		bool OnWindowClose(WindowCloseEvent& e);
-		bool OnMouseMoved(MouseMovedEvent& e);
+		inline static Application* s_Instance = nullptr;
 
-	protected:
-		bool m_Running = true;
+		bool b_Running = true;
 		std::unique_ptr<Window> m_Window;
-		LayerStack m_LayerStack;
 
-	private:
-		static Application* s_Instance;
+		ImGuiLayer* m_ImGuiLayer = nullptr;
+		LayerStack m_LayerStack;
 	};
 }

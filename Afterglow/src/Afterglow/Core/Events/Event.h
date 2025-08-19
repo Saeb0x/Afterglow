@@ -25,21 +25,48 @@ namespace Afterglow
 
 	class Event
 	{
-		friend class EventDispatcher;
 	public:
+		virtual ~Event() = default;
 
 		virtual EventType GetType() const = 0;
 		virtual int GetCategoryFlags() const = 0;
 		virtual const char* GetName() const = 0;
 		virtual std::string ToString() const { return GetName(); }
 
-		inline bool IsInCategory(EventCategory category) const
+		bool IsInCategory(EventCategory category) const
 		{
 			return GetCategoryFlags() & category;
 		}
-		
-		inline bool IsHandled() const { return m_Handled; }
-	protected:
-		bool m_Handled = false;
+
+	public:
+		bool b_Handled = false;
+	};
+
+	class EventDispatcher
+	{
+	public:
+		EventDispatcher(Event& event)
+			: m_Event(event)
+		{
+		}
+		~EventDispatcher() = default;
+
+		// EventCallback will be deduced by the compiler.
+		template<typename EventType, typename EventCallback>
+		bool Dispatch(const EventCallback& callback)
+		{
+			AG_ASSERT_STATIC((std::is_invocable_r_v<bool, EventCallback, EventType&>), "EventCallback must be callable with (EventType&) and return bool");
+
+			if (m_Event.GetType() == EventType::GetStaticType())
+			{
+				m_Event.b_Handled |= callback(static_cast<EventType&>(m_Event));
+				return true;
+			}
+
+			return false;
+		}
+
+	private:
+		Event& m_Event;
 	};
 }

@@ -1,20 +1,33 @@
 #pragma once
 
 #include <Afterglow.h>
+#include <imgui.h>
 
 class DebugLayer : public Afterglow::Layer
 {
 public:
-	DebugLayer() : Layer("DebugLayer")
+	DebugLayer()
+		: Afterglow::Layer("Debug")
 	{
 	}
+	~DebugLayer() override = default;
 
-	inline void OnUpdate() override
+	void OnAttach() override
 	{
-		if (Afterglow::Input::IsKeyPressed(AG_KEY_T))
+		AG_CLIENT_LOG_INFO("Layer \"{0}\" is attached!", m_DebugName);
+	}
+
+	void OnEvent(Afterglow::Event& e) override
+	{
+		if (Afterglow::Input::IsKeyPressed(AG_KEY_SPACE))
 		{
-			AG_LOG_TRACE("Key {0} is pressed!", (char)AG_KEY_T);
+			AG_CLIENT_LOG_TRACE("Space key is clicked and consumed by the \"{0}\" layer!", m_DebugName);
 		}
+	}
+
+	void OnImGuiRender() override
+	{
+		ImGui::ShowDemoWindow();
 	}
 };
 
@@ -25,7 +38,6 @@ public:
 		: Afterglow::Application(Afterglow::WindowProps())
 	{
 		PushLayer(new DebugLayer());
-		PushOverlay(new Afterglow::ImGuiLayer());
 	}
 
 	~Sandbox() override

@@ -3,10 +3,8 @@
 
 #include "Afterglow/Core/Base.h"
 
-#include "Afterglow/Events/EventBus.h"
-#include "Afterglow/Events/WindowEvents.h"
-#include "Afterglow/Events/MouseEvents.h"
-#include "Afterglow/Events/KeyboardEvents.h"
+#include "Afterglow/Core/Events/WindowEvents.h"
+#include "Afterglow/Core/Events/InputEvents.h"
 
 #include <glad/glad.h>
 
@@ -16,7 +14,7 @@ namespace Afterglow
 
 	Window* Window::Create(const WindowProps& props)
 	{
-#if AG_PLATFORM_WINDOWS
+#ifdef AG_PLATFORM_WINDOWS
 		return new WindowsWindow(props);
 #else
 		AG_ASSERT(false, "Afterglow only supports Windows for now.");
@@ -44,15 +42,14 @@ namespace Afterglow
 
 		if (!s_GLFWInitialized)
 		{
-			int initSuccess = glfwInit();
-			AG_ASSERT(initSuccess, "Failed to initialize GLFW!");
+			int glfwInitialize = glfwInit();
+			AG_ASSERT(glfwInitialize, "Failed to initialize GLFW!");
 
 			s_GLFWInitialized = true;
 		}
 
 		m_Window = glfwCreateWindow((int)m_Data.Width, (int)m_Data.Height, m_Data.Title.c_str(), nullptr, nullptr);
 		glfwMakeContextCurrent(m_Window);
-		glfwSwapInterval(props.VSync);
 		SetVSync(props.VSync);
 
 		int gladInit = gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
@@ -69,49 +66,55 @@ namespace Afterglow
 
 		glfwSetWindowCloseCallback(m_Window, [](GLFWwindow* window)
 			{
-				WindowCloseEvent e;
-				EventBus::GetInstance().Publish(e);
+				WindowData& data = *(WindowData*)glfwGetWindowUserPointer(window);
+				
+				WindowCloseEvent WCEvent;
+				data.EventCallback(WCEvent);
 			}
 		);
 
 		glfwSetWindowSizeCallback(m_Window, [](GLFWwindow* window, int width, int height)
 			{
-				WindowProps& props = *(WindowProps*)glfwGetWindowUserPointer(window);
-				props.Width = width;
-				props.Height = height;
+				WindowData& data = *(WindowData*)glfwGetWindowUserPointer(window);
+				data.Width = width;
+				data.Height = height;
 
-				WindowResizeEvent e((unsigned int)width, (unsigned int)height);
-				EventBus::GetInstance().Publish(e);
+				WindowResizeEvent WREvent((unsigned int)width, (unsigned int)height);
+				data.EventCallback(WREvent);
 			}
 		);
 
 		glfwSetCursorPosCallback(m_Window, [](GLFWwindow* window, double xpos, double ypos)
 			{
-				MouseMovedEvent e((float)xpos, (float)ypos);
-				EventBus::GetInstance().Publish(e);
+				WindowData& data = *(WindowData*)glfwGetWindowUserPointer(window);
+
+				MouseMovedEvent MMEvent((float)xpos, (float)ypos);
+				data.EventCallback(MMEvent);
 			}
 		);
 
 		glfwSetKeyCallback(m_Window, [](GLFWwindow* window, int key, int scancode, int action, int mods)
 			{
+				WindowData& data = *(WindowData*)glfwGetWindowUserPointer(window);
+
 				switch (action)
 				{
 					case GLFW_RELEASE:
 					{
-						KeyReleasedEvent KREvent((const int)key);
-						EventBus::GetInstance().Publish(KREvent);
+						KeyReleasedEvent KREvent(key);
+						data.EventCallback(KREvent);
 						break;
 					}
 					case GLFW_PRESS:
 					{
-						KeyPressedEvent KPEvent((const int)key, false);
-						EventBus::GetInstance().Publish(KPEvent);
+						KeyPressedEvent KPEvent(key, false);
+						data.EventCallback(KPEvent);
 						break;
 					}
 					case GLFW_REPEAT:
 					{
-						KeyPressedEvent KPREvent((const int)key, true);
-						EventBus::GetInstance().Publish(KPREvent);
+						KeyPressedEvent KPREvent(key, true);
+						data.EventCallback(KPREvent);
 						break;
 					}
 					default:

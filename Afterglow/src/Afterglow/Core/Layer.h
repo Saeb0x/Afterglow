@@ -1,6 +1,8 @@
 #pragma once
 
-#include "Afterglow/Events/Event.h"
+#include "Afterglow/Core/Events/Event.h"
+
+#include <string>
 
 namespace Afterglow
 {
@@ -8,14 +10,15 @@ namespace Afterglow
 	{
 	public:
 		Layer(const std::string& debugName = "Layer");
-		virtual ~Layer();
+		virtual ~Layer() = default;
 
 		virtual void OnAttach() {}
 		virtual void OnDetach() {}
 		virtual void OnUpdate() {}
+		virtual void OnImGuiRender() {}
 		virtual void OnEvent(Event& event) {}
 
-		inline const std::string& GetDebugName() const { return m_DebugName; }
+		const std::string& GetName() const { return m_DebugName; }
 
 	protected:
 		std::string m_DebugName;
