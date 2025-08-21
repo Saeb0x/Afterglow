@@ -26,7 +26,8 @@ project "Afterglow"
 		"%{includeDirs.spdlog}",
 		"%{includeDirs.glfw}",
 		"%{includeDirs.glad}",
-		"%{includeDirs.imgui}"
+		"%{includeDirs.imgui}",
+		"%{includeDirs.glm}"
 	}
 
 	defines {

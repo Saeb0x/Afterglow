@@ -4,6 +4,7 @@ includeDirs["spdlog"] = "vendor/spdlog/include"
 includeDirs["glfw"] = "vendor/glfw/include"
 includeDirs["glad"] = "vendor/glad/include"
 includeDirs["imgui"] = "vendor/imgui"
+includeDirs["glm"] = "vendor/glm"
 includeDirs["curl"] = "vendor/curl/include"
 
 project "GLFW"

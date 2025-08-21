@@ -16,7 +16,8 @@ project "Sandbox"
 		"src",
 		"%{wks.location}/Afterglow/src",
 		"%{wks.location}/Afterglow/%{includeDirs.spdlog}",
-		"%{wks.location}/Afterglow/%{includeDirs.imgui}"
+		"%{wks.location}/Afterglow/%{includeDirs.imgui}",
+		"%{wks.location}/Afterglow/%{includeDirs.glm}"
 	}
 
 	defines {

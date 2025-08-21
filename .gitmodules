@@ -11,3 +11,6 @@
 [submodule "Afterglow/vendor/curl"]
 	path = Afterglow/vendor/curl
 	url = https://github.com/curl/curl.git
+[submodule "Afterglow/vendor/glm"]
+	path = Afterglow/vendor/glm
+	url = https://github.com/g-truc/glm.git
