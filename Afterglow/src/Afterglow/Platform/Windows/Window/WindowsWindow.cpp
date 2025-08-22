@@ -38,7 +38,7 @@ namespace Afterglow
 		m_Data.Width = props.Width;
 		m_Data.Height = props.Height;
 
-		AG_LOG_INFO("Creating Window \"{0}\" ({1}, {2}).", m_Data.Title, m_Data.Width, m_Data.Height);
+		AG_INFO("Creating Window \"{0}\" ({1}, {2})", m_Data.Title, m_Data.Width, m_Data.Height);
 
 		if (!s_GLFWInitialized)
 		{
@@ -60,7 +60,7 @@ namespace Afterglow
 		// GLFW Callbacks.
 		glfwSetErrorCallback([](int error_code, const char* description)
 			{
-				AG_LOG_ERROR("GLFW error {0}: {1}", error_code, description);
+				AG_ERROR("GLFW error {0}: {1}", error_code, description);
 			}
 		);
 

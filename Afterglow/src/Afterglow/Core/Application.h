@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <string>
 
 #include "Window.h"
 #include "Events/Event.h"
@@ -12,7 +13,7 @@ namespace Afterglow
 	class Application
 	{
 	public:
-		Application(const WindowProps& windowProps);
+		Application(const std::string& appName = "Afterglow App");
 		virtual ~Application();
 		Application(const Application&) = delete;
 		Application& operator=(const Application&) = delete;

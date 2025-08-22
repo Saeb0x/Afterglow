@@ -2,6 +2,9 @@
 
 #include <utility>
 
+#include "KeyCodes.h"
+#include "MouseCodes.h"
+
 namespace Afterglow
 {
 	class Input

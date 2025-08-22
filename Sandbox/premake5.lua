@@ -20,18 +20,28 @@ project "Sandbox"
 		"%{wks.location}/Afterglow/%{includeDirs.glm}"
 	}
 
-	defines {
-		"_CRT_SECURE_NO_WARNINGS"
-	}
-
 	links {
 		"Afterglow"
 	}
+
+	if _OPTIONS["WithNetworking"] then
+		filter "system:windows"
+			defines {
+				"AG_NETWORKING",
+				"CURL_STATICLIB"
+			}
+
+			includedirs {
+				"%{wks.location}/Afterglow/%{includeDirs.libcurl}"
+			}
+		filter {}
+	end
 
 	filter "system:windows"
 		systemversion "latest"
 		
 		defines {
+			"_CRT_SECURE_NO_WARNINGS",
 			"AG_PLATFORM_WINDOWS"
 		}
 

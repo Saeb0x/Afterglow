@@ -9,12 +9,12 @@
 
 namespace Afterglow
 {
-	Application::Application(const WindowProps& windowProps)
+	Application::Application(const std::string& appName)
 	{
 		AG_ASSERT(!s_Instance, "Application already exists!");
 		s_Instance = this;
 
-		m_Window = std::unique_ptr<Window>(Window::Create(windowProps));
+		m_Window = std::unique_ptr<Window>(Window::Create(WindowProps(appName)));
 		m_Window->SetEventCallback(AG_BIND_FUNC(Application::OnEvent));
 
 		m_ImGuiLayer = new ImGuiLayer();
@@ -62,7 +62,7 @@ namespace Afterglow
 		disp.Dispatch<WindowCloseEvent>([this](Event& e)
 			{
 				b_Running = false;
-				AG_LOG_WARNING(e.ToString());
+				AG_WARNING(e.ToString());
 
 				return true;
 			}

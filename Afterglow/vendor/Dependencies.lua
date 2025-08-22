@@ -5,7 +5,7 @@ includeDirs["glfw"] = "vendor/glfw/include"
 includeDirs["glad"] = "vendor/glad/include"
 includeDirs["imgui"] = "vendor/imgui"
 includeDirs["glm"] = "vendor/glm"
-includeDirs["curl"] = "vendor/curl/include"
+includeDirs["libcurl"] = "vendor/libcurl/include"
 
 project "GLFW"
 	location "glfw"
@@ -171,6 +171,12 @@ project "IMGUI"
 
 	filter "system:windows"
 		systemversion "latest"
+		cppdialect "C++17"
+
+	filter "system:linux"
+		systemversion "latest"
+		pic "On"
+		cppdialect "C++17"
 
 	filter "configurations:Development"
 		runtime "Debug"
@@ -184,58 +190,3 @@ project "IMGUI"
 		runtime "Release"
 		symbols "Off"
 		optimize "Speed"
-
-if _OPTIONS["WithNetworking"] then 
-	project "CURL"
-		location "curl"
-		kind "StaticLib"
-		language "C"
-		staticruntime "Off"
-		warnings "Off"
-
-		targetdir ("%{wks.location}/bin/" ..outputDir.. "/%{prj.name}")
-		objdir ("%{wks.location}/bin-int/" ..outputDir.. "/%{prj.name}")
-
-		files {
-			"curl/lib/**.h",
-			"curl/lib/**.c",
-			"curl/src/**.h",
-			"curl/src/**.c",
-			"curl/include/**.h"
-		}
-
-		includedirs {
-			"curl/include",
-			"curl/lib"
-		}
-
-		defines {
-			"BUILDING_LIBCURL",
-			"CURL_STATICLIB",
-			"USE_SCHANNEL",   
-			"USE_WINDOWS_SSPI",
-			"CURL_DISABLE_LDAP"
-		}
-
-		filter "system:windows"
-			systemversion "latest"
-        
-			links {
-				"ws2_32.lib",
-				"crypt32.lib",
-				"secur32.lib"
-			}
-
-		filter "configurations:Development"
-			runtime "Debug"
-			symbols "On"
-
-		filter "configurations:Test"
-			runtime "Release"
-			optimize "Speed"
-
-		filter "configurations:Shipping"
-			runtime "Release"
-			symbols "Off"
-			optimize "Speed"
-end

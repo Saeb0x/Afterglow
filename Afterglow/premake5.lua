@@ -31,7 +31,6 @@ project "Afterglow"
 	}
 
 	defines {
-		"_CRT_SECURE_NO_WARNINGS",
 		"GLFW_INCLUDE_NONE"
 	}
 
@@ -42,29 +41,48 @@ project "Afterglow"
 	}
 
 	if _OPTIONS["WithNetworking"] then
-		files {
-			"src/Afterglow/Networking/**.h",
-			"src/Afterglow/Networking/**cpp"
-		}
+		filter "system:windows"
+			files {
+				"src/Afterglow/Networking/**.h",
+				"src/Afterglow/Networking/**cpp"
+			}
 
-		includedirs {
-			"%{includeDirs.curl}"
-		}
+			defines {
+				"AG_NETWORKING",
+				"CURL_STATICLIB"
+			}
 
-		defines {
-			"AG_NETWORKING",
-			"CURL_STATICLIB"
-		}
+			includedirs {
+				"%{includeDirs.libcurl}"
+			}
 
-		links {
-			"CURL"
-		}
+			filter { "system:windows", "configurations:Development" }
+				libdirs {
+					"vendor/libcurl/lib/win64/debug"
+				}
+
+				links {
+					"zlibd.lib",
+					"libcurl-d.lib"
+				}
+
+			filter { "system:windows", "configurations:Test or Shipping" }
+				libdirs {
+					"vendor/libcurl/lib/win64/release"
+				}
+
+				links {
+					"zlib.lib",
+					"libcurl.lib"
+				}
+		filter {}
 	end
 
 	filter "system:windows"
 		systemversion "latest"
 		
 		defines {
+			"_CRT_SECURE_NO_WARNINGS",
 			"AG_PLATFORM_WINDOWS"
 		}
 
@@ -72,7 +90,7 @@ project "Afterglow"
 		runtime "Debug"
 		symbols "On"
 		
-		defines { 
+		defines {
 			"AG_DEVELOPMENT"
 		}
 

@@ -11,5 +11,3 @@
 #include "Afterglow/Core/ImGui/ImGuiLayer.h"
 
 #include "Afterglow/Core/Input.h"
-#include "Afterglow/Core/KeyCodes.h"
-#include "Afterglow/Core/MouseCodes.h"
