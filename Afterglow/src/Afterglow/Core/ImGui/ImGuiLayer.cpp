@@ -24,9 +24,10 @@ namespace Afterglow
 		IMGUI_CHECKVERSION();
 		ImGui::CreateContext();
 		ImGuiIO& io = ImGui::GetIO(); (void)io;
-
-		io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;			// Enable Docking.
-		io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;			// Enable Multi-Viewport/Platform Windows.
+		
+		io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;         // Enable Keyboard Controls.
+		io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;             // Enable Docking.
+		io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;           // Enable Multi-Viewport/Platform Windows.
 
 		// Dear ImGui style.
 		ImGui::StyleColorsDark();
@@ -44,6 +45,14 @@ namespace Afterglow
 		ImGui_ImplOpenGL3_Shutdown();
 		ImGui_ImplGlfw_Shutdown();
 		ImGui::DestroyContext();
+	}
+
+	void ImGuiLayer::OnEvent(Event& event)
+	{
+		ImGuiIO& io = ImGui::GetIO(); (void)io;
+
+		event.b_Handled |= event.IsInCategory(EventCategoryMouse) & io.WantCaptureMouse;
+		event.b_Handled |= event.IsInCategory(EventCategoryKeyboard) & io.WantCaptureKeyboard;
 	}
 
 	void ImGuiLayer::Begin()
