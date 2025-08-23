@@ -16,6 +16,9 @@ namespace Afterglow
 
 		void Begin();
 		void End();
+
+	private:
+		void SetupImGuiStyle();
 	};
 }
 

@@ -4,7 +4,6 @@
 #include "Afterglow/Core/Base.h"
 #include "Afterglow/Core/Events/WindowEvents.h"
 #include "Afterglow/Core/Events/InputEvents.h"
-#include "Afterglow/Platform/OpenGL/OpenGLContext.h"
 
 #include <GLFW/glfw3.h>
 
@@ -50,7 +49,7 @@ namespace Afterglow
 
 		m_Window = glfwCreateWindow((int)m_Data.Width, (int)m_Data.Height, m_Data.Title.c_str(), nullptr, nullptr);
 	
-		m_Context = new OpenGLContext(m_Window);
+		m_Context.reset(GraphicsContext::Create(m_Window));
 		m_Context->Init();
 
 		SetVSync(props.VSync);
@@ -79,7 +78,7 @@ namespace Afterglow
 				data.Width = width;
 				data.Height = height;
 
-				WindowResizeEvent WREvent((unsigned int)width, (unsigned int)height);
+				WindowResizeEvent WREvent((uint32_t)width, (uint32_t)height);
 				data.EventCallback(WREvent);
 			}
 		);
@@ -126,7 +125,6 @@ namespace Afterglow
 
 	void WindowsWindow::Shutdown()
 	{
-		delete m_Context;
 		glfwDestroyWindow(m_Window);
 	}
 

@@ -12,5 +12,9 @@ namespace Afterglow
 
 		void Init() override;
 		void SwapBuffers() override;
+		void* GetWindowHandle() const override { return m_WindowHandle; }
+
+	private:
+		void* m_WindowHandle;
 	};
 }

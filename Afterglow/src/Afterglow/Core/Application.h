@@ -5,8 +5,11 @@
 
 #include "Window.h"
 #include "Events/Event.h"
-#include "ImGui/ImGuiLayer.h"
+
 #include "LayerStack.h"
+#include "ImGui/ImGuiLayer.h"
+
+#include "Renderer/Shader.h"
 
 namespace Afterglow
 {
@@ -39,5 +42,8 @@ namespace Afterglow
 
 		ImGuiLayer* m_ImGuiLayer = nullptr;
 		LayerStack m_LayerStack;
+
+		uint32_t m_VertexArray, m_VertexBuffer, m_IndexBuffer;
+		std::unique_ptr<Shader> m_Shader;
 	};
 }

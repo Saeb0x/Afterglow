@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Afterglow/Core/Window.h"
-
 #include "Afterglow/Core/Renderer/GraphicsContext.h"
 
 struct GLFWwindow;
@@ -23,8 +22,8 @@ namespace Afterglow
 		void SetVSync(bool enabled) override;
 		bool IsVSyncEnabled() const override { return m_Data.VSync; }
 
-		unsigned int GetWidth() const override { return m_Data.Width; }
-		unsigned int GetHeight() const override { return m_Data.Height; }
+		uint32_t GetWidth() const override { return m_Data.Width; }
+		uint32_t GetHeight() const override { return m_Data.Height; }
 
 	private:
 		void Init(const WindowProps& props);
@@ -32,12 +31,12 @@ namespace Afterglow
 	
 	private:
 		GLFWwindow* m_Window;
-		GraphicsContext* m_Context;
+		std::unique_ptr<GraphicsContext> m_Context;
 		
 		struct WindowData
 		{
 			std::string Title;
-			unsigned int Width, Height;
+			uint32_t Width, Height;
 			bool VSync;
 
 			EventCallbackFunc EventCallback;

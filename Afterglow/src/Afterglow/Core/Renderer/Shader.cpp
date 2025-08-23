@@ -1,13 +1,13 @@
 #include "agpch.h"
-#include "GraphicsContext.h"
+#include "Shader.h"
 
 #include "Afterglow/Core/Assert.h"
 #include "Renderer.h"
-#include "Afterglow/Platform/OpenGL/OpenGLContext.h"
+#include "Afterglow/Platform/OpenGL/OpenGLShader.h"
 
 namespace Afterglow
 {
-	GraphicsContext* GraphicsContext::Create(void* windowHandle)
+	Shader* Shader::Create(const std::string& vertexSource, const std::string& fragmentSource)
 	{
 		switch (Renderer::GetAPI())
 		{
@@ -15,7 +15,7 @@ namespace Afterglow
 			AG_ASSERT(false, "RendererAPI::None is not supported!");
 			return nullptr;
 		case RendererAPI::OpenGL:
-			return new OpenGLContext(windowHandle);
+			return new OpenGLShader(vertexSource, fragmentSource);
 		}
 
 		AG_ASSERT(false, "Unsupported Renderer API!");
