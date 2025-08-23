@@ -2,7 +2,7 @@ project "Sandbox"
 	kind "ConsoleApp"
 	language "C++"
 	cppdialect "C++17"
-	staticruntime "Off"
+	staticruntime "On"
 
 	targetdir ("%{wks.location}/bin/" ..outputDir.. "/%{prj.name}")
 	objdir ("%{wks.location}/bin-int/" ..outputDir.. "/%{prj.name}")
@@ -41,7 +41,6 @@ project "Sandbox"
 		systemversion "latest"
 		
 		defines {
-			"_CRT_SECURE_NO_WARNINGS",
 			"AG_PLATFORM_WINDOWS"
 		}
 

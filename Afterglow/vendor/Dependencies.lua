@@ -11,7 +11,7 @@ project "GLFW"
 	location "glfw"
 	kind "StaticLib"
 	language "C"
-	staticruntime "Off"
+	staticruntime "On"
 	warnings "Off"
 
 	targetdir ("%{wks.location}/bin/" ..outputDir.. "/%{prj.name}")
@@ -53,7 +53,6 @@ project "GLFW"
 		}
 
 		defines {
-			"_CRT_SECURE_NO_WARNINGS",
 			"_GLFW_WIN32"
 		}
 
@@ -113,7 +112,7 @@ project "GLAD"
 	location "glad"
 	kind "StaticLib"
 	language "C"
-	staticruntime "Off"
+	staticruntime "On"
 	warnings "Off"
 
 	targetdir ("%{wks.location}/bin/" ..outputDir.. "/%{prj.name}")
@@ -149,7 +148,8 @@ project "IMGUI"
 	location "imgui"
 	kind "StaticLib"
 	language "C++"
-	staticruntime "Off"
+	cppdialect "C++17"
+	staticruntime "On"
 	warnings "Off"
 
 	targetdir ("%{wks.location}/bin/" ..outputDir.. "/%{prj.name}")
@@ -171,12 +171,10 @@ project "IMGUI"
 
 	filter "system:windows"
 		systemversion "latest"
-		cppdialect "C++17"
-
+		
 	filter "system:linux"
 		systemversion "latest"
 		pic "On"
-		cppdialect "C++17"
 
 	filter "configurations:Development"
 		runtime "Debug"

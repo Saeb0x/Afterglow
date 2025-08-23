@@ -2,7 +2,7 @@ project "Afterglow"
 	kind "StaticLib"
 	language "C++"
 	cppdialect "C++17"
-	staticruntime "Off"
+	staticruntime "On"
 	
 	targetdir ("%{wks.location}/bin/" ..outputDir.. "/%{prj.name}")
 	objdir ("%{wks.location}/bin-int/" ..outputDir.. "/%{prj.name}")
