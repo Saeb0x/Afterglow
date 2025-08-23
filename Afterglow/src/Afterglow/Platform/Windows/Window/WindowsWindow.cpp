@@ -2,11 +2,11 @@
 #include "WindowsWindow.h"
 
 #include "Afterglow/Core/Base.h"
-
 #include "Afterglow/Core/Events/WindowEvents.h"
 #include "Afterglow/Core/Events/InputEvents.h"
+#include "Afterglow/Platform/OpenGL/OpenGLContext.h"
 
-#include <glad/glad.h>
+#include <GLFW/glfw3.h>
 
 namespace Afterglow
 {
@@ -49,11 +49,11 @@ namespace Afterglow
 		}
 
 		m_Window = glfwCreateWindow((int)m_Data.Width, (int)m_Data.Height, m_Data.Title.c_str(), nullptr, nullptr);
-		glfwMakeContextCurrent(m_Window);
-		SetVSync(props.VSync);
+	
+		m_Context = new OpenGLContext(m_Window);
+		m_Context->Init();
 
-		int gladInit = gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
-		AG_ASSERT(gladInit, "Failed to initialize GLAD!");
+		SetVSync(props.VSync);
 
 		glfwSetWindowUserPointer(m_Window, &m_Data);
 
@@ -126,13 +126,14 @@ namespace Afterglow
 
 	void WindowsWindow::Shutdown()
 	{
+		delete m_Context;
 		glfwDestroyWindow(m_Window);
 	}
 
 	void WindowsWindow::OnUpdate()
 	{
 		glfwPollEvents();
-		glfwSwapBuffers(m_Window);
+		m_Context->SwapBuffers();
 	}
 
 	void WindowsWindow::SetVSync(bool enabled)

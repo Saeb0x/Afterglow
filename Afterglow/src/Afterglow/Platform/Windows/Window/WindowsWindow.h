@@ -2,7 +2,9 @@
 
 #include "Afterglow/Core/Window.h"
 
-#include <GLFW/glfw3.h>
+#include "Afterglow/Core/Renderer/GraphicsContext.h"
+
+struct GLFWwindow;
 
 namespace Afterglow
 {
@@ -30,6 +32,7 @@ namespace Afterglow
 	
 	private:
 		GLFWwindow* m_Window;
+		GraphicsContext* m_Context;
 		
 		struct WindowData
 		{
