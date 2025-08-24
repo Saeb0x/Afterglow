@@ -2,10 +2,11 @@
 #include "Application.h"
 
 #include "Base.h"
+
 #include "Events/WindowEvents.h"
 #include "Events/InputEvents.h"
 
-#include <glad/glad.h>
+#include "Renderer/Renderer.h"
 
 namespace Afterglow
 {
@@ -20,57 +21,62 @@ namespace Afterglow
 		m_ImGuiLayer = new ImGuiLayer();
 		PushOverlay(m_ImGuiLayer);
 
-		glGenVertexArrays(1, &m_VertexArray);
-		glBindVertexArray(m_VertexArray);
+		m_VertexArray.reset(VertexArray::Create());
 
-		glGenBuffers(1, &m_VertexBuffer);
-		glBindBuffer(GL_ARRAY_BUFFER, m_VertexBuffer);
-
-		float vertices[3 * 3] =
+		float vertices[3 * 6] =
 		{
-			-0.5f, -0.5f, 0.0f,
-			0.0f, 0.5f, 0.0f,
-			0.5f, -0.5f, 0.0f 
+			// a_vertexPos			// a_vertexColor
+			-0.5f, -0.5f, 0.0f,		1.0f, 0.0f, 0.0f,
+			0.0f,  0.5f,  0.0f,		0.0f, 1.0f, 0.0f,
+			0.5f,  -0.5f, 0.0f,		0.0f, 0.0f, 1.0f
 		};
 
-		glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+		m_VertexBuffer.reset(VertexBuffer::Create(sizeof(vertices), vertices));
 
-		glEnableVertexAttribArray(0);
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), nullptr);
+		{
+			BufferLayout layout =
+			{
+				{ ShaderDataType::Float3, "a_vertexPos" },
+				{ ShaderDataType::Float3, "a_vertexColor" }
+			};
 
-		glGenBuffers(1, &m_IndexBuffer);
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_IndexBuffer);
+			m_VertexBuffer->SetLayout(layout);
+		}
+		
+		m_VertexArray->AddVertexBuffer(m_VertexBuffer);
 
 		uint32_t indices[3] =
 		{
 			0, 1, 2
 		};
 
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+		m_IndexBuffer.reset(IndexBuffer::Create(3, indices));
+		m_VertexArray->SetIndexBuffer(m_IndexBuffer);
 
 		std::string vertexSource = R"(
-			#version 460 core
+			#version 330 core
 			
-			layout(location = 0) in vec3 a_vertexPos; 			
+			layout(location = 0) in vec3 a_vertexPos;
+			layout(location = 1) in vec3 a_vertexColor;
 
-			out vec3 vertexPos;
+			out vec3 v_vertexColor;
 			
 			void main()
 			{
-				vertexPos = a_vertexPos;
 				gl_Position = vec4(a_vertexPos, 1.0);
+				v_vertexColor = a_vertexColor;
 			}
 		)";
 
 		std::string fragmentSource = R"(
-			#version 460 core
+			#version 330 core
 			
-			in vec3 vertexPos;
-			out vec4 fragColor; 			
+			in vec3 v_vertexColor;
+			out vec4 v_fragColor; 			
 
 			void main()
 			{
-				fragColor = vec4(vertexPos * 0.5 + 0.5, 1.0);
+				v_fragColor = vec4(v_vertexColor, 1.0);
 			}
 		)";
 
@@ -84,15 +90,18 @@ namespace Afterglow
 	
 	void Application::Run()
 	{
-		glClearColor(0.1f, 0.1f, 0.1f, 1);
+		RenderCommand::SetClearColor({ 0.1f, 0.1f, 0.1f, 1 });
 
 		while (b_Running)
 		{
-			glClear(GL_COLOR_BUFFER_BIT);
+			RenderCommand::Clear();
+
+			Renderer::BeginScene();
 
 			m_Shader->Bind();
-			glBindVertexArray(m_VertexArray);
-			glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, nullptr);
+			Renderer::Submit(m_VertexArray);
+
+			Renderer::EndScene();
 
 			{
 				for (Layer* layer : m_LayerStack)

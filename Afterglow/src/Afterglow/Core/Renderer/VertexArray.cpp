@@ -1,13 +1,13 @@
 #include "agpch.h"
-#include "Shader.h"
+#include "VertexArray.h"
 
 #include "Afterglow/Core/Assert.h"
 #include "Renderer.h"
-#include "Afterglow/Platform/OpenGL/OpenGLShader.h"
+#include "Afterglow/Platform/OpenGL/OpenGLVertexArray.h"
 
 namespace Afterglow
 {
-	Shader* Shader::Create(const std::string& vertexSource, const std::string& fragmentSource)
+	VertexArray* VertexArray::Create()
 	{
 		switch (Renderer::GetAPI())
 		{
@@ -15,7 +15,7 @@ namespace Afterglow
 			AG_ASSERT(false, "RendererAPI::None is not supported!");
 			return nullptr;
 		case RendererAPI::API::OpenGL:
-			return new OpenGLShader(vertexSource, fragmentSource);
+			return new OpenGLVertexArray();
 		}
 
 		AG_ASSERT(false, "Unsupported Renderer API!");

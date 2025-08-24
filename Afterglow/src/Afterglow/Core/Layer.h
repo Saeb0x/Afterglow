@@ -2,8 +2,6 @@
 
 #include "Afterglow/Core/Events/Event.h"
 
-#include <string>
-
 namespace Afterglow
 {
 	class Layer

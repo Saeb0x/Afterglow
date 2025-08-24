@@ -1,8 +1,5 @@
 #pragma once
 
-#include <string>
-#include <functional>
-
 #include "Events/Event.h"
 
 namespace Afterglow

@@ -1,7 +1,5 @@
 ﻿#pragma once
 
-#include <utility>
-
 #include "KeyCodes.h"
 #include "MouseCodes.h"
 

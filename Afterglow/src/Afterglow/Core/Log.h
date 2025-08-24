@@ -1,8 +1,5 @@
 #pragma once
 
-#include <memory>
-#include <string>
-
 #define FMT_UNICODE 0
 #include <spdlog/spdlog.h>
 

@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Afterglow/Core/Base.h"
-#include <string>
 
 namespace Afterglow
 {
