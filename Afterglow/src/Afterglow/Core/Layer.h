@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Afterglow/Core/Events/Event.h"
+#include "Afterglow/Core/Timestep.h"
 
 namespace Afterglow
 {
@@ -12,7 +13,7 @@ namespace Afterglow
 
 		virtual void OnAttach() {}
 		virtual void OnDetach() {}
-		virtual void OnUpdate() {}
+		virtual void OnUpdate(Timestep ts) {}
 		virtual void OnImGuiRender() {}
 		virtual void OnEvent(Event& event) {}
 

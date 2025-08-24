@@ -2,6 +2,8 @@
 #include "Application.h"
 
 #include "Base.h"
+#include "PlatformUtils.h"
+#include "Timestep.h"
 
 #include "Events/WindowEvents.h"
 #include "Events/InputEvents.h"
@@ -94,6 +96,10 @@ namespace Afterglow
 
 		while (b_Running)
 		{
+			float time = Time::GetTime();
+			Timestep ts = time - m_LastFrameTime;
+			m_LastFrameTime = time;
+
 			RenderCommand::Clear();
 
 			Renderer::BeginScene();
@@ -105,7 +111,7 @@ namespace Afterglow
 
 			{
 				for (Layer* layer : m_LayerStack)
-					layer->OnUpdate();
+					layer->OnUpdate(ts);
 			}
 			
 			m_ImGuiLayer->Begin();
