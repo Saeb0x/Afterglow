@@ -1,7 +1,6 @@
 #pragma once
 
 #include "RendererAPI.h"
-#include "RenderCommand.h"
 
 namespace Afterglow
 {

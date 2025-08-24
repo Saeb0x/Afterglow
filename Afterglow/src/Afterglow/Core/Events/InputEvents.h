@@ -2,6 +2,9 @@
 
 #include "Event.h"
 
+#include <string>
+#include <sstream>
+
 namespace Afterglow
 {
 	class KeyEvent : public Event

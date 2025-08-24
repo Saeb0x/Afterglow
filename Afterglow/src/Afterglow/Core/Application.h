@@ -6,10 +6,6 @@
 #include "LayerStack.h"
 #include "ImGui/ImGuiLayer.h"
 
-#include "Renderer/Shader.h"
-#include "Renderer/Buffer.h"
-#include "Renderer/VertexArray.h"
-
 namespace Afterglow
 {
 	class Application
@@ -41,11 +37,6 @@ namespace Afterglow
 
 		ImGuiLayer* m_ImGuiLayer = nullptr;
 		LayerStack m_LayerStack;
-
-		std::unique_ptr<Shader> m_Shader;
-		std::shared_ptr<VertexArray> m_VertexArray;
-		std::shared_ptr<VertexBuffer> m_VertexBuffer;
-		std::shared_ptr<IndexBuffer> m_IndexBuffer;
 
 		float m_LastFrameTime = 0.0f;
 	};

@@ -1,7 +1,6 @@
 #pragma once
 
 #include <Afterglow.h>
-
 #include <imgui.h>
 
 class DebugLayer : public Afterglow::Layer
@@ -10,6 +9,66 @@ public:
 	DebugLayer() :
 		Afterglow::Layer("Debug")
 	{
+		m_VertexArray.reset(Afterglow::VertexArray::Create());
+
+		float vertices[3 * 6] =
+		{
+			// a_vertexPos			// a_vertexColor
+			-0.5f, -0.5f, 0.0f,		1.0f, 0.0f, 0.0f,
+			0.0f,  0.5f,  0.0f,		0.0f, 1.0f, 0.0f,
+			0.5f,  -0.5f, 0.0f,		0.0f, 0.0f, 1.0f
+		};
+
+		m_VertexBuffer.reset(Afterglow::VertexBuffer::Create(sizeof(vertices), vertices));
+
+		{
+			Afterglow::BufferLayout layout =
+			{
+				{ Afterglow::ShaderDataType::Float3, "a_vertexPos" },
+				{ Afterglow::ShaderDataType::Float3, "a_vertexColor" }
+			};
+
+			m_VertexBuffer->SetLayout(layout);
+		}
+
+		m_VertexArray->AddVertexBuffer(m_VertexBuffer);
+
+		uint32_t indices[3] =
+		{
+			0, 1, 2
+		};
+
+		m_IndexBuffer.reset(Afterglow::IndexBuffer::Create(3, indices));
+		m_VertexArray->SetIndexBuffer(m_IndexBuffer);
+
+		std::string vertexSource = R"(
+			#version 330 core
+			
+			layout(location = 0) in vec3 a_vertexPos;
+			layout(location = 1) in vec3 a_vertexColor;
+
+			out vec3 v_vertexColor;
+			
+			void main()
+			{
+				gl_Position = vec4(a_vertexPos, 1.0);
+				v_vertexColor = a_vertexColor;
+			}
+		)";
+
+		std::string fragmentSource = R"(
+			#version 330 core
+			
+			in vec3 v_vertexColor;
+			out vec4 v_fragColor; 			
+
+			void main()
+			{
+				v_fragColor = vec4(v_vertexColor, 1.0);
+			}
+		)";
+
+		m_Shader.reset(Afterglow::Shader::Create(vertexSource, fragmentSource));
 	}
 
 	~DebugLayer() override = default;
@@ -19,13 +78,30 @@ public:
 		AG_APP_TRACE("Layer \"{0}\" is attached", m_DebugName);
 	}
 
+	void OnUpdate(Afterglow::Timestep ts) override
+	{
+		Afterglow::RenderCommand::Clear();
+
+		Afterglow::Renderer::BeginScene();
+
+		m_Shader->Bind();
+		Afterglow::Renderer::Submit(m_VertexArray);
+
+		Afterglow::Renderer::EndScene();
+	}
+
 	void OnImGuiRender() override
 	{
 		static bool show = true;
 		ImGui::ShowDemoWindow(&show);
 	}
-};
 
+private:
+	std::unique_ptr<Afterglow::Shader> m_Shader;
+	std::shared_ptr<Afterglow::VertexArray> m_VertexArray;
+	std::shared_ptr<Afterglow::VertexBuffer> m_VertexBuffer;
+	std::shared_ptr<Afterglow::IndexBuffer> m_IndexBuffer;
+};
 
 class Sandbox final : public Afterglow::Application
 {
