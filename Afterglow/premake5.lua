@@ -13,6 +13,9 @@ project "Afterglow"
 	files {
 		"src/**.h",
 		"src/**.cpp",
+
+		"vendor/stb_image/stb_image.h",
+		"vendor/stb_image/stb_image.cpp"
 	}
 
 	-- Exclude networking headers/sources by default.
@@ -27,7 +30,8 @@ project "Afterglow"
 		"%{includeDirs.glfw}",
 		"%{includeDirs.glad}",
 		"%{includeDirs.imgui}",
-		"%{includeDirs.glm}"
+		"%{includeDirs.glm}",
+		"%{includeDirs.stb_image}"
 	}
 
 	defines {

@@ -17,7 +17,8 @@ project "Sandbox"
 		"%{wks.location}/Afterglow/src",
 		"%{wks.location}/Afterglow/%{includeDirs.spdlog}",
 		"%{wks.location}/Afterglow/%{includeDirs.imgui}",
-		"%{wks.location}/Afterglow/%{includeDirs.glm}"
+		"%{wks.location}/Afterglow/%{includeDirs.glm}",
+		"%{wks.location}/Afterglow/%{includeDirs.stb_image}"
 	}
 
 	links {
@@ -42,6 +43,10 @@ project "Sandbox"
 		
 		defines {
 			"AG_PLATFORM_WINDOWS"
+		}
+
+		postbuildcommands {
+			"{COPYDIR} %{wks.location}/%{prj.name}/assets %{cfg.targetdir}/assets"
 		}
 
 	filter "configurations:Development"
