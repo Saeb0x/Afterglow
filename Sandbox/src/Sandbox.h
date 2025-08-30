@@ -69,6 +69,8 @@ public:
 		)";
 
 		m_Shader.reset(Afterglow::Shader::Create(vertexSource, fragmentSource));
+
+		m_Texture = Afterglow::Texture2D::Create("assets/textures/pic.jpeg");
 	}
 
 	~DebugLayer() override = default;
@@ -94,9 +96,17 @@ public:
 	{
 		static bool show = true;
 		ImGui::ShowDemoWindow(&show);
+
+		ImGui::Begin("Pic", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
+		if (ImGui::ImageButton("pic", (ImTextureID)(intptr_t)m_Texture->GetRendererID(), ImVec2(128.0f, 128.0f)))
+		{
+			AG_APP_TRACE("You clicked on the pic!");
+		}
+		ImGui::End();
 	}
 
 private:
+	std::shared_ptr<Afterglow::Texture2D> m_Texture;
 	std::unique_ptr<Afterglow::Shader> m_Shader;
 	std::shared_ptr<Afterglow::VertexArray> m_VertexArray;
 	std::shared_ptr<Afterglow::VertexBuffer> m_VertexBuffer;

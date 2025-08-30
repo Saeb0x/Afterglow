@@ -38,6 +38,8 @@ namespace Afterglow
 			Timestep ts = time - m_LastFrameTime;
 			m_LastFrameTime = time;
 			
+			RenderCommand::Clear();
+
 			{
 				for (Layer* layer : m_LayerStack)
 					layer->OnUpdate(ts);

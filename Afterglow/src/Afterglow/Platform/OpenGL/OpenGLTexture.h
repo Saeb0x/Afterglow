@@ -10,8 +10,9 @@ namespace Afterglow
 		OpenGLTexture2D(const std::string& path);
 		~OpenGLTexture2D() override;
 
-		int32_t GetWidth() const override { return m_Width;}
-		int32_t GetHeight() const override { return m_Height; }
+		uint32_t GetWidth() const override { return m_Width;}
+		uint32_t GetHeight() const override { return m_Height; }
+		uint32_t GetChannels() const override { return m_Channels; }
 		const std::string& GetPath() const override { return m_Path; }
 		uint32_t GetRendererID() const override { return m_RendererID; };
 
@@ -20,6 +21,6 @@ namespace Afterglow
 	private:
 		uint32_t m_RendererID;
 		std::string m_Path;
-		uint32_t m_Width, m_Height;
+		uint32_t m_Width, m_Height, m_Channels;
 	};
 }
