@@ -24,4 +24,5 @@
 #include "Afterglow/Core/Renderer/VertexArray.h"
 #include "Afterglow/Core/Renderer/Buffer.h"
 #include "Afterglow/Core/Renderer/Texture.h"
+#include "Afterglow/Core/Renderer/OrthographicCamera.h"
 // -------------------------------------

@@ -4,6 +4,7 @@
 #include "Afterglow/Core/Assert.h"
 
 #include <glad/glad.h>
+#include <glm/gtc/type_ptr.hpp>
 
 namespace Afterglow
 {
@@ -108,5 +109,11 @@ namespace Afterglow
 	void OpenGLShader::Unbind() const
 	{
 		glUseProgram(0);
+	}
+
+	void OpenGLShader::UniformMat4(const std::string& name, const glm::mat4& mat) const
+	{
+		int uniformLoc = glGetUniformLocation(m_RendererID, name.c_str());
+		glUniformMatrix4fv(uniformLoc, 1, GL_FALSE, glm::value_ptr(mat));
 	}
 }

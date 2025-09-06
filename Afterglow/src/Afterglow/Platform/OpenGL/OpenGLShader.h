@@ -14,6 +14,8 @@ namespace Afterglow
 		void Unbind() const override;
 		uint32_t GetRendererID() const override { return m_RendererID; }
 
+		void UniformMat4(const std::string& name, const glm::mat4& mat) const override;
+
 	private:
 		uint32_t m_RendererID;
 	};
