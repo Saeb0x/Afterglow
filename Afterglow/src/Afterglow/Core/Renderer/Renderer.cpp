@@ -17,7 +17,7 @@ namespace Afterglow
 	void Renderer::Submit(const std::shared_ptr<Shader>& shader, const std::shared_ptr<VertexArray>& vertexArray)
 	{
 		shader->Bind();
-		shader->UniformMat4("u_ProjectionViewMatrix", s_SceneData->ProjectionViewMatrix);
+		shader->SetMat4("u_ProjectionViewMatrix", s_SceneData->ProjectionViewMatrix);
 
 		RenderCommand::DrawIndexed(vertexArray);
 	}
