@@ -1,3 +1,9 @@
 #include "Sandbox.h"
 
-AG_IMPLEMENT_APP(Sandbox);
+#include "layers/Sandbox2D.h"
+
+Sandbox::Sandbox()
+	: Afterglow::Application("Sandbox")
+{
+	PushLayer(new Sandbox2D());
+}
