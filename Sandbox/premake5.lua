@@ -65,6 +65,10 @@ project "Sandbox"
 			"AG_TEST"
 		}
 
+	filter {"system:windows", "configurations:Shipping"}
+		kind "WindowedApp"
+	filter {}
+
 	filter "configurations:Shipping"
 		runtime "Release"
 		symbols "Off"

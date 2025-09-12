@@ -28,10 +28,10 @@ namespace Afterglow
 	#define AG_WARNING(...)
 	#define AG_ERROR(...)
 	
-	#define AG_APP_LOG_TRACE(...)
-	#define AG_APP_LOG_INFO(...)
-	#define AG_APP_LOG_WARNING(...)
-	#define AG_APP_LOG_ERROR(...)
+	#define AG_APP_TRACE(...)
+	#define AG_APP_INFO(...)
+	#define AG_APP_WARNING(...)
+	#define AG_APP_ERROR(...)
 #else
 	#define AG_TRACE(...) ::Afterglow::Log::GetCoreLogger()->trace(__VA_ARGS__)
 	#define AG_INFO(...) ::Afterglow::Log::GetCoreLogger()->info(__VA_ARGS__)
