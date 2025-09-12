@@ -92,6 +92,15 @@ namespace Afterglow
 			}
 		);
 
+		glfwSetScrollCallback(m_Window, [](GLFWwindow* window, double xoffset, double yoffset)
+			{
+				WindowData& data = *(WindowData*)glfwGetWindowUserPointer(window);
+
+				MouseScrolledEvent MSEvent((float)xoffset, (float)yoffset);
+				data.EventCallback(MSEvent);
+			}
+		);
+
 		glfwSetKeyCallback(m_Window, [](GLFWwindow* window, int key, int scancode, int action, int mods)
 			{
 				WindowData& data = *(WindowData*)glfwGetWindowUserPointer(window);

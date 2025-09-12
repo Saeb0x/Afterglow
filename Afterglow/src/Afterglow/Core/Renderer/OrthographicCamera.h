@@ -10,6 +10,8 @@ namespace Afterglow
 		OrthographicCamera(float left, float right, float bottom, float top);
 		~OrthographicCamera() = default;
 
+		void SetProjection(float left, float right, float bottom, float top);
+
 		void SetPosition(const glm::vec3& position);
 		const glm::vec3& GetPosition() const { return m_Position; }
 

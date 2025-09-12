@@ -11,6 +11,12 @@ namespace Afterglow
 		m_ProjectionViewMatrix = m_ProjectionMatrix * m_ViewMatrix;
 	}
 
+	void OrthographicCamera::SetProjection(float left, float right, float bottom, float top)
+	{
+		m_ProjectionMatrix = glm::ortho(left, right, bottom, top, -1.0f, 1.0f);
+		m_ProjectionViewMatrix = m_ProjectionMatrix * m_ViewMatrix;
+	}
+
 	void OrthographicCamera::SetPosition(const glm::vec3& position)
 	{
 		m_Position = position;

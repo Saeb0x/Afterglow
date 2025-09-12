@@ -1,13 +1,14 @@
 #pragma once
 
 #include <Afterglow.h>
+
 #include <imgui.h>
 
 class DebugLayer : public Afterglow::Layer
 {
 public:
 	DebugLayer() :
-		Afterglow::Layer("Debug"), m_OrthographicCamera(-1.0f, 1.0f, -1.0f, 1.0f)
+		Afterglow::Layer("Debug"), m_OrthoCameraController(Afterglow::Application::Get().GetWindow().GetWidth(), Afterglow::Application::Get().GetWindow().GetHeight())
 	{
 		m_VertexArray.reset(Afterglow::VertexArray::Create());
 
@@ -84,38 +85,20 @@ public:
 
 	void OnUpdate(Afterglow::Timestep ts) override
 	{
-		if (Afterglow::Input::IsKeyPressed(AG_KEY_A))
-			m_CameraPosition.x -= m_CameraMovementSpeed * ts;
-		else if(Afterglow::Input::IsKeyPressed(AG_KEY_D))
-			m_CameraPosition.x += m_CameraMovementSpeed * ts;
+		m_OrthoCameraController.OnUpdate(ts);
 
-		if (Afterglow::Input::IsKeyPressed(AG_KEY_W))
-			m_CameraPosition.y += m_CameraMovementSpeed * ts;
-		else if (Afterglow::Input::IsKeyPressed(AG_KEY_S))
-			m_CameraPosition.y -= m_CameraMovementSpeed * ts;
-
-		if (Afterglow::Input::IsKeyPressed(AG_KEY_R))
-			m_CameraRotation += m_CameraRotationSpeed * ts;
-
-		m_OrthographicCamera.SetPosition(m_CameraPosition);
-		m_OrthographicCamera.SetRotation(m_CameraRotation);
-
-		Afterglow::Renderer::BeginScene(m_OrthographicCamera);
+		Afterglow::Renderer::BeginScene(m_OrthoCameraController.GetCamera());
 		Afterglow::Renderer::Submit(m_Shader, m_VertexArray);
 		Afterglow::Renderer::EndScene();
 	}
 
+	void OnEvent(Afterglow::Event& event) override
+	{
+		m_OrthoCameraController.OnEvent(event);
+	}
+
 	void OnImGuiRender() override
 	{
-		static bool show = true;
-		ImGui::ShowDemoWindow(&show);
-
-		ImGui::Begin("Pic", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
-		if (ImGui::ImageButton("pic", (ImTextureID)(intptr_t)m_Texture->GetRendererID(), ImVec2(128.0f, 128.0f)))
-		{
-			AG_APP_TRACE("You clicked on the pic!");
-		}
-		ImGui::End();
 	}
 
 private:
@@ -125,11 +108,7 @@ private:
 	std::shared_ptr<Afterglow::VertexBuffer> m_VertexBuffer;
 	std::shared_ptr<Afterglow::IndexBuffer> m_IndexBuffer;
 
-	Afterglow::OrthographicCamera m_OrthographicCamera;
-	glm::vec3 m_CameraPosition = { 0.0f, 0.0f, 0.0f };
-	float m_CameraRotation = 0.0f;
-	float m_CameraMovementSpeed = 1.0f;
-	float m_CameraRotationSpeed = 45.0f;
+	Afterglow::OrthographicCameraController m_OrthoCameraController;
 };
 
 class Sandbox final : public Afterglow::Application
