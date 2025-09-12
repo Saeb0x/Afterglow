@@ -16,7 +16,7 @@ namespace Afterglow
 		const std::string& GetPath() const override { return m_Path; }
 		uint32_t GetRendererID() const override { return m_RendererID; };
 
-		void Bind(uint32_t slot) const override;
+		void Bind(uint32_t slot = 0) const override;
 
 	private:
 		uint32_t m_RendererID;

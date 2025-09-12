@@ -8,6 +8,7 @@
 #include "Events/WindowEvents.h"
 #include "Events/InputEvents.h"
 
+#include "Renderer/Renderer2D.h"
 #include "Renderer/RenderCommand.h"
 
 namespace Afterglow
@@ -19,6 +20,8 @@ namespace Afterglow
 
 		m_Window = std::unique_ptr<Window>(Window::Create(WindowProps(appName)));
 		m_Window->SetEventCallback(AG_BIND_FUNC(Application::OnEvent));
+
+		Renderer2D::GetInstance().Init();
 
 		m_ImGuiLayer = new ImGuiLayer();
 		PushOverlay(m_ImGuiLayer);

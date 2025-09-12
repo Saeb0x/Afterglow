@@ -18,6 +18,7 @@
 
 // ------------ Renderer ---------------
 #include "Afterglow/Core/Renderer/Renderer.h"
+#include "Afterglow/Core/Renderer/Renderer2D.h"
 #include "Afterglow/Core/Renderer/RenderCommand.h"
 
 #include "Afterglow/Core/Renderer/VertexArray.h"

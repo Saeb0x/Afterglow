@@ -17,10 +17,7 @@ public:
 private:
 	Afterglow::OrthographicCameraController m_OrthoCameraController;
 
-	std::shared_ptr<Afterglow::VertexArray> m_VertexArray;
-	std::shared_ptr<Afterglow::VertexBuffer> m_VertexBuffer;
-	std::shared_ptr<Afterglow::IndexBuffer> m_IndexBuffer;
-	std::shared_ptr<Afterglow::Texture2D> m_Texture;
+	Afterglow::Renderer2D& m_Renderer2D = Afterglow::Renderer2D::GetInstance();
 
-	Afterglow::ShaderLibrary& m_ShaderLibrary;
+	std::shared_ptr<Afterglow::Texture2D> m_Pic;
 };
