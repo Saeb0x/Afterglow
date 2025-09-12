@@ -26,4 +26,25 @@ namespace Afterglow
 		static Shader* Create(const std::filesystem::path& shadersFilePath);
 		static Shader* Create(const std::string& debugName, const std::string& vertexSource, const std::string& fragmentSource);
 	};
+
+	class ShaderLibrary
+	{
+	public:
+		static ShaderLibrary& GetInstance();
+		
+		void Add(const std::string& shaderName, const std::shared_ptr<Shader>& shader);
+		std::shared_ptr<Shader> Load(const std::filesystem::path& shadersFilePath, const std::string& shaderName = "");
+
+		std::shared_ptr<Shader> Get(const std::string& shaderName) const;
+		bool Exists(const std::string& shaderName) const;
+
+	private:
+		ShaderLibrary() = default;
+		~ShaderLibrary() = default;
+		ShaderLibrary(const ShaderLibrary&);
+		const ShaderLibrary& operator=(const ShaderLibrary&);
+
+	private:
+		std::unordered_map<std::string, std::shared_ptr<Shader>> m_Shaders;
+	};
 }

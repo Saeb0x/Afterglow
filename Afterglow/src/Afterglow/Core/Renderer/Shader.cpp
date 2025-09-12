@@ -36,4 +36,36 @@ namespace Afterglow
 		AG_ASSERT(false, "Unsupported Renderer API!");
 		return nullptr;
 	}
+
+	ShaderLibrary& ShaderLibrary::GetInstance()
+	{
+		static ShaderLibrary instance;
+		return instance;
+	}
+
+	void ShaderLibrary::Add(const std::string& shaderName, const std::shared_ptr<Shader>& shader)
+	{
+		AG_ASSERT(!Exists(shaderName), "Shader already exists: " + shaderName);
+		m_Shaders[shaderName] = shader;
+	}
+
+	std::shared_ptr<Shader> ShaderLibrary::Load(const std::filesystem::path& shadersFilePath, const std::string& shaderName)
+	{
+		auto shader = std::shared_ptr<Shader>(Shader::Create(shadersFilePath));
+
+		Add(shaderName.empty() ? shadersFilePath.stem().string() : shaderName, shader);
+
+		return shader;
+	}
+
+	std::shared_ptr<Shader> ShaderLibrary::Get(const std::string& shaderName) const
+	{
+		AG_ASSERT(Exists(shaderName), "Shader not found: " + shaderName);
+		return m_Shaders.at(shaderName);
+	}
+
+	bool ShaderLibrary::Exists(const std::string& shaderName) const
+	{
+		return m_Shaders.find(shaderName) != m_Shaders.end();
+	}
 }

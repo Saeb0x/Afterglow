@@ -1,7 +1,9 @@
 #include "Sandbox2D.h"
 
 Sandbox2D::Sandbox2D()
-	: Afterglow::Layer("Sandbox2D"), m_OrthoCameraController(Afterglow::Application::Get().GetWindow().GetWidth(), Afterglow::Application::Get().GetWindow().GetHeight())
+	: Afterglow::Layer("Sandbox2D"), 
+	m_OrthoCameraController(Afterglow::Application::Get().GetWindow().GetWidth(), Afterglow::Application::Get().GetWindow().GetHeight()),
+	m_ShaderLibrary(Afterglow::ShaderLibrary::GetInstance())
 {
 	m_VertexArray.reset(Afterglow::VertexArray::Create());
 
@@ -35,7 +37,7 @@ Sandbox2D::Sandbox2D()
 	m_IndexBuffer.reset(Afterglow::IndexBuffer::Create(3, indices));
 	m_VertexArray->SetIndexBuffer(m_IndexBuffer);
 
-	m_Shader.reset(Afterglow::Shader::Create("assets/shaders/TriangleRGB.glsl"));
+	m_ShaderLibrary.Load("assets/shaders/TriangleRGB.glsl");
 
 	m_Texture = Afterglow::Texture2D::Create("assets/textures/pic.jpeg");
 }
@@ -55,7 +57,7 @@ void Sandbox2D::OnUpdate(Afterglow::Timestep ts)
 	m_OrthoCameraController.OnUpdate(ts);
 
 	Afterglow::Renderer::BeginScene(m_OrthoCameraController.GetCamera());
-	Afterglow::Renderer::Submit(m_Shader, m_VertexArray);
+	Afterglow::Renderer::Submit(m_ShaderLibrary.Get("TriangleRGB"), m_VertexArray);
 	Afterglow::Renderer::EndScene();
 }
 

@@ -20,6 +20,7 @@ private:
 	std::shared_ptr<Afterglow::VertexArray> m_VertexArray;
 	std::shared_ptr<Afterglow::VertexBuffer> m_VertexBuffer;
 	std::shared_ptr<Afterglow::IndexBuffer> m_IndexBuffer;
-	std::shared_ptr<Afterglow::Shader> m_Shader;
 	std::shared_ptr<Afterglow::Texture2D> m_Texture;
+
+	Afterglow::ShaderLibrary& m_ShaderLibrary;
 };
