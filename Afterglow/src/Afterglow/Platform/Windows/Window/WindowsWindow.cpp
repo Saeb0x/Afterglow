@@ -72,6 +72,15 @@ namespace Afterglow
 			}
 		);
 
+		glfwSetWindowIconifyCallback(m_Window, [](GLFWwindow* window, int iconified)
+			{
+				WindowData& data = *(WindowData*)glfwGetWindowUserPointer(window);
+
+				WindowIconifyEvent WIEvent(iconified);
+				data.EventCallback(WIEvent);
+			}
+		);
+
 		glfwSetWindowSizeCallback(m_Window, [](GLFWwindow* window, int width, int height)
 			{
 				WindowData& data = *(WindowData*)glfwGetWindowUserPointer(window);

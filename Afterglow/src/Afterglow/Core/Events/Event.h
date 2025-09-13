@@ -9,7 +9,7 @@ namespace Afterglow
 	enum class EventType
 	{
 		None = 0,
-		WindowClose, WindowResize, WindowMinimize, WindowMaximize, WindowFocus, WindowLostFocus,
+		WindowClose, WindowResize, WindowIconify, WindowMaximize, WindowFocus, WindowLostFocus,
 		KeyPressed, KeyReleased,
 		MouseButtonPressed, MouseButtonReleased, MouseMoved, MouseScrolled
 	};

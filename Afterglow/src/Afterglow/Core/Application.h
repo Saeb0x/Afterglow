@@ -33,6 +33,7 @@ namespace Afterglow
 		inline static Application* s_Instance = nullptr;
 
 		bool b_Running = true;
+		bool b_Iconified = false;
 		std::unique_ptr<Window> m_Window;
 
 		ImGuiLayer* m_ImGuiLayer = nullptr;

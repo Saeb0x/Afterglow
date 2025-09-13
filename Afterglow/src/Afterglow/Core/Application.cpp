@@ -34,27 +34,27 @@ namespace Afterglow
 	
 	void Application::Run()
 	{
-		RenderCommand::SetClearColor({ 0.1f, 0.1f, 0.1f, 1 });
 		while (b_Running)
 		{
 			float time = Time::GetTime();
 			Timestep ts = time - m_LastFrameTime;
 			m_LastFrameTime = time;
 			
-			RenderCommand::Clear();
-
+			if (!b_Iconified)
 			{
-				for (Layer* layer : m_LayerStack)
-					layer->OnUpdate(ts);
+				{
+					for (Layer* layer : m_LayerStack)
+						layer->OnUpdate(ts);
+				}
+
+				m_ImGuiLayer->Begin();
+				{
+					for (Layer* layer : m_LayerStack)
+						layer->OnImGuiRender();
+				}
+				m_ImGuiLayer->End();
 			}
 			
-			m_ImGuiLayer->Begin();
-			{
-				for (Layer* layer : m_LayerStack)
-					layer->OnImGuiRender();
-			}
-			m_ImGuiLayer->End();
-
 			m_Window->OnUpdate();
 		}
 	}
@@ -68,9 +68,18 @@ namespace Afterglow
 	{
 		EventDispatcher disp(e);
 
-		disp.Dispatch<WindowCloseEvent>([this](Event& e)
+		disp.Dispatch<WindowCloseEvent>([this](WindowCloseEvent& e)
 			{
 				b_Running = false;
+				AG_WARNING(e.ToString());
+
+				return true;
+			}
+		);
+
+		disp.Dispatch<WindowIconifyEvent>([this](WindowIconifyEvent& e)
+			{
+				b_Iconified = e.GetIconify();
 				AG_WARNING(e.ToString());
 
 				return true;

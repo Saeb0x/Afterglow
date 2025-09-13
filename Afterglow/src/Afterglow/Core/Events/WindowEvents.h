@@ -54,4 +54,31 @@ namespace Afterglow
 			return ss.str();
 		}
 	};
+
+	class WindowIconifyEvent : public Event
+	{
+	public:
+		WindowIconifyEvent(int iconify)
+			: m_Iconify(iconify)
+		{
+		}
+		~WindowIconifyEvent() override = default;
+
+		static EventType GetStaticType() { return EventType::WindowIconify; }
+		EventType GetType() const override { return GetStaticType(); }
+		const char* GetName() const override { return "WindowIconifyEvent"; }
+		int GetCategoryFlags() const override { return EventCategoryWindow; }
+
+		std::string ToString() const override
+		{
+			std::stringstream ss;
+			ss << "Window Iconify Event: " << (m_Iconify ? "Iconified" : "Not iconified");
+			return ss.str();
+		}
+
+		int GetIconify() const { return m_Iconify; }
+
+	private:
+		int m_Iconify;
+	};
 }

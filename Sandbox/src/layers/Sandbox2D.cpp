@@ -22,6 +22,8 @@ void Sandbox2D::OnUpdate(Afterglow::Timestep ts)
 	m_OrthoCameraController.OnUpdate(ts);
 	m_PicRotation += 30.0f * ts;
 
+	Afterglow::RenderCommand::SetClearColor({ 0.1f, 0.1f, 0.1f, 1 });
+	Afterglow::RenderCommand::Clear();
 	m_Renderer2D.BeginScene(m_OrthoCameraController.GetCamera());
 	m_Renderer2D.DrawQuad({ 0.0f, -0.5f }, { 0.5f, 0.2f }, { 0.2f, 0.3f, 0.8f, 1.0f });
 	m_Renderer2D.DrawQuad({ -0.9f, 0.0f }, { 0.5f, 0.5f }, { 0.8f, 0.2f, 0.3f, 1.0f });
