@@ -114,4 +114,37 @@ namespace Afterglow
 		texture->Bind();
 		RenderCommand::DrawIndexed(s_Data->VertexArray);
 	}
+
+	void Renderer2D::DrawRotatedQuad(const glm::vec2& position, const glm::vec2& size, float rotation, const glm::vec4& color)
+	{
+		DrawRotatedQuad({ position.x, position.y, 0.0f }, size, rotation, color);
+	}
+
+	void Renderer2D::DrawRotatedQuad(const glm::vec3& position, const glm::vec2& size, float rotation, const glm::vec4& color)
+	{
+		m_ShaderLibrary.Get("FlatColor")->Bind();
+
+		glm::mat4 transform = glm::translate(glm::mat4(1.0), position) * glm::rotate(glm::mat4(1.0f), glm::radians(rotation), { 0.0f, 0.0f, 1.0f }) * glm::scale(glm::mat4(1.0f), { size.x, size.y, 1.0f });
+		m_ShaderLibrary.Get("FlatColor")->SetMat4("u_ModelMatrix", transform);
+
+		m_ShaderLibrary.Get("FlatColor")->SetFloat4("u_Color", color);
+
+		RenderCommand::DrawIndexed(s_Data->VertexArray);
+	}
+
+	void Renderer2D::DrawRotatedQuad(const glm::vec2& position, const glm::vec2& size, float rotation, const std::shared_ptr<Texture2D>& texture)
+	{
+		DrawRotatedQuad({ position.x, position.y, 0.0f }, size, rotation, texture);
+	}
+
+	void Renderer2D::DrawRotatedQuad(const glm::vec3& position, const glm::vec2& size, float rotation, const std::shared_ptr<Texture2D>& texture)
+	{
+		m_ShaderLibrary.Get("Texture")->Bind();
+
+		glm::mat4 transform = glm::translate(glm::mat4(1.0), position) * glm::rotate(glm::mat4(1.0f), glm::radians(rotation), { 0.0f, 0.0f, 1.0f }) * glm::scale(glm::mat4(1.0f), { size.x, size.y, 1.0f });
+		m_ShaderLibrary.Get("Texture")->SetMat4("u_ModelMatrix", transform);
+
+		texture->Bind();
+		RenderCommand::DrawIndexed(s_Data->VertexArray);
+	}
 }

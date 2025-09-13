@@ -20,4 +20,5 @@ private:
 	Afterglow::Renderer2D& m_Renderer2D = Afterglow::Renderer2D::GetInstance();
 
 	std::shared_ptr<Afterglow::Texture2D> m_Pic;
+	float m_PicRotation = 0.0f;
 };
