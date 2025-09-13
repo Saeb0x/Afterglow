@@ -14,6 +14,8 @@ namespace Afterglow
 		void Init();
 		void Shutdown();
 
+		void SetViewport(uint16_t x, uint16_t y, uint16_t width, uint16_t height);
+
 		ShaderLibrary& GetShaderLibrary() { return m_ShaderLibrary; }
 
 		void BeginScene(const OrthographicCamera& camera);

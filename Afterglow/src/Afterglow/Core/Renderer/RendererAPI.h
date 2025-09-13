@@ -18,6 +18,7 @@ namespace Afterglow
 	public:
 		virtual void SetClearColor(const glm::vec4& color) = 0;
 		virtual void Clear() = 0;
+		virtual void SetViewport(uint16_t x, uint16_t y, uint16_t width, uint16_t height) = 0;
 
 		virtual void DrawIndexed(const std::shared_ptr<VertexArray>& vertexArray) = 0;
 

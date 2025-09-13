@@ -86,6 +86,14 @@ namespace Afterglow
 			}
 		);
 
+		disp.Dispatch<WindowResizeEvent>([this](WindowResizeEvent& e)
+			{
+				Renderer2D::GetInstance().SetViewport(0, 0, (uint16_t)e.GetWidth(), (uint16_t)e.GetHeight());
+				AG_WARNING("Window viewport resized: {}, {}", (uint16_t)e.GetWidth(), (uint16_t)e.GetHeight());
+				return true;
+			}
+		);
+
 		for (auto it = m_LayerStack.rbegin(); it != m_LayerStack.rend(); ++it)
 		{
 			if (e.b_Handled)
