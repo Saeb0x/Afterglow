@@ -29,8 +29,7 @@ namespace Afterglow
 		io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;             // Enable Docking.
 		io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;           // Enable Multi-Viewport/Platform Windows.
 
-		float fontSize = 16.0f;
-		io.FontDefault = io.Fonts->AddFontFromFileTTF("assets/fonts/opensans/OpenSans-Bold.ttf", fontSize);
+		io.FontDefault = io.Fonts->AddFontFromFileTTF("assets/fonts/opensans/OpenSans-Bold.ttf", 17.0f);
 
 		// Dear ImGui style.
 		SetupImGuiStyle();
@@ -40,7 +39,7 @@ namespace Afterglow
 
 		// Platform/Renderer bindings.
 		ImGui_ImplGlfw_InitForOpenGL(window, true);
-		ImGui_ImplOpenGL3_Init("#version 460");
+		ImGui_ImplOpenGL3_Init("#version 330");
 	}
 
 	void ImGuiLayer::OnDetach()
@@ -52,10 +51,13 @@ namespace Afterglow
 
 	void ImGuiLayer::OnEvent(Event& event)
 	{
-		ImGuiIO& io = ImGui::GetIO(); (void)io;
+		if (b_ConsumeEvents)
+		{
+			ImGuiIO& io = ImGui::GetIO(); (void)io;
 
-		event.b_Handled |= event.IsInCategory(EventCategoryMouse) & io.WantCaptureMouse;
-		event.b_Handled |= event.IsInCategory(EventCategoryKeyboard) & io.WantCaptureKeyboard;
+			event.b_Handled |= event.IsInCategory(EventCategoryMouse) & io.WantCaptureMouse;
+			event.b_Handled |= event.IsInCategory(EventCategoryKeyboard) & io.WantCaptureKeyboard;
+		}
 	}
 
 	void ImGuiLayer::Begin()

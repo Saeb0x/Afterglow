@@ -7,11 +7,11 @@ namespace Afterglow
 	struct WindowProps
 	{
 		std::string Title;
-		uint32_t Width;
-		uint32_t Height;
+		uint16_t Width;
+		uint16_t Height;
 		bool VSync;
 
-		WindowProps(const std::string& title = "Afterglow Engine", uint32_t width = 1280, uint32_t height = 720, bool vSync = true)
+		WindowProps(const std::string& title = "Afterglow Engine", uint16_t width = 1280, uint16_t height = 720, bool vSync = true)
 			: Title(title), Width(width), Height(height), VSync(vSync) 
 		{
 		}
@@ -34,7 +34,7 @@ namespace Afterglow
 		virtual void SetVSync(bool enabled) = 0;
 		virtual bool IsVSyncEnabled() const = 0;
 
-		virtual uint32_t GetWidth() const = 0;
-		virtual uint32_t GetHeight() const = 0;
+		virtual uint16_t GetWidth() const = 0;
+		virtual uint16_t GetHeight() const = 0;
 	};
 }

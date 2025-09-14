@@ -1,6 +1,6 @@
 workspace "Afterglow"
 	architecture "x86_64"
-	startproject "Sandbox"
+	startproject "AfterglowEditor"
 
 	configurations {
 		"Development",
@@ -29,6 +29,7 @@ group ""
 
 group "Core"
 	include "Afterglow"
+	include "AfterglowEditor"
 group ""
 
 group "Misc"

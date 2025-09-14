@@ -10,6 +10,8 @@ namespace Afterglow
 		OpenGLFramebuffer(const FramebufferSpecification& spec);
 		~OpenGLFramebuffer() override;
 
+		void Resize(uint16_t width, uint16_t height) override;
+
 		void Bind() const override;
 		void Unbind() const override;
 

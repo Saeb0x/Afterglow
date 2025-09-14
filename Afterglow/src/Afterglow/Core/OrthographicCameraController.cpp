@@ -5,7 +5,7 @@
 
 namespace Afterglow
 {
-	OrthographicCameraController::OrthographicCameraController(uint32_t width, uint32_t height, bool canRotate)
+	OrthographicCameraController::OrthographicCameraController(uint16_t width, uint16_t height, bool canRotate)
 		: m_AspectRatio((float)width / (float)height), m_OrthographicCamera(-m_AspectRatio * m_ZoomLevel, m_AspectRatio* m_ZoomLevel, -m_ZoomLevel, m_ZoomLevel), b_CanRotate(canRotate)
 	{
 	}
@@ -43,11 +43,15 @@ namespace Afterglow
 		disp.Dispatch<MouseScrolledEvent>(AG_BIND_FUNC(OrthographicCameraController::OnMouseScroll));
 	}
 
+	void OrthographicCameraController::Resize(uint16_t width, uint16_t height)
+	{
+		m_AspectRatio = (float)width / (float)height;
+		m_OrthographicCamera.SetProjection(-m_AspectRatio * m_ZoomLevel, m_AspectRatio * m_ZoomLevel, -m_ZoomLevel, m_ZoomLevel);
+	}
+
 	bool OrthographicCameraController::OnWindowResize(WindowResizeEvent& e)
 	{
-		m_AspectRatio = (float)e.GetWidth() / (float)e.GetHeight();
-		m_OrthographicCamera.SetProjection(-m_AspectRatio * m_ZoomLevel, m_AspectRatio * m_ZoomLevel, -m_ZoomLevel, m_ZoomLevel);
-
+		Resize(e.GetWidth(), e.GetHeight());
 		return false;
 	}
 

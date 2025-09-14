@@ -12,11 +12,13 @@ namespace Afterglow
 	class OrthographicCameraController
 	{
 	public:
-		OrthographicCameraController(uint32_t width, uint32_t height, bool canRotate = false);
+		OrthographicCameraController(uint16_t width, uint16_t height, bool canRotate = false);
 		~OrthographicCameraController() = default;
 
 		void OnUpdate(Timestep ts);
 		void OnEvent(Event& event);
+		
+		void Resize(uint16_t width, uint16_t height);
 
 		OrthographicCamera& GetCamera() { return m_OrthographicCamera; }
 		const OrthographicCamera& GetCamera() const { return m_OrthographicCamera; }

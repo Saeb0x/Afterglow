@@ -22,8 +22,8 @@ namespace Afterglow
 		void SetVSync(bool enabled) override;
 		bool IsVSyncEnabled() const override { return m_Data.VSync; }
 
-		uint32_t GetWidth() const override { return m_Data.Width; }
-		uint32_t GetHeight() const override { return m_Data.Height; }
+		uint16_t GetWidth() const override { return m_Data.Width; }
+		uint16_t GetHeight() const override { return m_Data.Height; }
 
 	private:
 		void Init(const WindowProps& props);
@@ -36,7 +36,7 @@ namespace Afterglow
 		struct WindowData
 		{
 			std::string Title;
-			uint32_t Width, Height;
+			uint16_t Width, Height;
 			bool VSync;
 
 			EventCallbackFunc EventCallback;

@@ -12,6 +12,8 @@ namespace Afterglow
 	public:
 		virtual ~Framebuffer() = default;
 
+		virtual void Resize(uint16_t width, uint16_t height) = 0;
+
 		virtual void Bind() const = 0;
 		virtual void Unbind() const = 0;
 

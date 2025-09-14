@@ -61,6 +61,11 @@ namespace Afterglow
 	{
 	}
 
+	void Renderer2D::ResetStats()
+	{
+		m_Stats.DrawCalls = 0;
+	}
+
 	void Renderer2D::SetViewport(uint16_t x, uint16_t y, uint16_t width, uint16_t height)
 	{
 		RenderCommand::SetViewport(x, y, width, height);
@@ -95,6 +100,7 @@ namespace Afterglow
 		m_ShaderLibrary.Get("FlatColor")->SetFloat4("u_Color", color);
 
 		RenderCommand::DrawIndexed(s_Data.VertexArray);
+		m_Stats.DrawCalls++;
 	}
 
 	void Renderer2D::DrawQuad(const glm::vec2& position, const glm::vec2& size, const std::shared_ptr<Texture2D>& texture)
@@ -111,6 +117,7 @@ namespace Afterglow
 
 		texture->Bind();
 		RenderCommand::DrawIndexed(s_Data.VertexArray);
+		m_Stats.DrawCalls++;
 	}
 
 	void Renderer2D::DrawRotatedQuad(const glm::vec2& position, const glm::vec2& size, float rotation, const glm::vec4& color)
@@ -128,6 +135,7 @@ namespace Afterglow
 		m_ShaderLibrary.Get("FlatColor")->SetFloat4("u_Color", color);
 
 		RenderCommand::DrawIndexed(s_Data.VertexArray);
+		m_Stats.DrawCalls++;
 	}
 
 	void Renderer2D::DrawRotatedQuad(const glm::vec2& position, const glm::vec2& size, float rotation, const std::shared_ptr<Texture2D>& texture)
@@ -144,5 +152,6 @@ namespace Afterglow
 
 		texture->Bind();
 		RenderCommand::DrawIndexed(s_Data.VertexArray);
+		m_Stats.DrawCalls++;
 	}
 }

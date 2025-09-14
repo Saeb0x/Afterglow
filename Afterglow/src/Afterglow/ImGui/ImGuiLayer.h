@@ -17,8 +17,12 @@ namespace Afterglow
 		void Begin();
 		void End();
 
+		void SetConsumeEvents(bool consume) { b_ConsumeEvents = consume; }
+
 	private:
 		void SetupImGuiStyle();
+
+	private:
+		bool b_ConsumeEvents = true;
 	};
 }
-

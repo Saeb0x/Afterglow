@@ -29,6 +29,8 @@ namespace Afterglow
 		static Application& Get() { return *s_Instance; }
 		Window& GetWindow() const { return *m_Window; }
 
+		ImGuiLayer* GetImGuiLayer() { return m_ImGuiLayer; }
+
 	private:
 		inline static Application* s_Instance = nullptr;
 

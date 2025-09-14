@@ -7,6 +7,11 @@
 
 namespace Afterglow
 {
+	struct Stats
+	{
+		uint32_t DrawCalls = 0;
+	};
+
 	class Renderer2D
 	{
 	public:
@@ -16,6 +21,9 @@ namespace Afterglow
 
 		void Init();
 		void Shutdown();
+
+		const Stats& GetStats() const { return m_Stats; }
+		void ResetStats();
 
 		void SetViewport(uint16_t x, uint16_t y, uint16_t width, uint16_t height);
 
@@ -45,5 +53,6 @@ namespace Afterglow
 
 	private:
 		ShaderLibrary& m_ShaderLibrary = ShaderLibrary::GetInstance();
+		Stats m_Stats;
 	};
 }

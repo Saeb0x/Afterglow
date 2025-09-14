@@ -10,7 +10,7 @@ namespace Afterglow
 	class WindowResizeEvent : public Event
 	{
 	public:
-		WindowResizeEvent(uint32_t width, uint32_t height)
+		WindowResizeEvent(uint16_t width, uint16_t height)
 			: m_Width(width), m_Height(height) 
 		{
 		}
@@ -28,11 +28,11 @@ namespace Afterglow
 			return ss.str();
 		}
 
-		uint32_t GetWidth() const { return m_Width; }
-		uint32_t GetHeight() const { return m_Height; }
+		uint16_t GetWidth() const { return m_Width; }
+		uint16_t GetHeight() const { return m_Height; }
 	
 	private:
-		uint32_t m_Width, m_Height;
+		uint16_t m_Width, m_Height;
 	};
 
 
