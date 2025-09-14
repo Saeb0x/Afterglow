@@ -49,7 +49,7 @@ namespace Afterglow
 
 		m_Window = glfwCreateWindow((int)m_Data.Width, (int)m_Data.Height, m_Data.Title.c_str(), nullptr, nullptr);
 	
-		m_Context.reset(GraphicsContext::Create(m_Window));
+		m_Context = GraphicsContext::Create(m_Window);
 		m_Context->Init();
 
 		SetVSync(props.VSync);

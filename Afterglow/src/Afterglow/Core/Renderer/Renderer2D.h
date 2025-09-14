@@ -1,5 +1,6 @@
 #pragma once
 
+#include "RenderCommand.h"
 #include "OrthographicCamera.h"
 #include "Texture.h"
 #include "Shader.h"
@@ -10,6 +11,8 @@ namespace Afterglow
 	{
 	public:
 		static Renderer2D& GetInstance();
+
+		static RendererAPI::API GetAPI() { return RendererAPI::GetAPI(); }
 
 		void Init();
 		void Shutdown();
@@ -33,9 +36,12 @@ namespace Afterglow
 
 	private:
 		Renderer2D() = default;
-		~Renderer2D();
-		Renderer2D(const Renderer2D&);
-		const Renderer2D& operator=(const Renderer2D&);
+		~Renderer2D() = default;
+
+		Renderer2D(const Renderer2D&) = delete;
+		Renderer2D& operator=(const Renderer2D&) = delete;
+		Renderer2D(Renderer2D&&) = delete;
+		Renderer2D& operator=(Renderer2D&&) = delete;
 
 	private:
 		ShaderLibrary& m_ShaderLibrary = ShaderLibrary::GetInstance();

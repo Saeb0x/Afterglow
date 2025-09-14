@@ -1,7 +1,6 @@
 #include "agpch.h"
 #include "Renderer2D.h"
 
-#include "RenderCommand.h"
 #include "VertexArray.h"
 
 #include <glm/gtc/matrix_transform.hpp>
@@ -12,7 +11,7 @@ namespace Afterglow
 	{
 		std::shared_ptr<VertexArray> VertexArray;
 	};
-	static Renderer2DStorage* s_Data = new Renderer2DStorage();
+	static Renderer2DStorage s_Data;
 
 	Renderer2D& Renderer2D::GetInstance()
 	{
@@ -20,14 +19,9 @@ namespace Afterglow
 		return instance;
 	}
 
-	Renderer2D::~Renderer2D()
-	{
-		Shutdown();
-	}
-
 	void Renderer2D::Init()
 	{
-		s_Data->VertexArray.reset(VertexArray::Create());
+		s_Data.VertexArray = VertexArray::Create();
 
 		float squareVertices[4 * 5] =
 		{
@@ -39,7 +33,7 @@ namespace Afterglow
 		};
 
 		std::shared_ptr<VertexBuffer> squareVB;
-		squareVB.reset(VertexBuffer::Create(sizeof(squareVertices), squareVertices));
+		squareVB = VertexBuffer::Create(sizeof(squareVertices), squareVertices);
 		squareVB->SetLayout(
 			{
 
@@ -47,7 +41,7 @@ namespace Afterglow
 				{ ShaderDataType::Float2, "a_texCoord" }
 			}
 		);
-		s_Data->VertexArray->AddVertexBuffer(squareVB);
+		s_Data.VertexArray->AddVertexBuffer(squareVB);
 
 		uint32_t squareIndices[6] =
 		{
@@ -56,8 +50,8 @@ namespace Afterglow
 		};
 
 		std::shared_ptr<IndexBuffer> squareIB;
-		squareIB.reset(IndexBuffer::Create(6, squareIndices));
-		s_Data->VertexArray->SetIndexBuffer(squareIB);
+		squareIB = IndexBuffer::Create(6, squareIndices);
+		s_Data.VertexArray->SetIndexBuffer(squareIB);
 
 		m_ShaderLibrary.Load("assets/shaders/FlatColor.glsl");
 		m_ShaderLibrary.Load("assets/shaders/Texture.glsl");
@@ -65,7 +59,6 @@ namespace Afterglow
 
 	void Renderer2D::Shutdown()
 	{
-		delete s_Data;
 	}
 
 	void Renderer2D::SetViewport(uint16_t x, uint16_t y, uint16_t width, uint16_t height)
@@ -101,7 +94,7 @@ namespace Afterglow
 
 		m_ShaderLibrary.Get("FlatColor")->SetFloat4("u_Color", color);
 
-		RenderCommand::DrawIndexed(s_Data->VertexArray);
+		RenderCommand::DrawIndexed(s_Data.VertexArray);
 	}
 
 	void Renderer2D::DrawQuad(const glm::vec2& position, const glm::vec2& size, const std::shared_ptr<Texture2D>& texture)
@@ -117,7 +110,7 @@ namespace Afterglow
 		m_ShaderLibrary.Get("Texture")->SetMat4("u_ModelMatrix", transform);
 
 		texture->Bind();
-		RenderCommand::DrawIndexed(s_Data->VertexArray);
+		RenderCommand::DrawIndexed(s_Data.VertexArray);
 	}
 
 	void Renderer2D::DrawRotatedQuad(const glm::vec2& position, const glm::vec2& size, float rotation, const glm::vec4& color)
@@ -134,7 +127,7 @@ namespace Afterglow
 
 		m_ShaderLibrary.Get("FlatColor")->SetFloat4("u_Color", color);
 
-		RenderCommand::DrawIndexed(s_Data->VertexArray);
+		RenderCommand::DrawIndexed(s_Data.VertexArray);
 	}
 
 	void Renderer2D::DrawRotatedQuad(const glm::vec2& position, const glm::vec2& size, float rotation, const std::shared_ptr<Texture2D>& texture)
@@ -150,6 +143,6 @@ namespace Afterglow
 		m_ShaderLibrary.Get("Texture")->SetMat4("u_ModelMatrix", transform);
 
 		texture->Bind();
-		RenderCommand::DrawIndexed(s_Data->VertexArray);
+		RenderCommand::DrawIndexed(s_Data.VertexArray);
 	}
 }

@@ -17,7 +17,6 @@
 #include "Afterglow/Core/OrthographicCameraController.h"
 
 // ------------ Renderer ---------------
-#include "Afterglow/Core/Renderer/Renderer.h"
 #include "Afterglow/Core/Renderer/Renderer2D.h"
 #include "Afterglow/Core/Renderer/RenderCommand.h"
 

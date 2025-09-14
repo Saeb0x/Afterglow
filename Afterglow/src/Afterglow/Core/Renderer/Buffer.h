@@ -113,7 +113,7 @@ namespace Afterglow
 		virtual void SetLayout(const BufferLayout& layout) = 0;
 		virtual const BufferLayout& GetLayout() const = 0;
 
-		static VertexBuffer* Create(uint32_t size, const float* vertices);
+		static std::shared_ptr<VertexBuffer> Create(uint32_t size, const float* vertices);
 	};
 
 	class IndexBuffer
@@ -127,6 +127,6 @@ namespace Afterglow
 		virtual uint32_t GetCount() const = 0;
 		virtual uint32_t GetRendererID() const = 0;
 
-		static IndexBuffer* Create(uint32_t count, const uint32_t* indices);
+		static std::shared_ptr<IndexBuffer> Create(uint32_t count, const uint32_t* indices);
 	};
 }

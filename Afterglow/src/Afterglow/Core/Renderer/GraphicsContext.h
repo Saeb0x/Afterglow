@@ -11,6 +11,6 @@ namespace Afterglow
 		virtual void SwapBuffers() = 0;
 		virtual void* GetWindowHandle() const = 0;
 
-		static GraphicsContext* Create(void* windowHandle);
+		static std::shared_ptr<GraphicsContext> Create(void* windowHandle);
 	};
 }

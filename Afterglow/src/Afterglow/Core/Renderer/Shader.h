@@ -23,8 +23,8 @@ namespace Afterglow
 		virtual void SetFloat4(const std::string& uniform, const glm::vec4& vec) const = 0;
 		virtual void SetMat4(const std::string& uniform, const glm::mat4& mat) const = 0;
 
-		static Shader* Create(const std::filesystem::path& shadersFilePath);
-		static Shader* Create(const std::string& debugName, const std::string& vertexSource, const std::string& fragmentSource);
+		static std::shared_ptr<Shader> Create(const std::filesystem::path& shadersFilePath);
+		static std::shared_ptr<Shader> Create(const std::string& debugName, const std::string& vertexSource, const std::string& fragmentSource);
 	};
 
 	class ShaderLibrary

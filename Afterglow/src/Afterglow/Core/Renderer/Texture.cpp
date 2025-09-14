@@ -1,14 +1,14 @@
 #include "agpch.h"
 #include "Texture.h"
 
-#include "Afterglow/Core/Renderer/Renderer.h"
+#include "Afterglow/Core/Renderer/Renderer2D.h"
 #include "Afterglow/Platform/OpenGL/OpenGLTexture.h"
 
 namespace Afterglow
 {
     std::shared_ptr<Texture2D> Texture2D::Create(const std::string& path)
     {
-		switch (Renderer::GetAPI())
+		switch (Renderer2D::GetAPI())
 		{
 		case RendererAPI::API::None:
 			AG_ASSERT(false, "RendererAPI::None is not supported!");

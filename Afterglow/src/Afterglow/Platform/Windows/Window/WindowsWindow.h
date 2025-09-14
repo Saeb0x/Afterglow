@@ -31,7 +31,7 @@ namespace Afterglow
 	
 	private:
 		GLFWwindow* m_Window;
-		std::unique_ptr<GraphicsContext> m_Context;
+		std::shared_ptr<GraphicsContext> m_Context;
 		
 		struct WindowData
 		{

@@ -2,35 +2,35 @@
 #include "Shader.h"
 
 #include "Afterglow/Core/Assert.h"
-#include "Renderer.h"
+#include "Renderer2D.h"
 #include "Afterglow/Platform/OpenGL/OpenGLShader.h"
 
 namespace Afterglow
 {
-	Shader* Shader::Create(const std::filesystem::path& shadersFilePath)
+	std::shared_ptr<Shader> Shader::Create(const std::filesystem::path& shadersFilePath)
 	{
-		switch (Renderer::GetAPI())
+		switch (Renderer2D::GetAPI())
 		{
 		case RendererAPI::API::None:
 			AG_ASSERT(false, "RendererAPI::None is not supported!");
 			return nullptr;
 		case RendererAPI::API::OpenGL:
-			return new OpenGLShader(shadersFilePath);
+			return std::make_shared<OpenGLShader>(shadersFilePath);
 		}
 
 		AG_ASSERT(false, "Unsupported Renderer API!");
 		return nullptr;
 	}
 
-	Shader* Shader::Create(const std::string& debugName, const std::string& vertexSource, const std::string& fragmentSource)
+	std::shared_ptr<Shader> Shader::Create(const std::string& debugName, const std::string& vertexSource, const std::string& fragmentSource)
 	{
-		switch (Renderer::GetAPI())
+		switch (Renderer2D::GetAPI())
 		{
 		case RendererAPI::API::None:
 			AG_ASSERT(false, "RendererAPI::None is not supported!");
 			return nullptr;
 		case RendererAPI::API::OpenGL:
-			return new OpenGLShader(debugName, vertexSource, fragmentSource);
+			return std::make_shared<OpenGLShader>(debugName, vertexSource, fragmentSource);
 		}
 
 		AG_ASSERT(false, "Unsupported Renderer API!");
