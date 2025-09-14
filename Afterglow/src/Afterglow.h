@@ -23,6 +23,7 @@
 #include "Afterglow/Core/Renderer/VertexArray.h"
 #include "Afterglow/Core/Renderer/Buffer.h"
 #include "Afterglow/Core/Renderer/Shader.h"
+#include "Afterglow/Core/Renderer/Framebuffer.h"
 
 #include "Afterglow/Core/Renderer/Texture.h"
 // -------------------------------------

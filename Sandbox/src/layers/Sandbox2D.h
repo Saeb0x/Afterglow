@@ -21,4 +21,6 @@ private:
 
 	std::shared_ptr<Afterglow::Texture2D> m_Pic;
 	float m_PicRotation = 0.0f;
+
+	std::shared_ptr<Afterglow::Framebuffer> m_Framebuffer;
 };
