@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Afterglow/Core/Renderer/Framebuffer.h"
+#include "Afterglow/Renderer/Framebuffer.h"
 
 namespace Afterglow
 {

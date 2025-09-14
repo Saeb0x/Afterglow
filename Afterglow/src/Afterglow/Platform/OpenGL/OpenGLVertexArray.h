@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Afterglow/Core/Renderer/VertexArray.h"
+#include "Afterglow/Renderer/VertexArray.h"
 
 namespace Afterglow
 {

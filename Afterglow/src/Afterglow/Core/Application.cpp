@@ -8,8 +8,7 @@
 #include "Events/WindowEvents.h"
 #include "Events/InputEvents.h"
 
-#include "Renderer/Renderer2D.h"
-#include "Renderer/RenderCommand.h"
+#include "Afterglow/Renderer/Renderer2D.h"
 
 namespace Afterglow
 {

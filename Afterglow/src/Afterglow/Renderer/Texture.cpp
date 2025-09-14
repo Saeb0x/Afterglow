@@ -1,7 +1,7 @@
 #include "agpch.h"
 #include "Texture.h"
 
-#include "Afterglow/Core/Renderer/Renderer2D.h"
+#include "Afterglow/Renderer/Renderer2D.h"
 #include "Afterglow/Platform/OpenGL/OpenGLTexture.h"
 
 namespace Afterglow

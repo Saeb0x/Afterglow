@@ -4,7 +4,7 @@
 #include "Events/Event.h"
 
 #include "LayerStack.h"
-#include "ImGui/ImGuiLayer.h"
+#include "Afterglow/ImGui/ImGuiLayer.h"
 
 namespace Afterglow
 {

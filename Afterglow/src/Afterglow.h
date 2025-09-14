@@ -17,15 +17,15 @@
 #include "Afterglow/Core/OrthographicCameraController.h"
 
 // ------------ Renderer ---------------
-#include "Afterglow/Core/Renderer/Renderer2D.h"
-#include "Afterglow/Core/Renderer/RenderCommand.h"
+#include "Afterglow/Renderer/Renderer2D.h"
+#include "Afterglow/Renderer/RenderCommand.h"
 
-#include "Afterglow/Core/Renderer/VertexArray.h"
-#include "Afterglow/Core/Renderer/Buffer.h"
-#include "Afterglow/Core/Renderer/Shader.h"
-#include "Afterglow/Core/Renderer/Framebuffer.h"
+#include "Afterglow/Renderer/VertexArray.h"
+#include "Afterglow/Renderer/Buffer.h"
+#include "Afterglow/Renderer/Shader.h"
+#include "Afterglow/Renderer/Framebuffer.h"
 
-#include "Afterglow/Core/Renderer/Texture.h"
+#include "Afterglow/Renderer/Texture.h"
 // -------------------------------------
 
 #ifdef AG_NETWORKING

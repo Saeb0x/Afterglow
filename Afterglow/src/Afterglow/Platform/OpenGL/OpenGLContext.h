@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Afterglow/Core/Renderer/GraphicsContext.h"
+#include "Afterglow/Renderer/GraphicsContext.h"
 
 namespace Afterglow
 {

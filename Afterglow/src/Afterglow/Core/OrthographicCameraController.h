@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Afterglow/Core/Renderer/OrthographicCamera.h"
+#include "Afterglow/Renderer/OrthographicCamera.h"
 
 #include "Afterglow/Core/Timestep.h"
 #include "Afterglow/Core/Events/Event.h"

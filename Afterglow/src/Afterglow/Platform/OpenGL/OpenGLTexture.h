@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Afterglow/Core/Renderer/Texture.h"
+#include "Afterglow/Renderer/Texture.h"
 
 namespace Afterglow
 {

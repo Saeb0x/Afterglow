@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Afterglow/Core/Window.h"
-#include "Afterglow/Core/Renderer/GraphicsContext.h"
+#include "Afterglow/Renderer/GraphicsContext.h"
 
 struct GLFWwindow;
 
