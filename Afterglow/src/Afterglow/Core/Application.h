@@ -13,10 +13,6 @@ namespace Afterglow
 	public:
 		Application(const std::string& appName = "Afterglow App");
 		virtual ~Application();
-		Application(const Application&) = delete;
-		Application& operator=(const Application&) = delete;
-		Application(const Application&&) = delete;
-		Application& operator=(Application&&) = delete;
 
 		virtual void Run();
 		void Close();
@@ -33,14 +29,13 @@ namespace Afterglow
 
 	private:
 		inline static Application* s_Instance = nullptr;
-
 		bool b_Running = true;
-		bool b_Iconified = false;
-		std::unique_ptr<Window> m_Window;
-
-		ImGuiLayer* m_ImGuiLayer = nullptr;
-		LayerStack m_LayerStack;
-
 		float m_LastFrameTime = 0.0f;
+
+		std::unique_ptr<Window> m_Window;
+		bool b_Iconified = false;
+
+		LayerStack m_LayerStack;
+		ImGuiLayer* m_ImGuiLayer = nullptr;
 	};
 }
