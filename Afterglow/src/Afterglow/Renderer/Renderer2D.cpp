@@ -56,6 +56,7 @@ namespace Afterglow
 		m_ShaderLibrary.Load("assets/shaders/FlatColor.glsl");
 		m_ShaderLibrary.Load("assets/shaders/Texture.glsl");
 		m_ShaderLibrary.Load("assets/shaders/Grid.glsl");
+		m_ShaderLibrary.Load("assets/shaders/GridDotted.glsl");
 	}
 
 	void Renderer2D::Shutdown()
@@ -86,6 +87,10 @@ namespace Afterglow
 		auto gridShader = m_ShaderLibrary.Get("Grid");
 		gridShader->Bind();
 		gridShader->SetMat4("u_ProjectionViewMatrix", camera.GetProjectionViewMatrix());
+
+		auto gridDottedShader = m_ShaderLibrary.Get("GridDotted");
+		gridDottedShader->Bind();
+		gridDottedShader->SetMat4("u_ProjectionViewMatrix", camera.GetProjectionViewMatrix());
 	}
 
 	void Renderer2D::EndScene()
@@ -172,6 +177,22 @@ namespace Afterglow
 		gridShader->Bind();
 		gridShader->SetFloat("u_Spacing", spacing);
 		gridShader->SetFloat("u_Thickness", thickness);
+		gridShader->SetFloat3("u_GridColor", gridColor);
+		gridShader->SetFloat3("u_BGColor", backgroundColor);
+
+		glm::mat4 transform = glm::scale(glm::mat4(1.0f), { 1000.0f, 1000.0f, 1.0f });
+		gridShader->SetMat4("u_ModelMatrix", transform);
+
+		RenderCommand::DrawIndexed(s_Data.VertexArray);
+		m_Stats.DrawCalls++;
+	}
+
+	void Renderer2D::DrawDottedGrid(float spacing, float dotRadius, const glm::vec3& gridColor, const glm::vec3& backgroundColor)
+	{
+		auto gridShader = m_ShaderLibrary.Get("GridDotted");
+		gridShader->Bind();
+		gridShader->SetFloat("u_Spacing", spacing);
+		gridShader->SetFloat("u_DotRadius", dotRadius);
 		gridShader->SetFloat3("u_GridColor", gridColor);
 		gridShader->SetFloat3("u_BGColor", backgroundColor);
 
