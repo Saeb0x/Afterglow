@@ -42,6 +42,8 @@ namespace Afterglow
 		void DrawRotatedQuad(const glm::vec2& position, const glm::vec2& size, float rotation, const std::shared_ptr<Texture2D>& texture);
 		void DrawRotatedQuad(const glm::vec3& position, const glm::vec2& size, float rotation, const std::shared_ptr<Texture2D>& texture);
 
+		void DrawGrid(float spacing, float thickness, const glm::vec3& gridColor, const glm::vec3& backgroundColor);
+
 	private:
 		Renderer2D() = default;
 		~Renderer2D() = default;

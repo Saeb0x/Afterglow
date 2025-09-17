@@ -33,14 +33,14 @@ namespace Afterglow
 	
 	void Application::Run()
 	{
-		Afterglow::RenderCommand::SetClearColor({ 0.1f, 0.1f, 0.1f, 1 });
 		while (b_Running)
 		{
 			float time = Time::GetTime();
 			Timestep ts = time - m_LastFrameTime;
 			m_LastFrameTime = time;
 			
-			Afterglow::RenderCommand::Clear();
+			RenderCommand::SetClearColor({ 0.1f, 0.1f, 0.1f, 1 });
+			RenderCommand::Clear();
 
 			if (!b_Iconified)
 			{
