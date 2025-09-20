@@ -6,7 +6,7 @@
 namespace Afterglow
 {
 	OrthographicCameraController::OrthographicCameraController(uint16_t width, uint16_t height, bool canRotate)
-		: m_AspectRatio((float)width / (float)height), m_OrthographicCamera(-m_AspectRatio * m_ZoomLevel, m_AspectRatio* m_ZoomLevel, -m_ZoomLevel, m_ZoomLevel), b_CanRotate(canRotate)
+		: m_AspectRatio((float)width / (float)height), m_OrthographicCamera(-m_AspectRatio * m_ZoomLevel, m_AspectRatio* m_ZoomLevel, -m_ZoomLevel, m_ZoomLevel, -1.0f, 1.0f), b_CanRotate(canRotate)
 	{
 	}
 
@@ -32,7 +32,7 @@ namespace Afterglow
 			if (Input::IsKeyPressed(AG_KEY_E))
 				m_CameraRotation -= m_RotationSpeed * ts;
 
-			m_OrthographicCamera.SetRotation(m_CameraRotation);
+			m_OrthographicCamera.SetRotation(glm::vec3(0.0f, 0.0f, m_CameraRotation));
 		}
 	}
 
@@ -46,7 +46,7 @@ namespace Afterglow
 	void OrthographicCameraController::Resize(uint16_t width, uint16_t height)
 	{
 		m_AspectRatio = (float)width / (float)height;
-		m_OrthographicCamera.SetProjection(-m_AspectRatio * m_ZoomLevel, m_AspectRatio * m_ZoomLevel, -m_ZoomLevel, m_ZoomLevel);
+		m_OrthographicCamera.SetBounds(-m_AspectRatio * m_ZoomLevel, m_AspectRatio * m_ZoomLevel, -m_ZoomLevel, m_ZoomLevel);
 	}
 
 	bool OrthographicCameraController::OnWindowResize(WindowResizeEvent& e)
@@ -60,7 +60,7 @@ namespace Afterglow
 		m_ZoomLevel -= e.GetYOffset() * 0.25f;
 		m_ZoomLevel = std::max(m_ZoomLevel, 0.25f);
 
-		m_OrthographicCamera.SetProjection(-m_AspectRatio * m_ZoomLevel, m_AspectRatio * m_ZoomLevel, -m_ZoomLevel, m_ZoomLevel);
+		m_OrthographicCamera.SetBounds(-m_AspectRatio * m_ZoomLevel, m_AspectRatio * m_ZoomLevel, -m_ZoomLevel, m_ZoomLevel);
 
 		return false;
 	}

@@ -38,6 +38,6 @@ namespace Afterglow
 		float m_TranslationSpeed = m_ZoomLevel;
 
 		float m_CameraRotation = 0.0f;
-		float m_RotationSpeed = 0.1f;
+		float m_RotationSpeed = 30.0f;
 	};
 }

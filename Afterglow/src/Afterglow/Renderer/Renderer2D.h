@@ -1,7 +1,7 @@
 #pragma once
 
 #include "RenderCommand.h"
-#include "OrthographicCamera.h"
+#include "Camera.h"
 #include "Texture.h"
 #include "Shader.h"
 
@@ -29,7 +29,7 @@ namespace Afterglow
 
 		ShaderLibrary& GetShaderLibrary() { return m_ShaderLibrary; }
 
-		void BeginScene(const OrthographicCamera& camera);
+		void BeginScene(const Camera& camera);
 		void EndScene();
 
 		void DrawQuad(const glm::vec2& position, const glm::vec2& size, const glm::vec4& color);

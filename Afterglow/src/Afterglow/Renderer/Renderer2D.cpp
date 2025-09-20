@@ -73,7 +73,7 @@ namespace Afterglow
 		RenderCommand::SetViewport(x, y, width, height);
 	}
 
-	void Renderer2D::BeginScene(const OrthographicCamera& camera)
+	void Renderer2D::BeginScene(const Camera& camera)
 	{
 		auto flatColorShader = m_ShaderLibrary.Get("FlatColor");
 		flatColorShader->Bind();

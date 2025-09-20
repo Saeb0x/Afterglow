@@ -4,7 +4,7 @@
 
 Sandbox2D::Sandbox2D()
 	: Afterglow::Layer("Sandbox2D"), 
-	m_OrthoCameraController(Afterglow::Application::Get().GetWindow().GetWidth(), Afterglow::Application::Get().GetWindow().GetHeight())
+	m_OrthoCameraController(Afterglow::Application::Get().GetWindow().GetWidth(), Afterglow::Application::Get().GetWindow().GetHeight(), true)
 {
 	m_Pic = Afterglow::Texture2D::Create("assets/textures/pic.jpeg");
 }
