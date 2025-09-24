@@ -41,8 +41,10 @@ namespace Afterglow
 	private:
 		ShaderLibrary() = default;
 		~ShaderLibrary() = default;
-		ShaderLibrary(const ShaderLibrary&);
-		const ShaderLibrary& operator=(const ShaderLibrary&);
+		ShaderLibrary(const ShaderLibrary&) = delete;
+		ShaderLibrary& operator=(const ShaderLibrary&) = delete;
+		ShaderLibrary(ShaderLibrary&&) = delete;
+		ShaderLibrary& operator=(ShaderLibrary&&) = delete;
 
 	private:
 		std::unordered_map<std::string, std::shared_ptr<Shader>> m_Shaders;

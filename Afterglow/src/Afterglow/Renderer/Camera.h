@@ -29,8 +29,7 @@ namespace Afterglow
 	protected:
 		void RecalculateViewMatrix()
 		{
-			glm::mat4 transform = glm::translate(glm::mat4(1.0), m_Position) * 
-				glm::yawPitchRoll(glm::radians(m_Rotation.y), glm::radians(m_Rotation.x), glm::radians(m_Rotation.z));
+			glm::mat4 transform = glm::yawPitchRoll(glm::radians(m_Rotation.y), glm::radians(m_Rotation.x), glm::radians(m_Rotation.z)) * glm::translate(glm::mat4(1.0), m_Position);
 
 			m_ViewMatrix = glm::inverse(transform);
 

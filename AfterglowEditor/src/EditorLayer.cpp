@@ -31,14 +31,18 @@ void EditorLayer::OnUpdate(Afterglow::Timestep ts)
 	    m_OrthoCameraController.OnUpdate(ts);
 
     m_PicRotation += 30.0f * ts;
-	m_Framebuffer->Bind();
+
     m_Renderer2D.ResetStats();
+
+	m_Framebuffer->Bind();
 	Afterglow::RenderCommand::SetClearColor({ 0.1f, 0.1f, 0.1f, 1 });
 	Afterglow::RenderCommand::Clear();
 	m_Renderer2D.BeginScene(m_OrthoCameraController.GetCamera());
+
 	m_Renderer2D.DrawQuad({ 0.0f, -0.5f }, { 0.5f, 0.2f }, { 0.2f, 0.3f, 0.8f, 1.0f });
 	m_Renderer2D.DrawQuad({ -0.9f, 0.0f }, { 0.5f, 0.5f }, { 0.8f, 0.2f, 0.3f, 1.0f });
 	m_Renderer2D.DrawRotatedQuad({ 0.0f, 0.3f }, { 0.8f, 0.8f }, m_PicRotation, m_Pic);
+
 	m_Renderer2D.EndScene();
 	m_Framebuffer->Unbind();
 }
