@@ -166,7 +166,7 @@ namespace Afterglow
 
 		// Render the framebuffer as a textured quad in world space.
 		uint32_t textureID = m_Framebuffer->GetColorAttachmentRendererID();
-		renderer.DrawQuad(glm::vec3(1.0f, 1.0f, 0.0f), glm::vec2(1.0f, 1.0f), textureID);
+		renderer.DrawQuad(glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(1.0f, 1.0f), textureID);
 	}
 
 	void ImGuiWorldContext::ResizeFramebuffer(uint16_t width, uint16_t height)

@@ -23,7 +23,7 @@ void Sandbox2D::OnDetach()
 
 void Sandbox2D::OnUpdate(Afterglow::Timestep ts)
 {
-	// True consumed mean that input is being handled by the ImGui world context.
+	// True consumed means that the input is being handled by ImGui world-space context.
 	bool consumed = m_ImGuiWorldContext.HandleInput(
 		m_OrthoCameraController.GetCamera(),
 		m_Viewport,
@@ -36,10 +36,8 @@ void Sandbox2D::OnUpdate(Afterglow::Timestep ts)
 
 	m_ImGuiWorldContext.Begin();
 	{
-		ImGui::SetNextWindowPos(ImVec2(0, 0));
-		ImGui::SetNextWindowSize(ImGui::GetIO().DisplaySize);
-
-		ImGui::Begin("WorldSpaceUI", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse);
+		ImGui::SetNextWindowSize({ 200,200 });
+		ImGui::Begin("WorldSpaceUI", nullptr, ImGuiWindowFlags_None);
 		{
 			ImGui::Text("World Space UI!");
 			ImGui::Text("This UI exists in world coordinates");
@@ -61,9 +59,9 @@ void Sandbox2D::OnUpdate(Afterglow::Timestep ts)
 
 	m_Renderer2D.DrawGrid(1.0f, 0.02f, { 0.6f, 0.6f, 0.6f }, {0.1f, 0.1f, 0.1f});
 
-	m_Renderer2D.DrawQuad({ 0.0f, -0.5f }, { 0.3f, 0.3f }, { 0.2f, 0.3f, 0.8f, 1.0f });
-	m_Renderer2D.DrawQuad({ -0.9f, 0.0f }, { 0.3f, 0.3f }, { 0.8f, 0.2f, 0.3f, 1.0f });
-	m_Renderer2D.DrawRotatedQuad({ -1.0f, 1.0f }, { 0.5f, 0.5f }, m_PicRotation, m_Pic);
+	m_Renderer2D.DrawQuad({ 0.0f, -0.5f, 1.0f }, { 0.3f, 0.3f }, { 0.2f, 0.3f, 0.8f, 1.0f });
+	m_Renderer2D.DrawQuad({ -0.9f, 0.0f, 1.0f }, { 0.3f, 0.3f }, { 0.8f, 0.2f, 0.3f, 1.0f });
+	m_Renderer2D.DrawRotatedQuad({ -1.0f, 1.0f, 1.0f }, { 0.5f, 0.5f }, m_PicRotation, m_Pic);
 	m_ImGuiWorldContext.RenderInWorld(m_Renderer2D);
 
 	m_Renderer2D.EndScene();

@@ -19,6 +19,8 @@ namespace Afterglow
 
 	void Renderer2D::Init()
 	{
+		RenderCommand::Init();
+
 		s_Data.VertexArray = VertexArray::Create();
 
 		float squareVertices[4 * 5] =
