@@ -7,6 +7,10 @@ project "Sandbox"
 	targetdir ("%{wks.location}/bin/" ..outputDir.. "/%{prj.name}")
 	objdir ("%{wks.location}/bin-int/" ..outputDir.. "/%{prj.name}")
 
+	flags{
+		"MultiProcessorCompile"
+	}
+
 	files {
 		"src/**.h",
 		"src/**.cpp"

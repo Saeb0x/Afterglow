@@ -10,6 +10,10 @@ project "Afterglow"
 	pchheader "agpch.h"
 	pchsource "src/agpch.cpp"
 
+	flags{
+		"MultiProcessorCompile"
+	}
+
 	files {
 		"src/**.h",
 		"src/**.cpp",

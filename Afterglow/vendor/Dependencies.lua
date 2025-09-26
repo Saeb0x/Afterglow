@@ -18,6 +18,10 @@ project "GLFW"
 	targetdir ("%{wks.location}/bin/" ..outputDir.. "/%{prj.name}")
 	objdir ("%{wks.location}/bin-int/" ..outputDir.. "/%{prj.name}")
 
+	flags{
+		"MultiProcessorCompile"
+	}
+
 	files {
 		"glfw/include/GLFW/glfw3.h",
 		"glfw/include/GLFW/glfw3native.h",
@@ -155,6 +159,10 @@ project "IMGUI"
 
 	targetdir ("%{wks.location}/bin/" ..outputDir.. "/%{prj.name}")
 	objdir ("%{wks.location}/bin-int/" ..outputDir.. "/%{prj.name}")
+
+	flags{
+		"MultiProcessorCompile"
+	}
 
 	files {
 		"imgui/imconfig.h",
