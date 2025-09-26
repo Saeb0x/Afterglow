@@ -22,6 +22,11 @@ namespace Afterglow
 		s_RendererAPI->SetViewport(x, y, width, height);
 	}
 
+	void RenderCommand::BindTexture(uint32_t rendererID)
+	{
+		s_RendererAPI->BindTexture(rendererID);
+	}
+
 	void RenderCommand::DrawIndexed(const std::shared_ptr<VertexArray>& vertexArray)
 	{
 		s_RendererAPI->DrawIndexed(vertexArray);

@@ -4,9 +4,11 @@
 
 Sandbox2D::Sandbox2D()
 	: Afterglow::Layer("Sandbox2D"), 
-	m_OrthoCameraController(Afterglow::Application::Get().GetWindow().GetWidth(), Afterglow::Application::Get().GetWindow().GetHeight(), true)
+	m_Viewport(Afterglow::Application::Get().GetWindow().GetWidth(), Afterglow::Application::Get().GetWindow().GetHeight()),
+	m_OrthoCameraController((uint16_t)m_Viewport.x, (uint16_t)m_Viewport.y, true)
 {
 	m_Pic = Afterglow::Texture2D::Create("assets/textures/pic.jpeg");
+	m_ImGuiWorldContext.Initialize({ 0.0f, 0.0f }, { 2.0f, 2.0f });
 }
 
 void Sandbox2D::OnAttach()
@@ -21,19 +23,48 @@ void Sandbox2D::OnDetach()
 
 void Sandbox2D::OnUpdate(Afterglow::Timestep ts)
 {
+	// True consumed mean that input is being handled by the ImGui world context.
+	bool consumed = m_ImGuiWorldContext.HandleInput(
+		m_OrthoCameraController.GetCamera(),
+		m_Viewport,
+		{ Afterglow::Input::GetMouseX(), Afterglow::Input::GetMouseY() },
+		Afterglow::Input::IsMouseButtonPressed(AG_MOUSE_BUTTON_LEFT)
+	);
+
 	m_OrthoCameraController.OnUpdate(ts);
 	m_PicRotation += 30.0f * ts;
 
+	m_ImGuiWorldContext.Begin();
+	{
+		ImGui::SetNextWindowPos(ImVec2(0, 0));
+		ImGui::SetNextWindowSize(ImGui::GetIO().DisplaySize);
+
+		ImGui::Begin("WorldSpaceUI", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse);
+		{
+			ImGui::Text("World Space UI!");
+			ImGui::Text("This UI exists in world coordinates");
+			ImGui::Button("World Button");
+			if (ImGui::CollapsingHeader("Settings"))
+			{
+				static float value = 0.5f;
+				ImGui::SliderFloat("Some Value", &value, 0.0f, 1.0f);
+			}
+		}
+		ImGui::End();
+	}
+	m_ImGuiWorldContext.End();
+
 	m_Renderer2D.ResetStats();
-	Afterglow::RenderCommand::SetClearColor({ 0.1f, 0.1f, 0.1f, 1 });
+	Afterglow::RenderCommand::SetClearColor({ 0.0f, 0.0f, 0.0f, 0.0f });
 	Afterglow::RenderCommand::Clear();
 	m_Renderer2D.BeginScene(m_OrthoCameraController.GetCamera());
 
 	m_Renderer2D.DrawGrid(1.0f, 0.02f, { 0.6f, 0.6f, 0.6f }, {0.1f, 0.1f, 0.1f});
 
-	m_Renderer2D.DrawQuad({ 0.0f, -0.5f }, { 0.5f, 0.2f }, { 0.2f, 0.3f, 0.8f, 1.0f });
-	m_Renderer2D.DrawQuad({ -0.9f, 0.0f }, { 0.5f, 0.5f }, { 0.8f, 0.2f, 0.3f, 1.0f });
-	m_Renderer2D.DrawRotatedQuad({ 0.0f, 0.3f }, { 0.8f, 0.8f }, m_PicRotation, m_Pic);
+	m_Renderer2D.DrawQuad({ 0.0f, -0.5f }, { 0.3f, 0.3f }, { 0.2f, 0.3f, 0.8f, 1.0f });
+	m_Renderer2D.DrawQuad({ -0.9f, 0.0f }, { 0.3f, 0.3f }, { 0.8f, 0.2f, 0.3f, 1.0f });
+	m_Renderer2D.DrawRotatedQuad({ -1.0f, 1.0f }, { 0.5f, 0.5f }, m_PicRotation, m_Pic);
+	m_ImGuiWorldContext.RenderInWorld(m_Renderer2D);
 
 	m_Renderer2D.EndScene();
 }

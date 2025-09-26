@@ -28,6 +28,8 @@
 #include "Afterglow/Renderer/Texture.h"
 // -------------------------------------
 
+#include "Afterglow/ImGui/ImGuiWorldContext.h"
+
 #ifdef AG_NETWORKING
 #include "Afterglow/Networking/HTTP/HttpClient.h"
 #endif

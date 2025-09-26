@@ -24,10 +24,10 @@ namespace Afterglow
 		float squareVertices[4 * 5] =
 		{
 			// a_vertexPos			// a_texCoord
-			-0.5f, -0.5f, 0.0f,		0.0f, 0.0f,
-			 0.5f, -0.5f, 0.0f,		1.0f, 0.0f,
-			 0.5f,  0.5f, 0.0f,		1.0f, 1.0f,
-			-0.5f,  0.5f, 0.0f,		0.0f, 1.0f
+			-1.0f, -1.0f, 0.0f,		0.0f, 0.0f,
+			 1.0f, -1.0f, 0.0f,		1.0f, 0.0f,
+			 1.0f,  1.0f, 0.0f,		1.0f, 1.0f,
+			-1.0f,  1.0f, 0.0f,		0.0f, 1.0f
 		};
 
 		std::shared_ptr<VertexBuffer> squareVB;
@@ -123,6 +123,24 @@ namespace Afterglow
 		textureShader->SetMat4("u_ModelMatrix", transform);
 
 		texture->Bind();
+		RenderCommand::DrawIndexed(s_Data.VertexArray);
+		m_Stats.DrawCalls++;
+	}
+
+	void Renderer2D::DrawQuad(const glm::vec2& position, const glm::vec2& size, uint32_t rendererID)
+	{
+		DrawQuad({ position.x, position.y, 0.0f }, size, rendererID);
+	}
+
+	void Renderer2D::DrawQuad(const glm::vec3& position, const glm::vec2& size, uint32_t rendererID)
+	{
+		auto textureShader = m_ShaderLibrary.Get("Texture");
+		textureShader->Bind();
+
+		glm::mat4 transform = glm::translate(glm::mat4(1.0), position) * glm::scale(glm::mat4(1.0f), { size.x, size.y, 1.0f });
+		textureShader->SetMat4("u_ModelMatrix", transform);
+
+		RenderCommand::BindTexture(rendererID);
 		RenderCommand::DrawIndexed(s_Data.VertexArray);
 		m_Stats.DrawCalls++;
 	}

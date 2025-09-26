@@ -15,10 +15,13 @@ public:
 	void OnEvent(Afterglow::Event& event) override;
 
 private:
-	Afterglow::OrthographicCameraController m_OrthoCameraController;
-
 	Afterglow::Renderer2D& m_Renderer2D = Afterglow::Renderer2D::GetInstance();
+	glm::vec2 m_Viewport;
+
+	Afterglow::OrthographicCameraController m_OrthoCameraController;
 
 	std::shared_ptr<Afterglow::Texture2D> m_Pic;
 	float m_PicRotation = 0.0f;
+
+	Afterglow::ImGuiWorldContext m_ImGuiWorldContext;
 };

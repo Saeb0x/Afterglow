@@ -19,7 +19,6 @@ namespace Afterglow
 
 		void SetConsumeEvents(bool consume) { b_ConsumeEvents = consume; }
 
-	private:
 		void SetupImGuiStyle();
 
 	private:

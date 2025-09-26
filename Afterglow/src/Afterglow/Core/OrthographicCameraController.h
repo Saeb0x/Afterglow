@@ -29,7 +29,7 @@ namespace Afterglow
 
 	private:
 		float m_AspectRatio;
-		float m_ZoomLevel = 1.0f;
+		float m_ZoomLevel = 3.0f;
 		OrthographicCamera m_OrthographicCamera;
 		
 		bool b_CanRotate;

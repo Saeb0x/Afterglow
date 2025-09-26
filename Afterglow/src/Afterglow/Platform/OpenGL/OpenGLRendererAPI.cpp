@@ -20,6 +20,11 @@ namespace Afterglow
 		glViewport(x, y, width, height);
 	}
 
+	void OpenGLRendererAPI::BindTexture(uint32_t rendererID)
+	{
+		glBindTexture(GL_TEXTURE_2D, rendererID);
+	}
+
 	void OpenGLRendererAPI::DrawIndexed(const std::shared_ptr<VertexArray>& vertexArray)
 	{
 		vertexArray->Bind();
