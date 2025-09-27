@@ -26,6 +26,7 @@ namespace Afterglow
 		void ResetStats();
 
 		void SetViewport(uint16_t x, uint16_t y, uint16_t width, uint16_t height);
+		const glm::vec2& GetViewport() const { return m_Viewport; }
 
 		ShaderLibrary& GetShaderLibrary() { return m_ShaderLibrary; }
 
@@ -58,5 +59,7 @@ namespace Afterglow
 	private:
 		ShaderLibrary& m_ShaderLibrary = ShaderLibrary::GetInstance();
 		Stats m_Stats;
+		
+		glm::vec2 m_Viewport{0.0f};
 	};
 }

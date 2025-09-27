@@ -34,7 +34,7 @@ namespace Afterglow
 		// Dear ImGui style.
 		SetupImGuiStyle();
 
-		Application& app = Application::Get();
+		Application& app = Application::GetInstance();
 		auto window = static_cast<GLFWwindow*>(app.GetWindow().GetNativeWindow());
 
 		// Platform/Renderer bindings.
@@ -70,7 +70,7 @@ namespace Afterglow
 	void ImGuiLayer::End()
 	{
 		ImGuiIO& io = ImGui::GetIO();
-		Application& app = Application::Get();
+		Application& app = Application::GetInstance();
 		io.DisplaySize = ImVec2((float)app.GetWindow().GetWidth(), (float)app.GetWindow().GetHeight());
 
 		ImGui::Render();

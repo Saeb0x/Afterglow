@@ -2,6 +2,7 @@
 #include "Renderer2D.h"
 
 #include "VertexArray.h"
+#include "Afterglow/Core/Application.h"
 
 namespace Afterglow
 {
@@ -19,6 +20,9 @@ namespace Afterglow
 
 	void Renderer2D::Init()
 	{
+		Window& win = Application::GetInstance().GetWindow();
+		m_Viewport = { win.GetWidth(), win.GetHeight() };
+
 		RenderCommand::Init();
 
 		s_Data.VertexArray = VertexArray::Create();
@@ -69,6 +73,7 @@ namespace Afterglow
 
 	void Renderer2D::SetViewport(uint16_t x, uint16_t y, uint16_t width, uint16_t height)
 	{
+		m_Viewport = { width, height };
 		RenderCommand::SetViewport(x, y, width, height);
 	}
 

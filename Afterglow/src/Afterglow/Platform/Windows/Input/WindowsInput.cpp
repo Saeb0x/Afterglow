@@ -18,7 +18,7 @@ namespace Afterglow
 
 	bool WindowsInput::IsKeyPressedImpl(int keyCode) const
 	{
-		auto window = static_cast<GLFWwindow*>(Application::Get().GetWindow().GetNativeWindow());
+		auto window = static_cast<GLFWwindow*>(Application::GetInstance().GetWindow().GetNativeWindow());
 
 		auto state = glfwGetKey(window, keyCode);
 		return state == GLFW_PRESS || state == GLFW_REPEAT;
@@ -26,7 +26,7 @@ namespace Afterglow
 
 	bool WindowsInput::IsMouseButtonPressedImpl(int mouseButton) const
 	{
-		auto window = static_cast<GLFWwindow*>(Application::Get().GetWindow().GetNativeWindow());
+		auto window = static_cast<GLFWwindow*>(Application::GetInstance().GetWindow().GetNativeWindow());
 
 		auto state = glfwGetMouseButton(window, mouseButton);
 		return state == GLFW_PRESS;
@@ -34,7 +34,7 @@ namespace Afterglow
 
 	std::pair<float, float> WindowsInput::GetMousePositionImpl() const
 	{
-		auto window = static_cast<GLFWwindow*>(Application::Get().GetWindow().GetNativeWindow());
+		auto window = static_cast<GLFWwindow*>(Application::GetInstance().GetWindow().GetNativeWindow());
 
 		double xPos, yPos;
 		glfwGetCursorPos(window, &xPos, &yPos);

@@ -16,8 +16,6 @@ public:
 
 private:
 	Afterglow::Renderer2D& m_Renderer2D = Afterglow::Renderer2D::GetInstance();
-	glm::vec2 m_Viewport;
-
 	Afterglow::OrthographicCameraController m_OrthoCameraController;
 
 	std::shared_ptr<Afterglow::Texture2D> m_Pic;

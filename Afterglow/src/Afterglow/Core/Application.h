@@ -22,7 +22,7 @@ namespace Afterglow
 		void PushLayer(Layer* layer);
 		void PushOverlay(Layer* layer);
 
-		static Application& Get() { return *s_Instance; }
+		static Application& GetInstance() { return *s_Instance; }
 		Window& GetWindow() const { return *m_Window; }
 
 		ImGuiLayer* GetImGuiLayer() { return m_ImGuiLayer; }

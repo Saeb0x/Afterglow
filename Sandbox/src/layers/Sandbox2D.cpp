@@ -4,8 +4,7 @@
 
 Sandbox2D::Sandbox2D()
 	: Afterglow::Layer("Sandbox2D"), 
-	m_Viewport(Afterglow::Application::Get().GetWindow().GetWidth(), Afterglow::Application::Get().GetWindow().GetHeight()),
-	m_OrthoCameraController((uint16_t)m_Viewport.x, (uint16_t)m_Viewport.y, true)
+	m_OrthoCameraController(m_Renderer2D.GetViewport().x, m_Renderer2D.GetViewport().y, true)
 {
 	m_Pic = Afterglow::Texture2D::Create("assets/textures/pic.jpeg");
 	m_ImGuiWorldContext.Initialize({ 0.0f, 0.0f }, { 2.0f, 2.0f });
@@ -26,7 +25,7 @@ void Sandbox2D::OnUpdate(Afterglow::Timestep ts)
 	// True consumed means that the input is being handled by ImGui world-space context.
 	bool consumed = m_ImGuiWorldContext.HandleInput(
 		m_OrthoCameraController.GetCamera(),
-		m_Viewport,
+		m_Renderer2D.GetViewport(),
 		{ Afterglow::Input::GetMouseX(), Afterglow::Input::GetMouseY() },
 		Afterglow::Input::IsMouseButtonPressed(AG_MOUSE_BUTTON_LEFT)
 	);
@@ -36,7 +35,6 @@ void Sandbox2D::OnUpdate(Afterglow::Timestep ts)
 
 	m_ImGuiWorldContext.Begin();
 	{
-		ImGui::SetNextWindowSize({ 200,200 });
 		ImGui::Begin("WorldSpaceUI", nullptr, ImGuiWindowFlags_None);
 		{
 			ImGui::Text("World Space UI!");

@@ -39,7 +39,7 @@ namespace Afterglow
 		ImGuiIO& io = ImGui::GetIO();
 		
 		io.FontDefault = io.Fonts->AddFontFromFileTTF("assets/fonts/opensans/OpenSans-Bold.ttf", 20.0f);
-		Application::Get().GetImGuiLayer()->SetupImGuiStyle();
+		Application::GetInstance().GetImGuiLayer()->SetupImGuiStyle();
 		
 		io.DisplaySize = ImVec2(m_Framebuffer->GetSpecification().Width,
 			m_Framebuffer->GetSpecification().Height);
