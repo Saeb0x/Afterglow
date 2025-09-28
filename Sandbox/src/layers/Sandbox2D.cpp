@@ -4,7 +4,7 @@
 
 Sandbox2D::Sandbox2D()
 	: Afterglow::Layer("Sandbox2D"), 
-	m_OrthoCameraController(m_Renderer2D.GetViewport().x, m_Renderer2D.GetViewport().y, true)
+	m_OrthoCameraController((uint16_t)m_Renderer2D.GetViewport().x, (uint16_t)m_Renderer2D.GetViewport().y, true)
 {
 	m_Pic = Afterglow::Texture2D::Create("assets/textures/pic.jpeg");
 	m_ImGuiWorldContext.Initialize({ 0.0f, 0.0f }, { 2.0f, 2.0f });
