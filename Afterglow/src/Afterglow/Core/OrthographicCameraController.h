@@ -23,6 +23,9 @@ namespace Afterglow
 		OrthographicCamera& GetCamera() { return m_OrthographicCamera; }
 		const OrthographicCamera& GetCamera() const { return m_OrthographicCamera; }
 
+		float GetAspectRatio() const { return m_AspectRatio; }
+		float GetZoomLevel() const { return m_ZoomLevel; }
+
 	private:
 		bool OnWindowResize(WindowResizeEvent& e);
 		bool OnMouseScroll(MouseScrolledEvent& e);
