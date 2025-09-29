@@ -41,8 +41,7 @@ namespace Afterglow
 		io.FontDefault = io.Fonts->AddFontFromFileTTF("assets/fonts/opensans/OpenSans-Bold.ttf", 20.0f);
 		Application::GetInstance().GetImGuiLayer()->SetupImGuiStyle();
 		
-		io.DisplaySize = ImVec2(m_Framebuffer->GetSpecification().Width,
-			m_Framebuffer->GetSpecification().Height);
+		io.DisplaySize = ImVec2(m_Framebuffer->GetSpecification().Width, m_Framebuffer->GetSpecification().Height);
 		io.DisplayFramebufferScale = ImVec2(1.0f, 1.0f);
 
 		ImGui_ImplOpenGL3_Init("#version 330");
@@ -164,9 +163,16 @@ namespace Afterglow
 		if (!b_IsInitialized || !m_Framebuffer)
 			return;
 
-		// Render the framebuffer as a textured quad in world space.
+		// Calculate the center position of the world-space UI quad.
+		glm::vec3 centerPosition = glm::vec3(
+			m_WorldPosition.x + m_WorldSize.x * 0.5f,
+			m_WorldPosition.y + m_WorldSize.y * 0.5f,
+			1.0f  // Z-depth for layering.
+		);
+
+		// Render the framebuffer as a textured quad in world space. Base quad is 2 units (-1 to 1), so divide by 2 to get actual world size.
 		uint32_t textureID = m_Framebuffer->GetColorAttachmentRendererID();
-		renderer.DrawQuad(glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(1.0f, 1.0f), textureID);
+		renderer.DrawQuad(centerPosition, m_WorldSize * 0.5f, textureID);
 	}
 
 	void ImGuiWorldContext::ResizeFramebuffer(uint16_t width, uint16_t height)
