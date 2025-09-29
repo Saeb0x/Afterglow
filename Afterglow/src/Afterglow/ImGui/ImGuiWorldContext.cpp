@@ -105,7 +105,7 @@ namespace Afterglow
 		ImGui::SetCurrentContext(m_ScreenContext);
 	}
 
-	bool ImGuiWorldContext::HandleInput(const OrthographicCamera& camera, const glm::vec2& ViewportSize, const glm::vec2& mouseScreen, bool mouseDown)
+	bool ImGuiWorldContext::HandleInput(const OrthographicCameraController& camera, const glm::vec2& ViewportSize, const glm::vec2& mouseScreen, bool mouseDown)
 	{
 		if (!b_IsInitialized)
 			return false;
@@ -189,7 +189,7 @@ namespace Afterglow
 			worldPoint.y <= m_WorldPosition.y + m_WorldSize.y);
 	}
 
-	glm::vec2 ImGuiWorldContext::ScreenToWorld(const glm::vec2& canvasSize, const glm::vec2& screenPos, const OrthographicCamera& camera) const
+	glm::vec2 ImGuiWorldContext::ScreenToWorld(const glm::vec2& canvasSize, const glm::vec2& screenPos, const OrthographicCameraController& camera) const
 	{
 		// Convert screen coordinates to normalized device coordinates(-1 to 1).
 		glm::vec2 NDC;
@@ -197,7 +197,7 @@ namespace Afterglow
 		NDC.y = 1.0f - (2.0f * screenPos.y) / canvasSize.y; // Flip Y axis.
 
 		// Convert NDC to world coordinates using inverse view-projection matrix.
-		glm::mat4 invViewProj = glm::inverse(camera.GetProjectionViewMatrix());
+		glm::mat4 invViewProj = glm::inverse(camera.GetCamera().GetProjectionViewMatrix());
 		glm::vec4 worldPos4 = invViewProj * glm::vec4(NDC.x, NDC.y, 0.0f, 1.0f);
 
 		return glm::vec2(worldPos4.x, worldPos4.y);

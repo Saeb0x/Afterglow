@@ -24,7 +24,7 @@ void Sandbox2D::OnUpdate(Afterglow::Timestep ts)
 {
 	// True consumed means that the input is being handled by ImGui world-space context.
 	bool consumed = m_ImGuiWorldContext.HandleInput(
-		m_OrthoCameraController.GetCamera(),
+		m_OrthoCameraController,
 		m_Renderer2D.GetViewport(),
 		{ Afterglow::Input::GetMouseX(), Afterglow::Input::GetMouseY() },
 		Afterglow::Input::IsMouseButtonPressed(AG_MOUSE_BUTTON_LEFT)

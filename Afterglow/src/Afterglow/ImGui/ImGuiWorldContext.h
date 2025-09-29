@@ -2,7 +2,7 @@
 
 #include "Afterglow/Renderer/Renderer2D.h"
 #include "Afterglow/Renderer/Framebuffer.h"
-#include "Afterglow/Renderer/OrthographicCamera.h"
+#include "Afterglow/Core/OrthographicCameraController.h"
 
 #include <imgui.h>
 #include <glm/glm.hpp>
@@ -21,7 +21,7 @@ namespace Afterglow
 		void Begin();
 		void End();
 
-		bool HandleInput(const OrthographicCamera& camera, const glm::vec2& viewportSize, const glm::vec2& mouseScreen, bool mouseDown);
+		bool HandleInput(const OrthographicCameraController& camera, const glm::vec2& viewportSize, const glm::vec2& mouseScreen, bool mouseDown);
 		void RenderInWorld(Renderer2D& renderer);
 
 		void SetWorldPosition(const glm::vec2& position) { m_WorldPosition = position; }
@@ -34,7 +34,7 @@ namespace Afterglow
 
 	private:
 		bool IsPointInWorldBounds(const glm::vec2& worldPoint) const;
-		glm::vec2 ScreenToWorld(const glm::vec2& viewportSize, const glm::vec2& screenPos, const OrthographicCamera& camera) const;
+		glm::vec2 ScreenToWorld(const glm::vec2& viewportSize, const glm::vec2& screenPos, const OrthographicCameraController& camera) const;
 		glm::vec2 WorldToFramebuffer(const glm::vec2& worldPos) const;
 
 	private:
