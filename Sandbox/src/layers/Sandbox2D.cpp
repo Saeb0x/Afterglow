@@ -3,11 +3,16 @@
 #include <imgui.h>
 
 Sandbox2D::Sandbox2D()
-	: Afterglow::Layer("Sandbox2D"), 
+	: Afterglow::Layer("Sandbox2D"),
 	m_OrthoCameraController((uint16_t)m_Renderer2D.GetViewport().x, (uint16_t)m_Renderer2D.GetViewport().y, true)
 {
 	m_Pic = Afterglow::Texture2D::Create("assets/textures/pic.jpeg");
-	m_ImGuiWorldContext.Initialize({ 0.0f, 0.0f }, { 2.0f, 2.0f });
+
+	m_ImGuiWorldContext.Initialize();
+
+	m_ImGuiWorldContext.AddPanel("Panel", { -3.0f, 1.0f }, { 2.0f, 2.0f }, 300, 300, ImGuiWindowFlags_None, true);
+	m_ImGuiWorldContext.AddPanel("FixedPanel", { 3.0f, 3.0f }, { 2.0f, 2.0f }, 300, 300, ImGuiWindowFlags_None, false);
+	m_ImGuiWorldContext.AddPanel("Settings", { -5.0f, -3.0f }, { 3.0f, 3.0f }, 450, 450, ImGuiWindowFlags_None, true);
 }
 
 void Sandbox2D::OnAttach()
@@ -31,35 +36,49 @@ void Sandbox2D::OnUpdate(Afterglow::Timestep ts)
 	);
 
 	m_OrthoCameraController.OnUpdate(ts);
+		
 	m_PicRotation += 30.0f * ts;
 
-	m_ImGuiWorldContext.Begin();
+	m_ImGuiWorldContext.BeginPanel("Panel");
 	{
-		ImGui::Begin("WorldSpaceUI", nullptr, ImGuiWindowFlags_None);
+		ImGui::Text("Drag me!");
+		ImGui::Text("World Space UI");
+		if (ImGui::Button("World Button"))
 		{
-			ImGui::Text("World Space UI!");
-			ImGui::Text("This UI exists in world coordinates");
-			ImGui::Button("World Button");
-			if (ImGui::CollapsingHeader("Settings"))
-			{
-				static float value = 0.5f;
-				ImGui::SliderFloat("Some Value", &value, 0.0f, 1.0f);
-			}
+			AG_INFO("Panel button clicked!");
 		}
-		ImGui::End();
 	}
-	m_ImGuiWorldContext.End();
+	m_ImGuiWorldContext.EndPanel();
+
+	m_ImGuiWorldContext.BeginPanel("FixedPanel");
+	{
+		ImGui::Text("I can't be dragged!");
+		ImGui::Text("I'm fixed in place");
+	}
+	m_ImGuiWorldContext.EndPanel();
+
+	m_ImGuiWorldContext.BeginPanel("Settings");
+	{
+		ImGui::Text("Settings Panel");
+		if (ImGui::CollapsingHeader("Advanced"))
+		{
+			static float speed = 1.0f;
+			ImGui::SliderFloat("Speed", &speed, 0.1f, 10.0f);
+		}
+	}
+	m_ImGuiWorldContext.EndPanel();
 
 	m_Renderer2D.ResetStats();
 	Afterglow::RenderCommand::SetClearColor({ 0.0f, 0.0f, 0.0f, 0.0f });
 	Afterglow::RenderCommand::Clear();
 	m_Renderer2D.BeginScene(m_OrthoCameraController.GetCamera());
 
-	m_Renderer2D.DrawGrid(1.0f, 0.02f, { 0.6f, 0.6f, 0.6f }, {0.1f, 0.1f, 0.1f});
+	m_Renderer2D.DrawGrid(1.0f, 0.02f, { 0.6f, 0.6f, 0.6f }, { 0.1f, 0.1f, 0.1f });
 
 	m_Renderer2D.DrawQuad({ 0.0f, -0.5f, 1.0f }, { 0.3f, 0.3f }, { 0.2f, 0.3f, 0.8f, 1.0f });
 	m_Renderer2D.DrawQuad({ -0.9f, 0.0f, 1.0f }, { 0.3f, 0.3f }, { 0.8f, 0.2f, 0.3f, 1.0f });
 	m_Renderer2D.DrawRotatedQuad({ -1.0f, 1.0f, 1.0f }, { 0.5f, 0.5f }, m_PicRotation, m_Pic);
+
 	m_ImGuiWorldContext.RenderInWorld(m_Renderer2D);
 
 	m_Renderer2D.EndScene();

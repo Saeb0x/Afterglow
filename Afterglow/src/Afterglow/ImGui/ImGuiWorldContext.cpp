@@ -12,7 +12,7 @@ namespace Afterglow
 		Shutdown();
 	}
 
-	void ImGuiWorldContext::Initialize(const glm::vec2& worldPos, const glm::vec2& worldSize, uint16_t framebufferWidth, uint16_t framebufferHeight)
+	void ImGuiWorldContext::Initialize()
 	{
 		if (b_IsInitialized)
 		{
@@ -20,36 +20,10 @@ namespace Afterglow
 			return;
 		}
 
-		m_WorldPosition = worldPos;
-		m_WorldSize = worldSize;
-
-		// Main screen-space context.
 		m_ScreenContext = ImGui::GetCurrentContext();
 
-		// New ImGui context for world-space UI.
-		m_WorldContext = ImGui::CreateContext(ImGui::GetIO().Fonts);
-
-		FramebufferSpecification fbSpec;
-		fbSpec.Width = framebufferWidth;
-		fbSpec.Height = framebufferHeight;
-		m_Framebuffer = Framebuffer::Create(fbSpec);
-
-		// ImGui initialization for the world-space context.
-		ImGui::SetCurrentContext(m_WorldContext);
-		ImGuiIO& io = ImGui::GetIO();
-		
-		io.FontDefault = io.Fonts->AddFontFromFileTTF("assets/fonts/opensans/OpenSans-Bold.ttf", 20.0f);
-		Application::GetInstance().GetImGuiLayer()->SetupImGuiStyle();
-		
-		io.DisplaySize = ImVec2(m_Framebuffer->GetSpecification().Width, m_Framebuffer->GetSpecification().Height);
-		io.DisplayFramebufferScale = ImVec2(1.0f, 1.0f);
-
-		ImGui_ImplOpenGL3_Init("#version 330");
-
-		ImGui::SetCurrentContext(m_ScreenContext);
-
 		b_IsInitialized = true;
-		AG_INFO("WorldSpaceImGuiContext initialized at world position ({}, {}) with size ({}, {})", worldPos.x, worldPos.y, worldSize.x, worldSize.y);
+		AG_INFO("WorldSpaceImGuiContext initialized");
 	}
 
 	void ImGuiWorldContext::Shutdown()
@@ -57,12 +31,14 @@ namespace Afterglow
 		if (!b_IsInitialized)
 			return;
 
-		if (m_WorldContext)
+		for (auto& [name, panel] : m_Panels)
 		{
-			ImGui::SetCurrentContext(m_WorldContext);
-			ImGui_ImplOpenGL3_Shutdown();
-			ImGui::DestroyContext(m_WorldContext);
-			m_WorldContext = nullptr;
+			if (panel.Context)
+			{
+				ImGui::SetCurrentContext(panel.Context);
+				ImGui_ImplOpenGL3_Shutdown();
+				ImGui::DestroyContext(panel.Context);
+			}
 		}
 
 		if (m_ScreenContext)
@@ -70,17 +46,108 @@ namespace Afterglow
 			ImGui::SetCurrentContext(m_ScreenContext);
 		}
 
-		m_Framebuffer = nullptr;
+		m_Panels.clear();
 		b_IsInitialized = false;
 	}
 
-	void ImGuiWorldContext::Begin()
+	void ImGuiWorldContext::AddPanel(const std::string& panelName, const glm::vec2& worldPos, const glm::vec2& worldSize, uint16_t framebufferWidth, uint16_t framebufferHeight, ImGuiWindowFlags flags, bool draggable)
 	{
-		if (!b_IsInitialized || !m_Framebuffer)
+		WorldPanel panel;
+		panel.Name = panelName;
+		panel.WorldPosition = worldPos;
+		panel.WorldSize = worldSize;
+		panel.WindowFlags = flags;
+		panel.Visible = true;
+		panel.Draggable = draggable;
+		panel.IsDragging = false;
+
+		FramebufferSpecification fbSpec;
+		fbSpec.Width = framebufferWidth;
+		fbSpec.Height = framebufferHeight;
+		panel.Framebuffer = Framebuffer::Create(fbSpec);
+
+		// Unique ImGui context for this panel.
+		panel.Context = ImGui::CreateContext(ImGui::GetIO().Fonts);
+
+		// ImGui initialization for the panel's context.
+		ImGui::SetCurrentContext(panel.Context);
+		ImGuiIO& io = ImGui::GetIO();
+
+		io.FontDefault = io.Fonts->AddFontFromFileTTF("assets/fonts/opensans/OpenSans-Bold.ttf", 20.0f);
+		Application::GetInstance().GetImGuiLayer()->SetupImGuiStyle();
+
+		io.DisplaySize = ImVec2((float)framebufferWidth, (float)framebufferHeight);
+		io.DisplayFramebufferScale = ImVec2(1.0f, 1.0f);
+		io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange;
+
+		ImGui_ImplOpenGL3_Init("#version 330");
+
+		ImGui::SetCurrentContext(m_ScreenContext);
+
+		m_Panels[panelName] = panel;
+		AG_INFO("Added world panel '{}' at ({}, {}) with size ({}, {}) and resolution {}x{}", panelName, worldPos.x, worldPos.y, worldSize.x, worldSize.y, framebufferWidth, framebufferHeight);
+	}
+
+	void ImGuiWorldContext::RemovePanel(const std::string& panelName)
+	{
+		auto it = m_Panels.find(panelName);
+		if (it != m_Panels.end())
+		{
+			if (it->second.Context)
+			{
+				ImGui::SetCurrentContext(it->second.Context);
+				ImGui_ImplOpenGL3_Shutdown();
+				ImGui::DestroyContext(it->second.Context);
+			}
+			m_Panels.erase(it);
+		}
+	}
+
+	void ImGuiWorldContext::SetPanelPosition(const std::string& panelName, const glm::vec2& position)
+	{
+		if (auto it = m_Panels.find(panelName); it != m_Panels.end())
+			it->second.WorldPosition = position;
+	}
+
+	void ImGuiWorldContext::SetPanelSize(const std::string& panelName, const glm::vec2& size)
+	{
+		if (auto it = m_Panels.find(panelName); it != m_Panels.end())
+			it->second.WorldSize = size;
+	}
+
+	void ImGuiWorldContext::SetPanelVisible(const std::string& panelName, bool visible)
+	{
+		if (auto it = m_Panels.find(panelName); it != m_Panels.end())
+			it->second.Visible = visible;
+	}
+
+	void ImGuiWorldContext::SetPanelDraggable(const std::string& panelName, bool draggable)
+	{
+		if (auto it = m_Panels.find(panelName); it != m_Panels.end())
+			it->second.Draggable = draggable;
+	}
+
+	WorldPanel* ImGuiWorldContext::GetPanel(const std::string& panelName)
+	{
+		auto it = m_Panels.find(panelName);
+		return (it != m_Panels.end()) ? &it->second : nullptr;
+	}
+
+	void ImGuiWorldContext::BeginPanel(const std::string& panelName)
+	{
+		if (!b_IsInitialized)
 			return;
 
-		ImGui::SetCurrentContext(m_WorldContext);
-		m_Framebuffer->Bind();
+		auto it = m_Panels.find(panelName);
+		if (it == m_Panels.end() || !it->second.Visible || !it->second.Framebuffer || !it->second.Context)
+			return;
+
+		m_CurrentPanel = panelName;
+		WorldPanel& panel = it->second;
+
+		ImGui::SetCurrentContext(panel.Context);
+
+		panel.Framebuffer->Bind();
 
 		// Clear with a transparent background.
 		RenderCommand::SetClearColor({ 0.0f, 0.0f, 0.0f, 0.0f });
@@ -88,116 +155,233 @@ namespace Afterglow
 
 		ImGui_ImplOpenGL3_NewFrame();
 		ImGui::NewFrame();
+
+		ImGuiIO& io = ImGui::GetIO();
+		ImGui::SetNextWindowPos(ImVec2(0, 0));
+		ImGui::SetNextWindowSize(io.DisplaySize);
+
+		ImGuiWindowFlags finalFlags = panel.WindowFlags |
+			ImGuiWindowFlags_NoMove |
+			ImGuiWindowFlags_NoResize |
+			ImGuiWindowFlags_NoCollapse;
+
+		ImGui::Begin(panel.Name.c_str(), nullptr, finalFlags);
 	}
 
-	void ImGuiWorldContext::End()
+	void ImGuiWorldContext::EndPanel()
 	{
-		if (!b_IsInitialized || !m_Framebuffer)
+		if (m_CurrentPanel.empty())
 			return;
 
-		// Render ImGui draw data to a framebuffer.
+		auto it = m_Panels.find(m_CurrentPanel);
+		if (it == m_Panels.end() || !it->second.Framebuffer || !it->second.Context)
+			return;
+
+		ImGui::End();
+
+		// Render ImGui draw data to the framebuffer.
 		ImGui::Render();
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
-		m_Framebuffer->Unbind();
+		it->second.Framebuffer->Unbind();
 
 		ImGui::SetCurrentContext(m_ScreenContext);
+		m_CurrentPanel.clear();
 	}
 
-	bool ImGuiWorldContext::HandleInput(const OrthographicCameraController& camera, const glm::vec2& ViewportSize, const glm::vec2& mouseScreen, bool mouseDown)
+	bool ImGuiWorldContext::HandleInput(const OrthographicCameraController& camera, const glm::vec2& viewportSize,
+		const glm::vec2& mouseScreen, bool mouseDown)
 	{
 		if (!b_IsInitialized)
 			return false;
 
-		glm::vec2 mouseWorld = ScreenToWorld(ViewportSize, mouseScreen, camera);
-		bool inBounds = IsPointInWorldBounds(mouseWorld);
+		glm::vec2 mouseWorld = ScreenToWorld(viewportSize, mouseScreen, camera);
+		m_LastMouseWorld = mouseWorld;
 
-		if (mouseDown)
+		HandlePanelDragging(mouseWorld, mouseDown);
+
+		// If we're dragging a panel, clear input for all panels.
+		if (!m_DraggingPanel.empty())
 		{
-			AG_TRACE("=== DEBUG ===");
-			AG_TRACE("Mouse Screen: ({:.2f}, {:.2f})", mouseScreen.x, mouseScreen.y);
-			AG_TRACE("Mouse World: ({:.2f}, {:.2f})", mouseWorld.x, mouseWorld.y);
-			AG_TRACE("World Position: ({:.2f}, {:.2f})", m_WorldPosition.x, m_WorldPosition.y);
-			AG_TRACE("World Size: ({:.2f}, {:.2f})", m_WorldSize.x, m_WorldSize.y);
-			AG_TRACE("Bounds: X[{:.2f} to {:.2f}], Y[{:.2f} to {:.2f}]", m_WorldPosition.x, m_WorldPosition.x + m_WorldSize.x, m_WorldPosition.y, m_WorldPosition.y + m_WorldSize.y);
-			AG_TRACE("In Bounds: {}", inBounds ? "YES" : "NO");
-			AG_TRACE("=============");
+			for (auto& [name, panel] : m_Panels)
+			{
+				if (!panel.Context)
+					continue;
+
+				ImGui::SetCurrentContext(panel.Context);
+				ImGuiIO& io = ImGui::GetIO();
+				io.MouseDown[0] = false;
+				io.MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
+			}
+			ImGui::SetCurrentContext(m_ScreenContext);
+			return true;
 		}
 
-		// Check if mouse is within our world-space UI bounds.
-		if (inBounds)
+		std::string hoveredPanel = FindPanelAtPosition(mouseWorld);
+		m_HoveredPanel = hoveredPanel;
+
+		for (auto& [name, panel] : m_Panels)
 		{
-			ImGui::SetCurrentContext(m_WorldContext);
+			if (!panel.Context || !panel.Visible)
+				continue;
+
+			ImGui::SetCurrentContext(panel.Context);
 			ImGuiIO& io = ImGui::GetIO();
 
-			// Convert world coordinates to framebuffer local coordinates.
-			glm::vec2 framebufferPos = WorldToFramebuffer(mouseWorld);
-
-			io.MousePos = ImVec2(framebufferPos.x, framebufferPos.y);
-			io.MouseDown[0] = mouseDown;
-
-			ImGui::SetCurrentContext(m_ScreenContext);
-			b_IsInteracting = true;
-
-			return true; // Input consumed by world-space UI.
+			if (name == hoveredPanel)
+			{
+				// Convert world coordinates to framebuffer local coordinates.
+				glm::vec2 panelLocal = WorldToImGui(mouseWorld, panel);
+				io.MousePos = ImVec2(panelLocal.x, panelLocal.y);
+				io.MouseDown[0] = mouseDown;
+			}
+			else
+			{
+				io.MouseDown[0] = false;
+				io.MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
+			}
 		}
 
-		// Reset interaction state when mouse is released outside bounds.
-		if (b_IsInteracting && !mouseDown)
-		{
+		ImGui::SetCurrentContext(m_ScreenContext);
+
+		bool inAnyPanel = !hoveredPanel.empty();
+
+		if (mouseDown && inAnyPanel)
+			b_IsInteracting = true;
+		else if (!mouseDown)
 			b_IsInteracting = false;
 
-			// Clear mouse state in world-space context.
-			ImGui::SetCurrentContext(m_WorldContext);
-			ImGuiIO& io = ImGui::GetIO();
-			io.MouseDown[0] = false;
-			io.MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
-			ImGui::SetCurrentContext(m_ScreenContext);
-		}
+		return b_IsInteracting || inAnyPanel;
+	}
 
-		return b_IsInteracting; // True if we're still dragging something.
+	void ImGuiWorldContext::HandlePanelDragging(const glm::vec2& mouseWorld, bool mouseDown)
+	{
+		if (mouseDown && m_DraggingPanel.empty() && !b_IsInteracting)
+		{
+			for (auto& [name, panel] : m_Panels)
+			{
+				if (!panel.Visible || !panel.Draggable || !panel.Context)
+					continue;
+
+				glm::vec2 panelMin = panel.WorldPosition;
+				glm::vec2 panelMax = panel.WorldPosition + panel.WorldSize;
+
+				if (!IsPointInWorldBounds(mouseWorld, panelMin, panelMax))
+					continue;
+
+				ImGui::SetCurrentContext(panel.Context);
+				ImGuiIO& io = ImGui::GetIO();
+
+				// If ImGui wants the mouse (hovering over an interactive element), don't drag.
+				bool wantsMouseCapture = ImGui::IsAnyItemHovered() || ImGui::IsAnyItemActive() || ImGui::IsAnyItemFocused();
+
+				ImGui::SetCurrentContext(m_ScreenContext);
+
+				if (wantsMouseCapture)
+				{
+					continue;
+				}
+
+				m_DraggingPanel = name;
+				panel.IsDragging = true;
+				panel.DragStartWorldPos = mouseWorld;
+				panel.DragStartPanelPos = panel.WorldPosition;
+				AG_TRACE("Started dragging panel '{}'", name);
+				break;
+			}
+		}
+		else if (mouseDown && !m_DraggingPanel.empty())
+		{
+			auto it = m_Panels.find(m_DraggingPanel);
+			if (it != m_Panels.end())
+			{
+				WorldPanel& panel = it->second;
+				glm::vec2 dragDelta = mouseWorld - panel.DragStartWorldPos;
+				panel.WorldPosition = panel.DragStartPanelPos + dragDelta;
+			}
+		}
+		else if (!mouseDown && !m_DraggingPanel.empty())
+		{
+			auto it = m_Panels.find(m_DraggingPanel);
+			if (it != m_Panels.end())
+			{
+				it->second.IsDragging = false;
+				AG_TRACE("Stopped dragging panel '{}'", m_DraggingPanel);
+			}
+			m_DraggingPanel.clear();
+		}
+	}
+
+	bool ImGuiWorldContext::IsPointInPanelTitleBar(const glm::vec2& worldPos, const WorldPanel& panel) const
+	{
+		if (!panel.Framebuffer)
+			return false;
+
+		float titleBarWorldHeight = (30.0f / panel.Framebuffer->GetSpecification().Height) * panel.WorldSize.y;
+
+		glm::vec2 titleBarMin = glm::vec2(
+			panel.WorldPosition.x,
+			panel.WorldPosition.y + panel.WorldSize.y - titleBarWorldHeight
+		);
+		glm::vec2 titleBarMax = glm::vec2(
+			panel.WorldPosition.x + panel.WorldSize.x,
+			panel.WorldPosition.y + panel.WorldSize.y
+		);
+
+		return IsPointInWorldBounds(worldPos, titleBarMin, titleBarMax);
+	}
+
+	std::string ImGuiWorldContext::FindPanelAtPosition(const glm::vec2& worldPos) const
+	{
+		for (const auto& [name, panel] : m_Panels)
+		{
+			if (!panel.Visible)
+				continue;
+
+			glm::vec2 panelMin = panel.WorldPosition;
+			glm::vec2 panelMax = panel.WorldPosition + panel.WorldSize;
+
+			if (IsPointInWorldBounds(worldPos, panelMin, panelMax))
+			{
+				return name;
+			}
+		}
+		return "";
 	}
 
 	void ImGuiWorldContext::RenderInWorld(Renderer2D& renderer)
 	{
-		if (!b_IsInitialized || !m_Framebuffer)
+		if (!b_IsInitialized)
 			return;
 
-		// Calculate the center position of the world-space UI quad.
-		glm::vec3 centerPosition = glm::vec3(
-			m_WorldPosition.x + m_WorldSize.x * 0.5f,
-			m_WorldPosition.y + m_WorldSize.y * 0.5f,
-			1.0f  // Z-depth for layering.
-		);
+		for (const auto& [name, panel] : m_Panels)
+		{
+			if (!panel.Visible || !panel.Framebuffer)
+				continue;
 
-		// Render the framebuffer as a textured quad in world space. Base quad is 2 units (-1 to 1), so divide by 2 to get actual world size.
-		uint32_t textureID = m_Framebuffer->GetColorAttachmentRendererID();
-		renderer.DrawQuad(centerPosition, m_WorldSize * 0.5f, textureID);
+			// Calculate the center position of the world-space panel quad.
+			glm::vec3 centerPosition = glm::vec3(
+				panel.WorldPosition.x + panel.WorldSize.x * 0.5f,
+				panel.WorldPosition.y + panel.WorldSize.y * 0.5f,
+				1.0f  // Z-depth for layering.
+			);
+
+			// Render the framebuffer as a textured quad in world space.
+			uint32_t textureID = panel.Framebuffer->GetColorAttachmentRendererID();
+			renderer.DrawQuad(centerPosition, panel.WorldSize * 0.5f, textureID);
+		}
 	}
 
-	void ImGuiWorldContext::ResizeFramebuffer(uint16_t width, uint16_t height)
+	bool ImGuiWorldContext::IsPointInWorldBounds(const glm::vec2& worldPoint, const glm::vec2& boundsMin, const glm::vec2& boundsMax) const
 	{
-		if (!b_IsInitialized || !m_Framebuffer)
-			return;
-
-		m_Framebuffer->Resize(width, height);
-
-		ImGui::SetCurrentContext(m_WorldContext);
-		ImGui::GetIO().DisplaySize = ImVec2((float)width, (float)height);
-		ImGui::SetCurrentContext(m_ScreenContext);
+		return (worldPoint.x >= boundsMin.x && worldPoint.x <= boundsMax.x &&
+			worldPoint.y >= boundsMin.y && worldPoint.y <= boundsMax.y);
 	}
 
-	bool ImGuiWorldContext::IsPointInWorldBounds(const glm::vec2& worldPoint) const
+	glm::vec2 ImGuiWorldContext::ScreenToWorld(const glm::vec2& canvasSize, const glm::vec2& screenPos,
+		const OrthographicCameraController& camera) const
 	{
-		return (worldPoint.x >= m_WorldPosition.x &&
-			worldPoint.x <= m_WorldPosition.x + m_WorldSize.x &&
-			worldPoint.y >= m_WorldPosition.y &&
-			worldPoint.y <= m_WorldPosition.y + m_WorldSize.y);
-	}
-
-	glm::vec2 ImGuiWorldContext::ScreenToWorld(const glm::vec2& canvasSize, const glm::vec2& screenPos, const OrthographicCameraController& camera) const
-	{
-		// Convert screen coordinates to normalized device coordinates(-1 to 1).
+		// Convert screen coordinates to normalized device coordinates (-1 to 1).
 		glm::vec2 NDC;
 		NDC.x = (2.0f * screenPos.x) / canvasSize.x - 1.0f;
 		NDC.y = 1.0f - (2.0f * screenPos.y) / canvasSize.y; // Flip Y axis.
@@ -209,20 +393,20 @@ namespace Afterglow
 		return glm::vec2(worldPos4.x, worldPos4.y);
 	}
 
-	glm::vec2 ImGuiWorldContext::WorldToFramebuffer(const glm::vec2& worldPos) const
+	glm::vec2 ImGuiWorldContext::WorldToImGui(const glm::vec2& worldPos, const WorldPanel& panel) const
 	{
-		// Convert world position to normalized coordinates within our UI bounds (0-1).
-		glm::vec2 normalized = (worldPos - m_WorldPosition) / m_WorldSize;
+		if (!panel.Framebuffer)
+			return glm::vec2(0.0f, 0.0f);
+
+		// Convert world position to normalized coordinates within panel bounds (0-1).
+		glm::vec2 panelLocal = worldPos - panel.WorldPosition;
+		glm::vec2 normalized = panelLocal / panel.WorldSize;
 
 		// To framebuffer pixel coordinates.
-		glm::vec2 framebufferPos;
-		framebufferPos.x = normalized.x * m_Framebuffer->GetSpecification().Width;
-		framebufferPos.y = (1.0f - normalized.y) * m_Framebuffer->GetSpecification().Height;
+		glm::vec2 imguiPos;
+		imguiPos.x = normalized.x * panel.Framebuffer->GetSpecification().Width;
+		imguiPos.y = (1.0f - normalized.y) * panel.Framebuffer->GetSpecification().Height;
 
-		// Clamp to framebuffer bounds.
-		framebufferPos.x = glm::clamp(framebufferPos.x, 0.0f, (float)m_Framebuffer->GetSpecification().Width);
-		framebufferPos.y = glm::clamp(framebufferPos.y, 0.0f, (float)m_Framebuffer->GetSpecification().Height);
-
-		return framebufferPos;
+		return imguiPos;
 	}
 }
