@@ -1,0 +1,10 @@
+# Directories
+out/
+inter/
+
+# Visual Studio
+.vs/
+**.sln
+**.vcxproj
+**.vcxproj.filters
+**.vcxproj.user
