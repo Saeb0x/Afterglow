@@ -19,10 +19,22 @@ project "Afterglow"
 	filter "system:windows"
 		systemversion "latest"
 
+		defines {
+			"AG_PLATFORM_WINDOWS"
+		}
+
 	filter "configurations:Debug"
 		runtime "Debug"
 		symbols "On"
 
+		defines {
+			"AG_DEBUG"
+		}
+
 	filter "configurations:Release"
 		runtime "Release"
 		optimize "On"
+
+		defines {
+			"AG_RELEASE"
+		}
