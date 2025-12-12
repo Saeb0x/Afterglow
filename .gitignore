@@ -1,6 +1,7 @@
 # Directories
 out/
 inter/
+vcpkg_installed/
 
 # Visual Studio
 .vs/

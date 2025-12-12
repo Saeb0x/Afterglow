@@ -7,6 +7,7 @@ workspace "AfterglowWorkspace"
 	startproject "Sandbox"
 
 	OutputDirectory = "%{cfg.system}-%{cfg.buildcfg}-%{cfg.architecture}"
+	VcpkgDirectory = "%{wks.location}/vcpkg_installed/x64-windows-static"
 
 group "Core"
 	include "Afterglow/Afterglow"

@@ -13,7 +13,8 @@ project "Afterglow"
 	}
 
 	includedirs {
-		"src"
+		"src",
+		VcpkgDirectory.. "/include"
 	}
 
 	filter "system:windows"
@@ -21,6 +22,10 @@ project "Afterglow"
 
 		defines {
 			"AG_PLATFORM_WINDOWS"
+		}
+
+		buildoptions {
+			"/utf-8"
 		}
 
 	filter "configurations:Debug"
@@ -31,10 +36,26 @@ project "Afterglow"
 			"AG_DEBUG"
 		}
 
+		libdirs {
+			VcpkgDirectory.. "/debug/lib"
+		}
+
+		links {
+			"fmtd"
+		}
+
 	filter "configurations:Release"
 		runtime "Release"
 		optimize "On"
 
 		defines {
 			"AG_RELEASE"
+		}
+
+		libdirs {
+			VcpkgDirectory.. "/lib"
+		}
+
+		links {
+			"fmt"
 		}
