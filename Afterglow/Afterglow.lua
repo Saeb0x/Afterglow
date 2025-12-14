@@ -7,6 +7,9 @@ project "Afterglow"
 	targetdir("%{wks.location}/out/%{prj.name}/" ..OutputDirectory)
 	objdir("%{wks.location}/inter/%{prj.name}/" ..OutputDirectory)
 
+	pchheader "agpch.h"
+	pchsource "src/agpch.cpp"
+
 	files {
 		"src/**.h",
 		"src/**.cpp"
