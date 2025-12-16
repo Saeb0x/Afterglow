@@ -31,7 +31,42 @@ namespace Afterglow
 			fmt::print(stderr, fg(fmt::color::red), "Failed to open log file: {}\n", filepath);
 	}
 
-	std::string Logger::FormatLogMessage(LogVerbosity verbosity, const char* file, uint32_t line, const std::string& logMessage)
+	void Logger::EnableAllCategories()
+	{
+		std::lock_guard<std::mutex> lock(m_Mutex);
+		b_AllCategoriesEnabled = true;
+		m_EnabledCategories.clear();
+	}
+
+	void Logger::DisableAllCategories()
+	{
+		std::lock_guard<std::mutex> lock(m_Mutex);
+		b_AllCategoriesEnabled = false;
+		m_EnabledCategories.clear();
+	}
+
+	void Logger::EnableCategory(const char* category)
+	{
+		std::lock_guard<std::mutex> lock(m_Mutex);
+		b_AllCategoriesEnabled = false;
+		m_EnabledCategories.insert(category);
+	}
+
+	void Logger::DisableCategory(const char* category)
+	{
+		std::lock_guard<std::mutex> lock(m_Mutex);
+		m_EnabledCategories.erase(category);
+	}
+
+	bool Logger::IsCategoryEnabled(const char* category) const
+	{
+		if (b_AllCategoriesEnabled)
+			return true;
+
+		return m_EnabledCategories.find(category) != m_EnabledCategories.end();
+	}
+
+	std::string Logger::FormatLogMessage(const char* category, LogVerbosity verbosity, const char* file, uint32_t line, const std::string& logMessage)
 	{
 		auto now = std::chrono::system_clock::now();
 		auto time = std::chrono::system_clock::to_time_t(now);
@@ -48,12 +83,13 @@ namespace Afterglow
 		localtime_r(&time, &localTime);
 #endif
 
-		// Format: [HH:MM:SS.mmm] [VERBOSITY] [FILE:LINE] LogMessage.
-		return fmt::format("[{:02d}:{:02d}:{:02d}.{:03d}] [{}] [{}:{}] {}",
+		// Format: [HH:MM:SS.mmm] [CATEGORY] [VERBOSITY] [FILE:LINE] LogMessage.
+		return fmt::format("[{:02d}:{:02d}:{:02d}.{:03d}] [{}] [{}] [{}:{}] {}",
 			localTime.tm_hour,
 			localTime.tm_min,
 			localTime.tm_sec,
 			ms.count(),
+			category,
 			GetVerbosityString(verbosity),
 			filename,
 			line,
