@@ -14,7 +14,8 @@ project "Sandbox"
 
 	includedirs {
 		"src",
-		"%{wks.location}/Afterglow/src"
+		"%{wks.location}/Afterglow/src",
+		VcpkgDirectory.. "/include"
 	}
 
 	links {
@@ -24,10 +25,42 @@ project "Sandbox"
 	filter "system:windows"
 		systemversion "latest"
 
+		defines {
+			"AG_PLATFORM_WINDOWS"
+		}
+
+		buildoptions {
+			"/utf-8"
+		}
+
 	filter "configurations:Debug"
 		runtime "Debug"
 		symbols "On"
 
+		defines {
+			"AG_DEBUG"
+		}
+
+		libdirs {
+			VcpkgDirectory.. "/debug/lib"
+		}
+
+		links {
+			"fmtd"
+		}
+
 	filter "configurations:Release"
 		runtime "Release"
 		optimize "On"
+
+		defines {
+			"AG_RELEASE"
+		}
+
+		libdirs {
+			VcpkgDirectory.. "/lib"
+		}
+
+		links {
+			"fmt"
+		}
