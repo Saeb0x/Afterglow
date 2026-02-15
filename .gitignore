@@ -1,0 +1,11 @@
+# Directories
+Build/
+vcpkg_installed/
+
+# Visual Studio
+.vs/
+**.slnx
+**.sln
+**.vcxproj
+**.vcxproj.filters
+**.vcxproj.user
