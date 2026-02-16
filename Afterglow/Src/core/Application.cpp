@@ -2,16 +2,23 @@
 
 namespace Afterglow
 {
+	Application::Application()
+		: b_Running(true)
+	{
+	}
+
 	void Application::Run()
 	{
-		OnInit();
+		AG_CORE_INFO("Afterglow Engine starting...");
 
-		b_Running = true;
+		OnInit();
 		while (b_Running)
 		{
 			OnUpdate();
+			Close();
 		}
-
 		OnShutdown();
+
+		AG_CORE_INFO("Afterglow Engine shutting down...");
 	}
 }

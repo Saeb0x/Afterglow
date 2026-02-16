@@ -10,9 +10,21 @@ public:
 	void OnInit() override {}
 	void OnUpdate() override 
 	{
-		printf("Updating Sandbox!\n");
+		AG_LOG_DEBUG("Updating Sandbox!");
+		AG_LOG_INFO("Updating Sandbox!");
+		AG_LOG_WARN("Updating Sandbox!");
+		AG_LOG_ERROR("Updating Sandbox!");
 	}
 	void OnShutdown() override {}
+
+	Afterglow::LoggerConfig GetLoggerConfig() override
+	{
+		Afterglow::LoggerConfig config;
+		config.ClientLoggerName = "SANDBOX";
+		config.ClientLogFileName = "Afterglow-Sandbox.log";
+
+		return config;
+	}
 };
 
 Afterglow::Application* Afterglow::CreateApplication()

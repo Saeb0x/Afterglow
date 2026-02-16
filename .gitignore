@@ -1,6 +1,7 @@
 # Directories
 Build/
 vcpkg_installed/
+Logs/
 
 # Visual Studio
 .vs/

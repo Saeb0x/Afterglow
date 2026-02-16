@@ -14,7 +14,7 @@ project "Afterglow"
 
     includedirs {
         "Src",
-        "%{IncludeDir.vcpkg}"
+        "../%{IncludeDir.vcpkg}"
     }
 
     filter "system:windows"
@@ -27,7 +27,7 @@ project "Afterglow"
         symbols "On"
         targetsuffix "-d"
         
-        libdirs "%{LibDir.vcpkg_debug}"
+        libdirs "../%{LibsDir.vcpkg_debug}"
         links {}
 
     filter "configurations:Release"
@@ -35,5 +35,5 @@ project "Afterglow"
         runtime "Release"
         optimize "On"
 
-        libdirs "%{LibDir.vcpkg_release}"
+        libdirs "../%{LibsDir.vcpkg_release}"
         links {}
