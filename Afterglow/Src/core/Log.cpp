@@ -182,11 +182,11 @@ namespace Afterglow
     {
         switch (verbosity)
         {
-            case LogLevel::Debug:   return "\033[36m";      // Cyan
-            case LogLevel::Info:    return "\033[32m";      // Green
-            case LogLevel::Warning: return "\033[33m";      // Yellow
-            case LogLevel::Error:   return "\033[31m";      // Red
-            default:                return "\033[37m";      // White
+            case LogLevel::Debug:   return "\033[96m";      // Bright Cyan
+            case LogLevel::Info:    return "\033[92m";      // Bright Green
+            case LogLevel::Warning: return "\033[93m";      // Bright Yellow
+            case LogLevel::Error:   return "\033[91m";      // Bright Red
+            default:                return "\033[97m";      // Bright White
         }
     }
 }

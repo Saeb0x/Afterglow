@@ -10,10 +10,7 @@ public:
 	void OnInit() override {}
 	void OnUpdate() override 
 	{
-		AG_LOG_DEBUG("Updating Sandbox!");
-		AG_LOG_INFO("Updating Sandbox!");
-		AG_LOG_WARN("Updating Sandbox!");
-		AG_LOG_ERROR("Updating Sandbox!");
+		AG_LOG_INFO("Updating Sandbox...");
 	}
 	void OnShutdown() override {}
 
