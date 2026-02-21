@@ -1,9 +1,13 @@
 #pragma once
 
-#include "Log.h"
+#include <memory>
 
 namespace Afterglow
 {
+	struct LoggerConfig;
+	struct WindowConfig;
+	class Window;
+
 	class Application
 	{
 	public:
@@ -16,10 +20,17 @@ namespace Afterglow
 		virtual void OnInit() {}
 		virtual void OnUpdate() {}
 		virtual void OnShutdown() {}
-
-		virtual LoggerConfig GetLoggerConfig() { return LoggerConfig(); }
+		
+		// Override this to customize logger config
+		virtual LoggerConfig GetLoggerConfig();
+		
+		// Override this to customize window config
+		virtual WindowConfig GetWindowConfig();
+		
+		Window& GetWindow() { return *m_Window; }
 
 	private:
+		std::unique_ptr<Window> m_Window;
 		bool b_Running;
 	};
 

@@ -1,4 +1,6 @@
 #include "Application.h"
+#include "Log.h"
+#include "Window.h"
 
 namespace Afterglow
 {
@@ -9,16 +11,28 @@ namespace Afterglow
 
 	void Application::Run()
 	{
-		AG_CORE_INFO("Afterglow Engine starting...");
+		WindowConfig config = GetWindowConfig();
+		m_Window = Window::Create(config);
 
 		OnInit();
-		while (b_Running)
-		{
-			OnUpdate();
-			Close();
-		}
-		OnShutdown();
 
-		AG_CORE_INFO("Afterglow Engine shutting down...");
+		while (b_Running && !m_Window->ShouldClose())
+		{
+			m_Window->Update();
+
+			OnUpdate();
+		}
+
+		OnShutdown();
+	}
+
+	LoggerConfig Application::GetLoggerConfig()
+	{
+		return LoggerConfig();
+	}
+
+	WindowConfig Application::GetWindowConfig()
+	{
+		return WindowConfig();
 	}
 }

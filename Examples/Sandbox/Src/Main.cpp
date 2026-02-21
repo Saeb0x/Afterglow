@@ -7,30 +7,9 @@ public:
 	Sandbox() = default;
 	~Sandbox() override = default;
 
-	void OnInit() override
-	{
-		AG_LOG_INFO("Sandbox initialized");
-
-		int health = 100;
-		float x = 10.5f;
-		float y = 20.3f;
-
-		AG_LOG_DEBUG("Simple message without formatting");
-		AG_LOG_INFO("Player health: {}", health);
-		AG_LOG_INFO("Position: ({}, {})", x, y);
-		AG_LOG_WARN("Warning: health below {}, current: {}", 50, health);
-		AG_LOG_ERROR("Error code: {}, message: {}", 404, "Not Found");
-	}
-
-	void OnUpdate() override 
-	{
-		AG_LOG_INFO("Updating Sandbox");
-	}
-
-	void OnShutdown() override
-	{
-		AG_LOG_INFO("Sandbox shutdown");
-	}
+	void OnInit() override {}
+	void OnUpdate() override {}
+	void OnShutdown() override {}
 
 	Afterglow::LoggerConfig GetLoggerConfig() override
 	{
@@ -38,6 +17,15 @@ public:
 		config.ClientLoggerName = "SANDBOX";
 		config.ClientLogFileName = "Afterglow-Sandbox.log";
 
+		return config;
+	}
+
+	Afterglow::WindowConfig GetWindowConfig() override
+	{
+		Afterglow::WindowConfig config;
+		config.Title = "Sandbox";
+		config.Resizable = true;
+		
 		return config;
 	}
 };
