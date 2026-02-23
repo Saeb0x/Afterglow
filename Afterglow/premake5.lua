@@ -12,6 +12,11 @@ project "Afterglow"
         "Src/**.cpp"
     }
 
+    -- Remove all platform-specific files by default
+    removefiles {
+        "Src/Platform/**"
+    }
+
     includedirs {
         "Src",
         "../%{IncludeDir.vcpkg}"
@@ -20,7 +25,13 @@ project "Afterglow"
     filter "system:windows"
         systemversion "latest"
         defines "AG_PLATFORM_WINDOWS"
-
+        
+        -- Re-include only Windows platform files
+        files {
+            "Src/Platform/Windows/**.h",
+            "Src/Platform/Windows/**.cpp"
+        }
+        
     filter "configurations:Debug"
         defines "AG_DEBUG"
         runtime "Debug"
