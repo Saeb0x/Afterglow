@@ -1,6 +1,7 @@
 #include "Application.h"
 #include "Log.h"
 #include "Window.h"
+#include "Input.h"
 
 namespace Afterglow
 {
@@ -18,9 +19,14 @@ namespace Afterglow
 
 		while (b_Running && !m_Window->ShouldClose())
 		{
+			// Poll window events (updates Input internally via WindowProc)
 			m_Window->Update();
 
+			// Client game loop
 			OnUpdate();
+
+			// Update Input state (swap current/previous)
+			Input::Update();
 		}
 
 		OnShutdown();

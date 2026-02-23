@@ -5,6 +5,8 @@
 
 namespace Afterglow
 {
+	enum class Key;
+
 	class WindowsWindow : public Window
 	{
 	public:
@@ -27,6 +29,8 @@ namespace Afterglow
 		void Shutdown();
 
 		static LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
+		
+		static Key TranslateWin32KeyCode(WPARAM wParam, LPARAM lParam);
 
 	private:
 		HWND m_Handle;
