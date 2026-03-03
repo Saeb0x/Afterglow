@@ -1,6 +1,7 @@
 #include "WindowsWindow.h"
 #include "Core/Log.h"
 #include "Core/Input.h"
+#include "Core/GraphicsContext.h"
 #include <windowsx.h>
 
 namespace Afterglow
@@ -84,10 +85,14 @@ namespace Afterglow
 			return;
 		}
 
+		m_Context = GraphicsContext::Create(m_Handle);
+		m_Context->Init();
+		m_Context->SetVSync(m_Config.VSync);
+
 		ShowWindow(m_Handle, SW_SHOW);
 		UpdateWindow(m_Handle);
 
-		AG_CORE_DEBUG("Window created: {} ({}x{})", m_Config.Title, m_Config.Width, m_Config.Height);
+		AG_CORE_INFO("Window created: {} ({}x{})", m_Config.Title, m_Config.Width, m_Config.Height);
 	}
 
 	void WindowsWindow::Shutdown()
@@ -122,9 +127,11 @@ namespace Afterglow
 		if (m_Config.VSync != enabled)
 		{
 			m_Config.VSync = enabled;
-			
-			// TODO(saeb): Actually set VSync when we have OpenGL/DirectX context
-			AG_CORE_WARN("VSync {}", enabled ? "enabled" : "disabled");
+
+			if (m_Context)
+			{
+				m_Context->SetVSync(enabled);
+			}
 		}
 	}
 

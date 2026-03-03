@@ -5,6 +5,8 @@
 
 namespace Afterglow
 {
+    class GraphicsContext;
+
     struct WindowConfig
     {
         std::string Title = "Afterglow";
@@ -30,6 +32,8 @@ namespace Afterglow
         
         virtual void SetVSync(bool enabled) = 0;
         virtual bool IsVSync() const = 0;
+
+        virtual GraphicsContext& GetContext() = 0;
 
         static std::unique_ptr<Window> Create(const WindowConfig& config = WindowConfig());
     };

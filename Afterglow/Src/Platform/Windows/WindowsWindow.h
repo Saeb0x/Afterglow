@@ -2,10 +2,12 @@
 
 #include "Core/Window.h"
 #include <Windows.h>
+#include <memory>
 
 namespace Afterglow
 {
 	enum class Key;
+	class GraphicsContext;
 
 	class WindowsWindow : public Window
 	{
@@ -24,6 +26,8 @@ namespace Afterglow
 		void SetVSync(bool enabled) override;
 		bool IsVSync() const override { return m_Config.VSync; };
 
+		GraphicsContext& GetContext() override { return *m_Context; }
+
 	private:
 		void Init();
 		void Shutdown();
@@ -37,5 +41,6 @@ namespace Afterglow
 		HINSTANCE m_Instance;
 		WindowConfig m_Config;
 		bool b_ShouldClose;
+		std::unique_ptr<GraphicsContext> m_Context;
 	};
 }

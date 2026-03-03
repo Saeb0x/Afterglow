@@ -11,7 +11,7 @@ namespace Afterglow
 #ifdef AG_PLATFORM_WINDOWS
 		return std::make_unique<WindowsWindow>(config);
 #else
-#error "Afterglow doesn't support this platform yet!"
+		#error "Afterglow doesn't support this platform yet!"
 		return nullptr;
 #endif
 	}

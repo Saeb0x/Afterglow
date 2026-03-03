@@ -59,6 +59,12 @@ public:
 			auto [x, y] = Afterglow::Input::GetMousePosition();
 			// AG_LOG_DEBUG("Mouse position: ({}, {})", x, y);
 		}
+
+		if (Afterglow::Input::IsKeyPressed(Afterglow::Key::V))
+		{
+			bool currentVSync = GetWindow().IsVSync();
+			GetWindow().SetVSync(!currentVSync);
+		}
 	}
 
 	void OnShutdown() override {}

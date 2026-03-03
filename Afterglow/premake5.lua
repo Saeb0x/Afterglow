@@ -31,7 +31,17 @@ project "Afterglow"
             "Src/Platform/Windows/**.h",
             "Src/Platform/Windows/**.cpp"
         }
-        
+
+        -- Re-include OpenGL (for now)
+        files {
+            "Src/Platform/Graphics/OpenGL/**.h",
+            "Src/Platform/Graphics/OpenGL/**.cpp"
+        }
+
+        links {
+            "opengl32"
+        }
+
     filter "configurations:Debug"
         defines "AG_DEBUG"
         runtime "Debug"
