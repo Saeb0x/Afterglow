@@ -27,7 +27,6 @@ public:
 
 	void OnInit() override 
 	{
-		AG_LOG_INFO("Window size: {}x{}", GetWindow().GetWidth(), GetWindow().GetHeight());
 	}
 
 	void OnUpdate() override 

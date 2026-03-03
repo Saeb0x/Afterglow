@@ -20,7 +20,6 @@ namespace Afterglow
 
         s_Config = config;
 
-        // Create logs directory if it doesn't exist
         if (s_Config.EnableFile && !std::filesystem::exists(s_Config.LogDirectory))
         {
             std::filesystem::create_directories(s_Config.LogDirectory);
@@ -41,7 +40,6 @@ namespace Afterglow
         timestampStr << std::put_time(&localTm, "%Y-%m-%d_%H-%M-%S");
         std::string timestamp = timestampStr.str();
 
-        // Build configuration
 #ifdef AG_DEBUG
         std::string buildConfig = "Debug";
 #else

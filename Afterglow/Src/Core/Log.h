@@ -33,7 +33,7 @@ namespace Afterglow
 		static void Init(const LoggerConfig& config = LoggerConfig());
 		static void Shutdown();
 		
-		// NOTE(saeb): Internal logging functions (don't call directly, use macros)
+		// Internal logging functions (don't call directly, use macros)
 		static void CoreLog(LogLevel verbosity, const char* file, int line, const char* message);
 		static void ClientLog(LogLevel verbosity, const char* file, int line, const char* message);
 
@@ -49,7 +49,6 @@ namespace Afterglow
 		static const char* GetLogLevelString(LogLevel verbosity);
 		static const char* GetLogLevelColor(LogLevel verbosity);
 
-		// Helper to convert single argument to string
 		template<typename T>
 		static std::string ToString(T&& value);
 
