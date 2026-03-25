@@ -19,4 +19,5 @@ workspace "Afterglow"
     
     group "Examples"
         include "Examples/Sandbox"
+        include "Examples/Wave"
     group ""
