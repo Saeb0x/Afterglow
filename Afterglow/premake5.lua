@@ -39,7 +39,8 @@ project "Afterglow"
         }
 
         links {
-            "opengl32"
+            "opengl32",
+            "glad"
         }
 
     filter "configurations:Debug"

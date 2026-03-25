@@ -1,6 +1,6 @@
 #include "OpenGLContext.h"
 #include "Core/Log.h"
-#include <gl/GL.h>
+#include <glad/glad.h>
 
 // WGL extension for VSync control
 typedef BOOL(WINAPI* PFNWGLSWAPINTERVALEXTPROC)(int interval);
@@ -73,6 +73,28 @@ namespace Afterglow
 		if (!wglMakeCurrent(m_DeviceContext, m_RenderingContext))
 		{
 			AG_CORE_ERROR("Failed to make OpenGL context current");
+			return;
+		}
+
+		// Load all OpenGL function pointers via GLAD
+		// NOTE(saeb): wglGetProcAddress only resolves extension/ARB functions - it returns NULL for core OpenGL 1.x entry points (glViewport, glGetString, ...). Those live directly in opengl32.dll and must be resolved via GetProcAddress. The combined loader below handles both cases
+		static HMODULE s_OpenGL32 = LoadLibraryA("opengl32.dll");
+		auto GLGetProcAddress = [](const char* name) -> void*
+		{
+			void* p = reinterpret_cast<void*>(wglGetProcAddress(name));
+			
+			// wglGetProcAddress signals failure with NULL or one of these sentinel values depending on the driver
+			if (p == nullptr || p == reinterpret_cast<void*>(1) || p == reinterpret_cast<void*>(2) || p == reinterpret_cast<void*>(3) || p == reinterpret_cast<void*>(-1))
+			{
+				p = reinterpret_cast<void*>(GetProcAddress(s_OpenGL32, name));
+			}
+
+			return p;
+		};
+
+		if (!gladLoadGLLoader(static_cast<GLADloadproc>(GLGetProcAddress)))
+		{
+			AG_CORE_ERROR("Failed to initialize GLAD");
 			return;
 		}
 
