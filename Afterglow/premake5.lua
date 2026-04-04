@@ -3,7 +3,8 @@ project "Afterglow"
     language "C++"
     cppdialect "C++17"
     staticruntime "Off"
-    
+    multiprocessorcompile "On"
+
     targetdir "../Build/%{prj.name}/%{cfg.system}-%{cfg.buildcfg}-%{cfg.architecture}/Bin"
     objdir "../Build/%{prj.name}/%{cfg.system}-%{cfg.buildcfg}-%{cfg.architecture}/Bin-Int"
 
@@ -12,27 +13,34 @@ project "Afterglow"
         "Src/**.cpp"
     }
 
-    -- Remove all platform-specific files by default
+    includedirs {
+        "Src"
+    }
+
+    externalincludedirs {
+        "../%{IncludeDir.vcpkg}"
+    }
+    externalwarnings "Off"
+
+    -- Remove all platform-specific files by default.
     removefiles {
         "Src/Platform/**"
     }
 
-    includedirs {
-        "Src",
-        "../%{IncludeDir.vcpkg}"
-    }
-
     filter "system:windows"
         systemversion "latest"
-        defines "AG_PLATFORM_WINDOWS"
-        
-        -- Re-include only Windows platform files
+
+        defines {
+            "AG_PLATFORM_WINDOWS"
+        }
+
+        -- Re-include Windows platform files.
         files {
             "Src/Platform/Windows/**.h",
             "Src/Platform/Windows/**.cpp"
         }
 
-        -- Re-include OpenGL (for now)
+        -- Re-include OpenGL (for now).
         files {
             "Src/Platform/Graphics/OpenGL/**.h",
             "Src/Platform/Graphics/OpenGL/**.cpp"
@@ -43,19 +51,41 @@ project "Afterglow"
             "glad"
         }
 
+    filter "system:linux"
+        defines {
+            "AG_PLATFORM_LINUX"
+        }
+
+    filter "system:macosx"
+        defines {
+            "AG_PLATFORM_MAC"
+        }
+
     filter "configurations:Debug"
-        defines "AG_DEBUG"
         runtime "Debug"
         symbols "On"
         targetsuffix "-d"
-        
-        libdirs "../%{LibsDir.vcpkg_debug}"
+
+        defines {
+            "AG_DEBUG"
+        }
+
+        libdirs {
+            "../%{LibsDir.vcpkg_debug}"
+        }
+
         links {}
 
     filter "configurations:Release"
-        defines "AG_RELEASE"
         runtime "Release"
         optimize "On"
 
-        libdirs "../%{LibsDir.vcpkg_release}"
+        defines {
+            "AG_RELEASE"
+        }
+
+        libdirs {
+            "../%{LibsDir.vcpkg_release}"
+        }
+        
         links {}

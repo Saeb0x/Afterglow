@@ -3,6 +3,7 @@ project "Sandbox"
     language "C++"
     cppdialect "C++17"
     staticruntime "Off"
+    multiprocessorcompile "On"
 
     targetdir "../../Build/%{prj.name}/%{cfg.system}-%{cfg.buildcfg}-%{cfg.architecture}/Bin"
     objdir "../../Build/%{prj.name}/%{cfg.system}-%{cfg.buildcfg}-%{cfg.architecture}/Bin-Int"
@@ -13,9 +14,13 @@ project "Sandbox"
     }
 
     includedirs {
-        "../../Afterglow/Src",
         "Src"
     }
+    
+    externalincludedirs {
+        "../../Afterglow/Src"
+    }
+    externalwarnings "Off"
 
     links {
         "Afterglow"
@@ -23,15 +28,24 @@ project "Sandbox"
 
     filter "system:windows"
         systemversion "latest"
-        defines "AG_PLATFORM_WINDOWS"
+
+        defines {
+            "AG_PLATFORM_WINDOWS"
+        }
 
     filter "configurations:Debug"
-        defines "AG_DEBUG"
         runtime "Debug"
         symbols "On"
         targetsuffix "-d"
         
+        defines {
+            "AG_DEBUG"
+        }
+
     filter "configurations:Release"
-        defines "AG_RELEASE"
         runtime "Release"
         optimize "On"
+
+        defines {
+            "AG_RELEASE"
+        }

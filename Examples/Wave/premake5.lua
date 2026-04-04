@@ -3,7 +3,8 @@ project "Wave"
     language "C++"
     cppdialect "C++17"
     staticruntime "Off"
-    
+    multiprocessorcompile "On"
+
     targetdir "../../Build/%{prj.name}/%{cfg.system}-%{cfg.buildcfg}-%{cfg.architecture}/Bin"
     objdir "../../Build/%{prj.name}/%{cfg.system}-%{cfg.buildcfg}-%{cfg.architecture}/Bin-Int"
 
@@ -13,10 +14,14 @@ project "Wave"
     }
 
     includedirs {
+        "Src"
+    }
+
+    externalincludedirs {
         "../../Afterglow/Src",
-        "Src",
         "../../%{IncludeDir.vcpkg}"
     }
+    externalwarnings "Off"
 
     links {
         "Afterglow"
@@ -24,7 +29,10 @@ project "Wave"
 
     filter "system:windows"
         systemversion "latest"
-        defines "AG_PLATFORM_WINDOWS"
+
+        defines {
+            "AG_PLATFORM_WINDOWS"
+        }
 
         links {
             "opengl32",
@@ -32,16 +40,30 @@ project "Wave"
         }
 
     filter "configurations:Debug"
-        defines "AG_DEBUG"
         runtime "Debug"
         symbols "On"
         targetsuffix "-d"
+
+        defines {
+            "AG_DEBUG"
+        }
+
+        libdirs {
+            "../../%{LibsDir.vcpkg_debug}"
+        }
+
+        links {}
         
-        libdirs "../../%{LibsDir.vcpkg_debug}"
-    
     filter "configurations:Release"
-        defines "AG_RELEASE"
         runtime "Release"
         optimize "On"
-        
-        libdirs "../../%{LibsDir.vcpkg_release}"
+
+        defines {
+            "AG_RELEASE"
+        }
+
+        libdirs {
+            "../../%{LibsDir.vcpkg_release}"
+        }
+
+        links {}
