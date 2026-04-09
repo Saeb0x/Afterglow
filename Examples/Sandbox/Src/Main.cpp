@@ -11,7 +11,6 @@ public:
 	{
 		Afterglow::LoggerConfig config;
 		config.ClientLoggerName = "SANDBOX";
-		config.ClientLogFileName = "Afterglow-Sandbox.log";
 
 		return config;
 	}

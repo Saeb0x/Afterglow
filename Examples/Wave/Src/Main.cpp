@@ -174,8 +174,7 @@ public:
 	{
 		Afterglow::LoggerConfig config;
 		config.ClientLoggerName = "WAVE";
-		config.ClientLogFileName = "Afterglow-Wave.log";
-		
+
 		return config;
 	}
 
