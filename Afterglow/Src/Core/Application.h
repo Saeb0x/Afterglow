@@ -33,7 +33,4 @@ namespace Afterglow
 		std::unique_ptr<Window> m_Window;
 		bool b_Running;
 	};
-
-	// To be implemented by CLIENT/GAME
-	Application* CreateApplication();
 }

@@ -15,6 +15,8 @@ namespace Afterglow
 
 	void Application::Run()
 	{
+		Logger::Init(GetLoggerConfig());
+
 		WindowConfig config = GetWindowConfig();
 		m_Window = Window::Create(config);
 
@@ -41,6 +43,7 @@ namespace Afterglow
 
 		OnShutdown();
 		Renderer::Shutdown();
+		Logger::Shutdown();
 	}
 
 	LoggerConfig Application::GetLoggerConfig()

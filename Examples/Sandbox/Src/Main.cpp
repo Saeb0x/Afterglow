@@ -70,7 +70,10 @@ public:
 	void OnShutdown() override {}
 };
 
-Afterglow::Application* Afterglow::CreateApplication()
+int main()
 {
-	return new Sandbox();
+	Sandbox app;
+
+	app.Run();
+	return 0;
 }

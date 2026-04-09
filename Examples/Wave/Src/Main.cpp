@@ -688,7 +688,10 @@ private:
 	LARGE_INTEGER m_LastTime = {};
 };
 
-Afterglow::Application* Afterglow::CreateApplication()
+int main()
 {
-	return new Wave();
+	Wave app;
+
+	app.Run();
+	return 0;
 }
