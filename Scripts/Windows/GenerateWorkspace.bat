@@ -16,6 +16,7 @@ if %ERRORLEVEL% neq 0 (
     goto :fail
 )
 echo %GREEN%[OK]%RESET% vcpkg found.
+echo.
 
 where premake5 >nul 2>&1
 if %ERRORLEVEL% neq 0 (
