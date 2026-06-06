@@ -6,25 +6,19 @@ call vcvarsall.bat x64 >nul 2>&1
 set MODE=debug
 if /i "%1"=="release" set MODE=release
 
-if /i "%MODE%"=="debug" (
-    set OUT_DIR=Build\Debug
-) else (
-    set OUT_DIR=Build\Release
-)
+set OUT_DIR=Build\Debug
+if /i "%MODE%"=="release" set OUT_DIR=Build\Release
+
+set FLAGS=/nologo /W4 /WX /FS /Zi /Fd:%OUT_DIR%\ /Od /DAG_DEBUG
+if /i "%MODE%"=="release" set FLAGS=/nologo /W4 /WX /FS /O2 /Ox /Oi /Oy /DAG_RELEASE
 
 if not exist %OUT_DIR% mkdir %OUT_DIR%
 
-if /i "%MODE%"=="debug" (
-    set FLAGS=/nologo /std:c++17 /W4 /WX /GR- /EHa- /Zi /Fd:%OUT_DIR%\ /Od /DAG_DEBUG
-) else (
-    set FLAGS=/nologo /std:c++17 /W4 /WX /GR- /EHa- /O2 /DAG_RELEASE
-)
-
-set INCLUDES=-I Engine/Include
-set DEFINES=
+set INCLUDES=-I "%cd%\Engine\Include"
+set LIBS=kernel32.lib user32.lib gdi32.lib
 
 echo [Afterglow] Building engine [%MODE%]...
-cl %FLAGS% %INCLUDES% %DEFINES% /c Engine/Src/*.cpp /Fo:%OUT_DIR%\
+cl %FLAGS% %INCLUDES% /c Engine/Src/*.c /Fo:%OUT_DIR%\
 if %errorlevel% neq 0 goto error
 
 lib /nologo /OUT:%OUT_DIR%\Afterglow.lib %OUT_DIR%\*.obj
@@ -32,10 +26,10 @@ if %errorlevel% neq 0 goto error
 
 echo.
 echo [Afterglow] Building game [%MODE%]...
-cl %FLAGS% %INCLUDES% %DEFINES% /c Game/Src/*.cpp /Fo:%OUT_DIR%\
+cl %FLAGS% %INCLUDES% /c Game/Src/*.c /Fo:%OUT_DIR%\
 if %errorlevel% neq 0 goto error
 
-link /nologo %OUT_DIR%\*.obj %OUT_DIR%\Afterglow.lib /OUT:%OUT_DIR%\Game.exe /PDB:%OUT_DIR%\Game.pdb
+link /nologo %OUT_DIR%\*.obj %OUT_DIR%\Afterglow.lib %LIBS% /OUT:%OUT_DIR%\Game.exe /PDB:%OUT_DIR%\Game.pdb /SUBSYSTEM:CONSOLE
 if %errorlevel% neq 0 goto error
 
 echo.
