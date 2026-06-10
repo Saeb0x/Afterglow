@@ -1,11 +1,11 @@
 #include "Afterglow.h"
 
-#include <stdio.h>
+#include <windows.h>
 
-int main(void)
+int CALLBACK WinMain(HINSTANCE hInstance,
+                     HINSTANCE hPrevInstance,
+                     LPSTR lpCmdLine,
+                     int nShowCmd)
 {
-	printf("Hello world!\n");
-
-	getchar();
-	return 0;
+    return(0);
 }
