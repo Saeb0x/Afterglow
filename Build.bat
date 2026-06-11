@@ -42,14 +42,12 @@ if %errorlevel% neq 0 goto error
 popd
 echo.
 echo [Afterglow] Build succeeded.
-pause
 goto end
 
 :error
 popd
 echo.
 echo [Afterglow] Build failed.
-pause
 exit /b 1
 
 :end

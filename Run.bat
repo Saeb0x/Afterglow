@@ -12,7 +12,6 @@ if /i "%MODE%"=="debug" (
 
 if not exist %EXE% (
     echo [Afterglow] %EXE% not found. Run build.bat %MODE% first.
-    pause
     exit /b 1
 )
 
