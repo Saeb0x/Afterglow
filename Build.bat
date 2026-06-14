@@ -9,7 +9,7 @@ if /i "%1"=="release" set MODE=release
 set OUT_DIR=Build\Debug
 if /i "%MODE%"=="release" set OUT_DIR=Build\Release
 
-set FLAGS=/nologo /W4 /WX /Zi /DAG_DEBUG
+set FLAGS=/nologo /W4 /Zi /DAG_DEBUG
 if /i "%MODE%"=="release" set FLAGS=/nologo /W4 /WX /O2 /DAG_RELEASE
 
 set LINK_FLAGS=/nologo /SUBSYSTEM:WINDOWS
