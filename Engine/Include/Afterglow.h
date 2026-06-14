@@ -1,8 +1,3 @@
-#ifndef AFTERGLOW_H
-#define AFTERGLOW_H
+#pragma once
 
 #include "Core/Types.h"
-
-void afterglow_init(void);
-
-#endif

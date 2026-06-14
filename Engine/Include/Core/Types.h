@@ -1,9 +1,6 @@
-#ifndef TYPES_H
-#define TYPES_H
+#pragma once
 
 #include <stdint.h>
-#include <stdbool.h>
-#include <stddef.h>
 
 typedef int8_t i8;
 typedef int16_t i16;
@@ -20,5 +17,3 @@ typedef double f64;
 
 typedef size_t usize;
 typedef ptrdiff_t isize;
-
-#endif
