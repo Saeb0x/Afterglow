@@ -3,75 +3,99 @@
 #include <windows.h>
 
 static bool Running;
-static BITMAPINFO BitmapInfo;
-static u32 BitmapWidth;
-static u32 BitmapHeight;
-static u8 BytesPerPixel = 4;
-static void* BitmapMemory;
+static u32 XOffset;
+static u32 YOffset;
 
-static void FillScreen()
+struct BitmapBuffer
 {
-    u32* pixel = (u32*)BitmapMemory;
-    for(size_t i = 0; i < (BitmapWidth * BitmapHeight); i++)
+    BITMAPINFO Info;
+    void* Data;
+    
+    i32 Width;
+    i32 Height;
+    
+    u8 BytesPerPixel;
+    i32 Pitch;
+};
+static BitmapBuffer Buffer;
+
+struct WindowDimensions
+{
+    i32 Width;
+    i32 Height;
+};
+
+static WindowDimensions GetWindowDimensions(HWND windowHandle)
+{
+    RECT windowClientRect;
+    GetClientRect(windowHandle, &windowClientRect);
+    
+    WindowDimensions windowDims;
+    windowDims.Width = windowClientRect.right - windowClientRect.left;
+    windowDims.Height = windowClientRect.bottom - windowClientRect.top;
+    
+    return windowDims;
+}
+
+static void FillScreen(BitmapBuffer* buffer)
+{
+    u8* row = (u8*)buffer->Data;
+    for(i32 y = 0; y < buffer->Height; ++y)
     {
-        /* NOTE(saeb): GDI walks those bytes in address order and reads them as B G R.
-         *
-         * (MSB) FF 00 00 FF (LSB)
-         * Byte 0: 0xFF
-         * Byte 1: 0x00
-         * Byte 2: 0x00
-         * Byte 3: 0xFF
-         *
-         * Little-endian flips this in memory (LSB goes to the lowest address).
-         * Address+0: 0xFF (LSB)    -> BB
-         * Address+1: 0x00          -> GG
-         * Address+2: 0x00          -> RR
-         * Address+3: 0xFF (MSB)    -> IGNORED
-         */
-        *pixel++ = 0xFF0000FF;
+        u32* pixel = (u32*)row;
+        
+        for(i32 x = 0; x < buffer->Width; ++x)
+        {
+            u8 blue = (u8)(x + XOffset);
+            u8 green = 0;
+            u8 red = (u8)(y + YOffset);
+
+            *pixel++ = (red << 16) | (green << 8) | blue;  
+        }
+
+        row += buffer->Pitch;
     }
 }
 
-static void ResizeDIB(RECT* windowRect)
-{   
-    BitmapWidth = windowRect->right - windowRect->left;
-    BitmapHeight = windowRect->bottom - windowRect->top;
-    
-    if(BitmapWidth == 0 || BitmapHeight == 0)
-        return;
-    
-    BitmapInfo.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
-    BitmapInfo.bmiHeader.biWidth = BitmapWidth;
-    BitmapInfo.bmiHeader.biHeight = -(i32)BitmapHeight;
-    BitmapInfo.bmiHeader.biPlanes = 1;
-    BitmapInfo.bmiHeader.biBitCount = BytesPerPixel * 8;
-    BitmapInfo.bmiHeader.biCompression = BI_RGB;
+static void SetupBitmapBuffer(BitmapBuffer* buffer, i32 width, i32 height)
+{
+    buffer->Info.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
 
-    u64 bitmapMemorySize = (BitmapWidth * BitmapHeight) * BytesPerPixel;
+    buffer->Width = width;
+    buffer->Info.bmiHeader.biWidth = buffer->Width;
 
-    if(BitmapMemory)
+    buffer->Height = height;
+    buffer->Info.bmiHeader.biHeight = -buffer->Height;
+
+    buffer->Info.bmiHeader.biPlanes = 1;
+
+    buffer->BytesPerPixel = 4;
+    buffer->Info.bmiHeader.biBitCount = buffer->BytesPerPixel * 8;
+
+    buffer->Info.bmiHeader.biCompression = BI_RGB;
+
+    buffer->Pitch = buffer->Width * buffer->BytesPerPixel;
+
+    if(buffer->Data)
     {
-        VirtualFree(BitmapMemory, 0, MEM_RELEASE);
+        VirtualFree(buffer->Data, 0, MEM_RELEASE);
     }
-    
-    BitmapMemory = VirtualAlloc(0, bitmapMemorySize, MEM_COMMIT, PAGE_READWRITE);
+
+    buffer->Data = VirtualAlloc(0, (buffer->Width * buffer->Height) * buffer->BytesPerPixel, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
 }
 
-static void BlitWindowDC(HDC* deviceContext, RECT* windowRect)
+static void BlitWindowDC(HDC deviceContext, BitmapBuffer* buffer, WindowDimensions windowDims)
 {
-    u32 windowWidth = windowRect->right - windowRect->left;
-    u32 windowHeight = windowRect->bottom - windowRect->top;
-    
-    StretchDIBits(*deviceContext,
-                  0, 0, windowWidth, windowHeight,
-                  0, 0, BitmapWidth, BitmapHeight,
-                  BitmapMemory,
-                  &BitmapInfo,
+    StretchDIBits(deviceContext,
+                  0, 0, windowDims.Width, windowDims.Height,
+                  0, 0, buffer->Width, buffer->Height,
+                  buffer->Data,
+                  &buffer->Info,
                   DIB_RGB_COLORS,
                   SRCCOPY);
 }
 
-LRESULT CALLBACK WindowCallback(HWND handle,
+LRESULT CALLBACK WindowCallback(HWND windowHandle,
                                 UINT message,
                                 WPARAM wParam,
                                 LPARAM lParam)
@@ -83,32 +107,29 @@ LRESULT CALLBACK WindowCallback(HWND handle,
         case WM_CLOSE:
         {
             // TODO(saeb): User chose to close - show confirmation UI?
-            DestroyWindow(handle);
+            DestroyWindow(windowHandle);
         } break;
+        
         case WM_DESTROY:
         {
             // TODO(saeb): Window is being destroyed; perform shutdown cleanup.
             PostQuitMessage(0);
         } break;
-        case WM_SIZE:
-        {
-            RECT windowRect;
-            GetClientRect(handle, &windowRect);
-            ResizeDIB(&windowRect);
-        } break;
+        
         case WM_PAINT:
         {
             PAINTSTRUCT paint;
-            HDC deviceContext = BeginPaint(handle, &paint);
-            RECT windowRect;
-            GetClientRect(handle, &windowRect);
-            FillScreen();
-            BlitWindowDC(&deviceContext, &windowRect);
-            EndPaint(handle, &paint);
+            HDC deviceContext = BeginPaint(windowHandle, &paint);
+
+            WindowDimensions windowDims = GetWindowDimensions(windowHandle);
+            BlitWindowDC(deviceContext, &Buffer, windowDims);
+            
+            EndPaint(windowHandle, &paint);
         } break;
+        
         default:
         {
-            return DefWindowProc(handle, message, wParam, lParam);
+            result = DefWindowProc(windowHandle, message, wParam, lParam);
         } break;
     }
     
@@ -120,9 +141,11 @@ int WINAPI WinMain(HINSTANCE instance,
                    LPSTR,
                    int)
 {
+    SetupBitmapBuffer(&Buffer, 1280, 720);
+    
     WNDCLASSEX windowClass = {};
     windowClass.cbSize = sizeof(WNDCLASSEX);
-    windowClass.style = CS_OWNDC;
+    windowClass.style = CS_OWNDC | CS_HREDRAW | CS_VREDRAW;
     windowClass.lpfnWndProc = WindowCallback;
     windowClass.hInstance = instance;
     // windowClass.hIcon = ;
@@ -145,6 +168,7 @@ int WINAPI WinMain(HINSTANCE instance,
         
         if(windowHandle)
         {
+            HDC deviceContext = GetDC(windowHandle);
             Running = true;
             while(Running)
             {
@@ -160,6 +184,13 @@ int WINAPI WinMain(HINSTANCE instance,
                     TranslateMessage(&message);
                     DispatchMessage(&message);
                 }
+
+                FillScreen(&Buffer);
+                XOffset++;
+                YOffset++;
+                
+                WindowDimensions windowDims = GetWindowDimensions(windowHandle); 
+                BlitWindowDC(deviceContext, &Buffer, windowDims);
             }
         }
         else
