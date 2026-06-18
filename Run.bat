@@ -5,17 +5,17 @@ set MODE=debug
 if /i "%1"=="release" set MODE=release
 
 if /i "%MODE%"=="debug" (
-    set EXE=Build\Debug\Game.exe
+    set EXE=%~dp0Build\Debug\Game.exe
 ) else (
-    set EXE=Build\Release\Game.exe
+    set EXE=%~dp0Build\Release\Game.exe
 )
 
-if not exist %EXE% (
-    echo [Afterglow] %EXE% not found. Run build.bat %MODE% first.
+if not exist "%EXE%" (
+    echo [Afterglow] "%EXE%" not found. Run Build.bat %MODE% first.
     exit /b 1
 )
 
 echo [Afterglow] Running...
-start "" %EXE%
+"%EXE%"
 
 endlocal
