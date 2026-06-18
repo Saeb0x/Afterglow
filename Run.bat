@@ -5,9 +5,9 @@ set MODE=debug
 if /i "%1"=="release" set MODE=release
 
 if /i "%MODE%"=="debug" (
-    set EXE=%~dp0Build\Debug\Game.exe
+    set EXE=%~dp0Build\Debug\Afterglow.exe
 ) else (
-    set EXE=%~dp0Build\Release\Game.exe
+    set EXE=%~dp0Build\Release\Afterglow.exe
 )
 
 if not exist "%EXE%" (

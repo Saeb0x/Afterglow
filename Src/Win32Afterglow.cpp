@@ -1,4 +1,4 @@
-#include "Afterglow.h"
+#include "Core/Types.h"
 
 #include <windows.h>
 
@@ -156,7 +156,7 @@ int WINAPI WinMain(HINSTANCE instance,
     {
         HWND windowHandle = CreateWindowEx(0,
                                            windowClass.lpszClassName,
-                                           "Afterglow Game",
+                                           "Afterglow",
                                            WS_OVERLAPPEDWINDOW | WS_VISIBLE,
                                            CW_USEDEFAULT, CW_USEDEFAULT,
                                            CW_USEDEFAULT, CW_USEDEFAULT,
