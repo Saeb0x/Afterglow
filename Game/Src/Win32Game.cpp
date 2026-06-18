@@ -3,26 +3,25 @@
 #include <windows.h>
 
 static bool Running;
-static u32 XOffset;
-static u32 YOffset;
+static int32 XOffset;
 
 struct BitmapBuffer
 {
     BITMAPINFO Info;
     void* Data;
     
-    i32 Width;
-    i32 Height;
+    int32 Width;
+    int32  Height;
     
-    u8 BytesPerPixel;
-    i32 Pitch;
+    uint8 BytesPerPixel;
+    int32 Pitch;
 };
 static BitmapBuffer Buffer;
 
 struct WindowDimensions
 {
-    i32 Width;
-    i32 Height;
+    int32 Width;
+    int32 Height;
 };
 
 static WindowDimensions GetWindowDimensions(HWND windowHandle)
@@ -39,16 +38,16 @@ static WindowDimensions GetWindowDimensions(HWND windowHandle)
 
 static void FillScreen(BitmapBuffer* buffer)
 {
-    u8* row = (u8*)buffer->Data;
-    for(i32 y = 0; y < buffer->Height; ++y)
+    uint8* row = (uint8*)buffer->Data;
+    for(int32 y = 0; y < buffer->Height; ++y)
     {
-        u32* pixel = (u32*)row;
+        uint32* pixel = (uint32*)row;
         
-        for(i32 x = 0; x < buffer->Width; ++x)
+        for(int32 x = 0; x < buffer->Width; ++x)
         {
-            u8 blue = (u8)(x + XOffset);
-            u8 green = 0;
-            u8 red = (u8)(y + YOffset);
+            uint8 blue = (uint8)(x + XOffset);
+            uint8 green = 0;
+            uint8 red = (uint8)y;
 
             *pixel++ = (red << 16) | (green << 8) | blue;  
         }
@@ -57,7 +56,7 @@ static void FillScreen(BitmapBuffer* buffer)
     }
 }
 
-static void SetupBitmapBuffer(BitmapBuffer* buffer, i32 width, i32 height)
+static void SetupBitmapBuffer(BitmapBuffer* buffer, int32 width, int32 height)
 {
     buffer->Info.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
 
@@ -187,7 +186,6 @@ int WINAPI WinMain(HINSTANCE instance,
 
                 FillScreen(&Buffer);
                 XOffset++;
-                YOffset++;
                 
                 WindowDimensions windowDims = GetWindowDimensions(windowHandle); 
                 BlitWindowDC(deviceContext, &Buffer, windowDims);
