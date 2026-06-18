@@ -1,22 +1,24 @@
 #include "Core/Types.h"
 
+#include "Afterglow.cpp"
+
 #include <windows.h>
 
 static bool Running;
 static int32 XOffset;
 
-struct BitmapBuffer
+struct WinBitmapBuffer
 {
     BITMAPINFO Info;
     void* Data;
-    
+
     int32 Width;
     int32  Height;
-    
+
     uint8 BytesPerPixel;
     int32 Pitch;
 };
-static BitmapBuffer Buffer;
+static WinBitmapBuffer Buffer;
 
 struct WindowDimensions
 {
@@ -28,7 +30,7 @@ static WindowDimensions GetWindowDimensions(HWND windowHandle)
 {
     RECT windowClientRect;
     GetClientRect(windowHandle, &windowClientRect);
-    
+
     WindowDimensions windowDims;
     windowDims.Width = windowClientRect.right - windowClientRect.left;
     windowDims.Height = windowClientRect.bottom - windowClientRect.top;
@@ -36,27 +38,7 @@ static WindowDimensions GetWindowDimensions(HWND windowHandle)
     return windowDims;
 }
 
-static void FillScreen(BitmapBuffer* buffer)
-{
-    uint8* row = (uint8*)buffer->Data;
-    for(int32 y = 0; y < buffer->Height; ++y)
-    {
-        uint32* pixel = (uint32*)row;
-        
-        for(int32 x = 0; x < buffer->Width; ++x)
-        {
-            uint8 blue = (uint8)(x + XOffset);
-            uint8 green = 0;
-            uint8 red = (uint8)y;
-
-            *pixel++ = (red << 16) | (green << 8) | blue;  
-        }
-
-        row += buffer->Pitch;
-    }
-}
-
-static void SetupBitmapBuffer(BitmapBuffer* buffer, int32 width, int32 height)
+static void SetupBitmapBuffer(WinBitmapBuffer* buffer, int32 width, int32 height)
 {
     buffer->Info.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
 
@@ -83,7 +65,7 @@ static void SetupBitmapBuffer(BitmapBuffer* buffer, int32 width, int32 height)
     buffer->Data = VirtualAlloc(0, (buffer->Width * buffer->Height) * buffer->BytesPerPixel, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
 }
 
-static void BlitWindowDC(HDC deviceContext, BitmapBuffer* buffer, WindowDimensions windowDims)
+static void BlitWindowDC(HDC deviceContext, WinBitmapBuffer* buffer, WindowDimensions windowDims)
 {
     StretchDIBits(deviceContext,
                   0, 0, windowDims.Width, windowDims.Height,
@@ -184,7 +166,14 @@ int WINAPI WinMain(HINSTANCE instance,
                     DispatchMessage(&message);
                 }
 
-                FillScreen(&Buffer);
+                GameOffScreenBitmapBuffer buffer = {};
+                buffer.Data = Buffer.Data;
+                buffer.Width = Buffer.Width;
+                buffer.Height = Buffer.Height;
+                buffer.BytesPerPixel = Buffer.BytesPerPixel;
+                buffer.Pitch = Buffer.Pitch;
+                
+                GameUpdateAndRender(&buffer, XOffset);
                 XOffset++;
                 
                 WindowDimensions windowDims = GetWindowDimensions(windowHandle); 

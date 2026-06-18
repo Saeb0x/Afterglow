@@ -18,11 +18,11 @@ pushd "%OUT_DIR%"
 
 if /i "%MODE%"=="debug" (
     echo [Afterglow] Compiling and linking game [debug]...
-    cl /nologo /Zi /I "%~dp0Src" "%~dp0Src\Win32Afterglow.cpp" /Fd"Afterglow.pdb" /Fe"Afterglow.exe" /link /nologo /DEBUG kernel32.lib user32.lib gdi32.lib
+    cl /nologo /Zi /I "%~dp0Src" "%~dp0Src\Platform\Windows\Win32Afterglow.cpp" /Fd"Afterglow.pdb" /Fe"Afterglow.exe" /link /nologo /DEBUG kernel32.lib user32.lib gdi32.lib
     if !errorlevel! neq 0 goto error
 ) else (
     echo [Afterglow] Compiling and linking game [release]...
-    cl /nologo /O2 /I "%~dp0Src" "%~dp0Src\Win32Afterglow.cpp" /Fe"Afterglow.exe" /link /nologo kernel32.lib user32.lib gdi32.lib
+    cl /nologo /O2 /I "%~dp0Src" "%~dp0Src\Platform\Windows\Win32Afterglow.cpp" /Fe"Afterglow.exe" /link /nologo kernel32.lib user32.lib gdi32.lib
     if !errorlevel! neq 0 goto error
 )
 

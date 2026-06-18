@@ -1,4 +1,4 @@
-#pragma once
+#if !defined(TYPES_H)
 
 #include <stdint.h>
 
@@ -15,3 +15,6 @@ typedef uint64_t uint64;
 
 typedef float real32;
 typedef double real64;
+
+#define TYPES_H
+#endif
