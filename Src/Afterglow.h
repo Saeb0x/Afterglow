@@ -1,16 +1,18 @@
 #if !defined(AFTERGLOW_H)
 
-struct GameOffScreenBitmapBuffer
+#include "Core/Types.h"
+
+struct GameOffscreenBitmapBuffer
 {
     void* Data;
 
     int32 Width;
-    int32  Height;
+    int32 Height;
 
     uint8 BytesPerPixel;
     int32 Pitch;
 };
-static void GameUpdateAndRender(GameOffScreenBitmapBuffer* buffer, int32 xOffset);
+static void GameUpdateAndRender(GameOffscreenBitmapBuffer* buffer);
 
 #define AFTERGLOW_H
 #endif

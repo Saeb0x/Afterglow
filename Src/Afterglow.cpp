@@ -1,15 +1,16 @@
 #include "Afterglow.h"
 
-static void FillScreen(GameOffScreenBitmapBuffer* buffer, int32 xOffset)
+static void DrawGradient(GameOffscreenBitmapBuffer* buffer)
 {
     uint8* row = (uint8*)buffer->Data;
+
     for(int32 y = 0; y < buffer->Height; ++y)
     {
         uint32* pixel = (uint32*)row;
         
         for(int32 x = 0; x < buffer->Width; ++x)
         {
-            uint8 blue = (uint8)(x + xOffset);
+            uint8 blue = (uint8)x;
             uint8 green = 0;
             uint8 red = (uint8)y;
 
@@ -20,7 +21,7 @@ static void FillScreen(GameOffScreenBitmapBuffer* buffer, int32 xOffset)
     }
 }
 
-static void GameUpdateAndRender(GameOffScreenBitmapBuffer* buffer, int32 xOffset)
+static void GameUpdateAndRender(GameOffscreenBitmapBuffer* buffer)
 {
-    FillScreen(buffer, xOffset);
+    DrawGradient(buffer);
 }
