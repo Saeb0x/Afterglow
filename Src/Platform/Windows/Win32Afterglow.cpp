@@ -1,7 +1,6 @@
 #include "Afterglow.cpp"
 
 #include <windows.h>
-#include <xinput.h>
 
 static bool Running;
 
@@ -18,13 +17,13 @@ struct WinBitmapBuffer
 };
 static WinBitmapBuffer OffscreenBitmapBuffer;
 
-static void GetWindowDimensions(HWND windowHandle, int32* width, int32* height)
+static void GetWindowDimensions(HWND windowHandle, WindowDimensions* windowDims)
 {
     RECT windowClientRect;
     GetClientRect(windowHandle, &windowClientRect);
 
-    *width = windowClientRect.right - windowClientRect.left;
-    *height = windowClientRect.bottom - windowClientRect.top;  
+    windowDims->Width = windowClientRect.right - windowClientRect.left;
+    windowDims->Height = windowClientRect.bottom - windowClientRect.top;  
 }
 
 static void SetupBitmapBuffer(WinBitmapBuffer* buffer, int32 width, int32 height)
@@ -54,10 +53,10 @@ static void SetupBitmapBuffer(WinBitmapBuffer* buffer, int32 width, int32 height
     buffer->Data = VirtualAlloc(0, (buffer->Width * buffer->Height) * buffer->BytesPerPixel, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
 }
 
-static void BlitWindowDC(HDC deviceContext, WinBitmapBuffer* buffer, int32 windowWidth, int32 windowHeight)
+static void BlitWindowDC(HDC deviceContext, WinBitmapBuffer* buffer, WindowDimensions windowDims)
 {
     StretchDIBits(deviceContext,
-                  0, 0, windowWidth, windowHeight,
+                  0, 0, windowDims.Width, windowDims.Height,
                   0, 0, buffer->Width, buffer->Height,
                   buffer->Data,
                   &buffer->Info,
@@ -90,15 +89,14 @@ LRESULT CALLBACK WindowCallback(HWND windowHandle,
         {
             PAINTSTRUCT paint;
             HDC deviceContext = BeginPaint(windowHandle, &paint);
-
-            int32 width;
-            int32 height;
-            GetWindowDimensions(windowHandle, &width, &height);
-            BlitWindowDC(deviceContext, &OffscreenBitmapBuffer, width, height);
-
+            
+            WindowDimensions windowDims;
+            GetWindowDimensions(windowHandle, &windowDims);
+            BlitWindowDC(deviceContext, &OffscreenBitmapBuffer, windowDims);
+            
             EndPaint(windowHandle, &paint);
         } break;
-        
+
         default:
         {
             result = DefWindowProc(windowHandle, message, wParam, lParam);
@@ -166,11 +164,10 @@ int WINAPI WinMain(HINSTANCE instance,
                 offscreenBitmapBuffer.Pitch = OffscreenBitmapBuffer.Pitch;
                 
                 GameUpdateAndRender(&offscreenBitmapBuffer);
-                
-                int32 width;
-                int32 height;
-                GetWindowDimensions(windowHandle, &width, &height);
-                BlitWindowDC(deviceContext, &OffscreenBitmapBuffer, width, height);
+
+                WindowDimensions windowDims;
+                GetWindowDimensions(windowHandle, &windowDims);
+                BlitWindowDC(deviceContext, &OffscreenBitmapBuffer, windowDims);
             }
         }
         else

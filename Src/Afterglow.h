@@ -2,6 +2,12 @@
 
 #include "Core/Types.h"
 
+struct WindowDimensions
+{
+    int32 Width;
+    int32 Height;
+};
+
 struct GameOffscreenBitmapBuffer
 {
     void* Data;
