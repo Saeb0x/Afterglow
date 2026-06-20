@@ -23,7 +23,7 @@ static bool D3D11CreateRenderTargetView()
     {
         return(false);
     }
-    
+
     HRESULT result = Device->CreateRenderTargetView(backBuffer, 0, &RenderTargetView);
     backBuffer->Release();
 
@@ -98,11 +98,51 @@ void D3D11ResizeRenderer(int32 width, int32 height)
     Context->OMSetRenderTargets(0, 0, 0);
     RenderTargetView->Release();
     RenderTargetView = 0;
-    
+
     SwapChain->ResizeBuffers(0, width, height, DXGI_FORMAT_UNKNOWN, 0);
 
-    D3D11CreateRenderTargetView();
+    if(!D3D11CreateRenderTargetView())
+    {
+        return;
+    }
+
     D3D11SetViewport(width, height);
+}
+
+void D3D11ShutdownRenderer()
+{
+#if defined(AG_DEBUG)
+    ID3D11Debug* debug;
+    if(SUCCEEDED(Device->QueryInterface(__uuidof(ID3D11Debug), (void**)&debug)))
+    {
+        debug->ReportLiveDeviceObjects(D3D11_RLDO_DETAIL);
+        debug->Release();
+    }
+#endif
+
+    if(RenderTargetView)
+    {
+        RenderTargetView->Release();
+        RenderTargetView = 0;
+    }
+    
+    if(SwapChain)
+    {
+        SwapChain->Release();
+        SwapChain = 0;
+    }
+    
+    if(Context)
+    {
+        Context->Release();
+        Context = 0;
+    }
+    
+    if(Device)
+    {
+        Device->Release();
+        Device = 0;
+    }
 }
 
 void D3D11BeginFrame()

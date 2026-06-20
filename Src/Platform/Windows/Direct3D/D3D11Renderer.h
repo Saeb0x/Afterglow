@@ -9,6 +9,7 @@
 
 bool D3D11InitRenderer(HWND windowHandle, int32 width, int32 height);
 void D3D11ResizeRenderer(int32 width, int32 height);
+void D3D11ShutdownRenderer();
 
 void D3D11BeginFrame();
 void D3D11Present();

@@ -10,7 +10,10 @@ int WINAPI WinMain(HINSTANCE instance,
     HWND windowHandle;
     if(Win32CreateWindow(instance, "Afterglow", 1280, 720, &windowHandle))
     {
-        if(D3D11InitRenderer(windowHandle, 1280, 720))
+        WindowDimensions dims;
+        Win32GetWindowDimensions(windowHandle, &dims);
+        
+        if(D3D11InitRenderer(windowHandle, dims.Width, dims.Height))
         {
             bool running = true;
             while(running)
@@ -46,5 +49,6 @@ int WINAPI WinMain(HINSTANCE instance,
         // TODO(saeb): Logging.
     }
 
+    D3D11ShutdownRenderer();
     return(0);
 }
