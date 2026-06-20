@@ -16,5 +16,7 @@ typedef uint64_t uint64;
 typedef float real32;
 typedef double real64;
 
+#define ArrayCount(array) (sizeof(array) / sizeof((array)[0]))
+
 #define TYPES_H
 #endif
