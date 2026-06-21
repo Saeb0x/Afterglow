@@ -15,16 +15,16 @@ int WINAPI WinMain(HINSTANCE instance,
 
         if(D3D11InitRenderer(windowHandle, dims.Width, dims.Height))
         {
-            GameMemory gameMem = {};
+            uint64 permanentArenaSize = Megabytes(64);
+            uint64 transientArenaSize = Gigabytes(2);
+            LPVOID gameMemoryBlock = VirtualAlloc(0, permanentArenaSize + transientArenaSize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
 
-            gameMem.PermanentDataSize = Megabytes(64);
-            gameMem.TransientDataSize = Gigabytes(2);
-            uint64 totalSize = gameMem.PermanentDataSize + gameMem.TransientDataSize;
+            GameMemory gameMemory = {};
 
-            gameMem.PermanentData = VirtualAlloc(0, totalSize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
-            gameMem.TransientData = (uint8*)gameMem.PermanentData + gameMem.PermanentDataSize;
+            InitializeArena(&gameMemory.PermanentArena, permanentArenaSize, gameMemoryBlock);
+            InitializeArena(&gameMemory.TransientArena, transientArenaSize, (uint8*)gameMemoryBlock + permanentArenaSize);
 
-            if(gameMem.PermanentData)
+            if(gameMemory.PermanentArena.Base)
             {
                 Win32ShowWindow(windowHandle);
 
@@ -47,12 +47,12 @@ int WINAPI WinMain(HINSTANCE instance,
 
                     D3D11BeginFrame();
 
-                    GameUpdateAndRender(&gameMem);
+                    GameUpdateAndRender(&gameMemory);
 
                     D3D11Present();
                 }
 
-                VirtualFree(gameMem.PermanentData, 0, MEM_RELEASE);
+                VirtualFree(gameMemory.PermanentArena.Base, 0, MEM_RELEASE);
             }
             else
             {
