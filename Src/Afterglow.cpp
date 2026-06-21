@@ -1,5 +1,5 @@
 #include "Afterglow.h"
 
-static void GameUpdateAndRender()
+static void GameUpdateAndRender(GameMemory* gameMemory)
 {
 }

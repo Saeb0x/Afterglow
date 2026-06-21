@@ -2,7 +2,18 @@
 
 #include "Core/Types.h"
 
-static void GameUpdateAndRender();
+struct GameMemory
+{
+    bool32 Initialized;
+
+    uint64 PermanentDataSize;
+    void* PermanentData;
+
+    uint64 TransientDataSize;
+    void* TransientData;
+};
+
+static void GameUpdateAndRender(GameMemory* gameMemory);
 
 #define AFTERGLOW_H
 #endif

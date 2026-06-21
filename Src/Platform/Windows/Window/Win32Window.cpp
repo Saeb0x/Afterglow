@@ -4,6 +4,11 @@ static bool ShouldQuit;
 static bool ResizePending;
 static WindowDimensions PendingResizeDimensions;
 
+void Win32ShowWindow(HWND windowHandle)
+{
+    ShowWindow(windowHandle, SW_SHOW);
+}
+
 void Win32GetWindowDimensions(HWND windowHandle, WindowDimensions* outDims)
 {
     RECT windowClientRect;
@@ -30,7 +35,6 @@ static LRESULT CALLBACK Win32WindowCallback(HWND windowHandle,
 
         case WM_DESTROY:
         {
-            // TODO(saeb): Window is being destroyed; perform shutdown cleanup.
             PostQuitMessage(0);
         } break;
 
@@ -73,7 +77,7 @@ bool Win32CreateWindow(HINSTANCE instance, const char* title, int32 width, int32
     HWND windowHandle = CreateWindowEx(0,
                                        windowClass.lpszClassName,
                                        title,
-                                       WS_OVERLAPPEDWINDOW | WS_VISIBLE,
+                                       WS_OVERLAPPEDWINDOW,
                                        CW_USEDEFAULT, CW_USEDEFAULT,
                                        width, height,
                                        0,

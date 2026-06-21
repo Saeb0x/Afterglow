@@ -16,6 +16,7 @@ void Win32ProcessPendingMessages();
 bool Win32WindowShouldQuit();
 bool Win32WindowConsumeResize(WindowDimensions* outDims);
 
+void Win32ShowWindow(HWND windowHandle);
 void Win32GetWindowDimensions(HWND windowHandle, WindowDimensions* outDims);
 
 #define WIN32WINDOW_H

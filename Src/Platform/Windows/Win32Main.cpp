@@ -12,31 +12,51 @@ int WINAPI WinMain(HINSTANCE instance,
     {
         WindowDimensions dims;
         Win32GetWindowDimensions(windowHandle, &dims);
-        
+
         if(D3D11InitRenderer(windowHandle, dims.Width, dims.Height))
         {
-            bool running = true;
-            while(running)
+            GameMemory gameMem = {};
+
+            gameMem.PermanentDataSize = Megabytes(64);
+            gameMem.TransientDataSize = Gigabytes(2);
+            uint64 totalSize = gameMem.PermanentDataSize + gameMem.TransientDataSize;
+
+            gameMem.PermanentData = VirtualAlloc(0, totalSize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+            gameMem.TransientData = (uint8*)gameMem.PermanentData + gameMem.PermanentDataSize;
+
+            if(gameMem.PermanentData)
             {
-                Win32ProcessPendingMessages();
+                Win32ShowWindow(windowHandle);
 
-                if(Win32WindowShouldQuit())
+                bool running = true;
+                while(running)
                 {
-                    running = false;
-                    break;
+                    Win32ProcessPendingMessages();
+
+                    if(Win32WindowShouldQuit())
+                    {
+                        running = false;
+                        break;
+                    }
+
+                    WindowDimensions newDimensions;
+                    if(Win32WindowConsumeResize(&newDimensions))
+                    {
+                        D3D11ResizeRenderer(newDimensions.Width, newDimensions.Height);
+                    }
+
+                    D3D11BeginFrame();
+
+                    GameUpdateAndRender(&gameMem);
+
+                    D3D11Present();
                 }
 
-                WindowDimensions newDimensions;
-                if(Win32WindowConsumeResize(&newDimensions))
-                {
-                    D3D11ResizeRenderer(newDimensions.Width, newDimensions.Height);
-                }
-
-                D3D11BeginFrame();
-
-                GameUpdateAndRender();
-
-                D3D11Present();
+                VirtualFree(gameMem.PermanentData, 0, MEM_RELEASE);
+            }
+            else
+            {
+                // TODO(saeb): Logging.
             }
         }
         else
@@ -50,5 +70,6 @@ int WINAPI WinMain(HINSTANCE instance,
     }
 
     D3D11ShutdownRenderer();
+
     return(0);
 }
