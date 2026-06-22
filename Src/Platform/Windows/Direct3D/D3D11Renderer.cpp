@@ -30,30 +30,52 @@ static bool D3D11CreateRenderTargetView()
     return(SUCCEEDED(result));
 }
 
+static IDXGIAdapter1* D3D11SelectAdapter(IDXGIFactory2* factory)
+{
+    // TODO(saeb): Currently always picks the adapter with the most dedicated VRAM, overriding any OS-level per-app GPU preference the user may have set. Consider respecting DXGI_GPU_PREFERENCE/EnumAdapterByGpuPreference instead of forcing highest-VRAM unconditionally.
+    IDXGIAdapter1* bestAdapter = 0;
+    SIZE_T bestVideoMemory = 0;
+
+    IDXGIAdapter1* adapter;
+    for(UINT index = 0; factory->EnumAdapters1(index, &adapter) != DXGI_ERROR_NOT_FOUND; ++index)
+    {
+        DXGI_ADAPTER_DESC1 desc;
+        adapter->GetDesc1(&desc);
+
+        if(desc.DedicatedVideoMemory > bestVideoMemory)
+        {
+            if(bestAdapter)
+            {
+                bestAdapter->Release();
+            }
+
+            bestAdapter = adapter;
+            bestVideoMemory = desc.DedicatedVideoMemory;
+        }
+        else
+        {
+            adapter->Release();
+        }
+    }
+
+#if defined(AG_DEBUG)
+    if(bestAdapter)
+    {
+        DXGI_ADAPTER_DESC1 desc;
+        bestAdapter->GetDesc1(&desc);
+
+        OutputDebugStringW(desc.Description);
+        OutputDebugStringW(L"\n");
+    }
+#endif
+
+    return(bestAdapter);
+}
+
 bool D3D11InitRenderer(HWND windowHandle, int32 width, int32 height)
 {
-    D3D_FEATURE_LEVEL featureLevels[] = { D3D_FEATURE_LEVEL_11_1, D3D_FEATURE_LEVEL_11_0 };
-
-    UINT deviceFlags = 0;
-#if defined(AG_DEBUG)
-    deviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
-#endif
-    
-    if(FAILED(D3D11CreateDevice(0,
-                                D3D_DRIVER_TYPE_HARDWARE,
-                                0,
-                                deviceFlags,
-                                featureLevels,
-                                ArrayCount(featureLevels),
-                                D3D11_SDK_VERSION,
-                                &Device,
-                                0,
-                                &Context)))
-    {
-        return(false);
-    }
-    
     UINT factoryFlags = 0;
+
 #if defined(AG_DEBUG)
     factoryFlags |= DXGI_CREATE_FACTORY_DEBUG;
 #endif
@@ -61,6 +83,41 @@ bool D3D11InitRenderer(HWND windowHandle, int32 width, int32 height)
     IDXGIFactory2* factory;
     if(FAILED(CreateDXGIFactory2(factoryFlags, __uuidof(IDXGIFactory2), (void**)&factory)))
     {
+        return(false);
+    }
+
+    IDXGIAdapter1* adapter = D3D11SelectAdapter(factory);
+    if(!adapter)
+    {
+        factory->Release();
+        return(false);
+    }
+
+    D3D_FEATURE_LEVEL featureLevels[] = { D3D_FEATURE_LEVEL_11_1, D3D_FEATURE_LEVEL_11_0 };
+    D3D_FEATURE_LEVEL supportedFeatureLevel;
+
+    UINT deviceFlags = 0;
+
+#if defined(AG_DEBUG)
+    deviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
+#endif
+
+    HRESULT deviceResult = D3D11CreateDevice(adapter,
+                                             D3D_DRIVER_TYPE_UNKNOWN,
+                                             0,
+                                             deviceFlags,
+                                             featureLevels,
+                                             ArrayCount(featureLevels),
+                                             D3D11_SDK_VERSION,
+                                             &Device,
+                                             &supportedFeatureLevel,
+                                             &Context);
+
+    adapter->Release();
+
+    if(FAILED(deviceResult))
+    {
+        factory->Release();
         return(false);
     }
 
@@ -74,11 +131,12 @@ bool D3D11InitRenderer(HWND windowHandle, int32 width, int32 height)
     swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
     swapChainDesc.Scaling = DXGI_SCALING_STRETCH;
     swapChainDesc.AlphaMode = DXGI_ALPHA_MODE_UNSPECIFIED;
-    
-    HRESULT result = factory->CreateSwapChainForHwnd(Device, windowHandle, &swapChainDesc, 0, 0, &SwapChain);
+
+    HRESULT swapChainResult = factory->CreateSwapChainForHwnd(Device, windowHandle, &swapChainDesc, 0, 0, &SwapChain);
+
     factory->Release();
 
-    if(FAILED(result))
+    if(FAILED(swapChainResult))
     {
         return(false);
     }
