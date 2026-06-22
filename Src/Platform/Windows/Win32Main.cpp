@@ -45,11 +45,14 @@ int WINAPI WinMain(HINSTANCE instance,
                         D3D11ResizeRenderer(newDimensions.Width, newDimensions.Height);
                     }
 
-                    D3D11BeginFrame();
+                    if(!Win32WindowIsMinimized())
+                    {
+                        D3D11BeginFrame();
 
-                    GameUpdateAndRender(&gameMemory);
+                        GameUpdateAndRender(&gameMemory);
 
-                    D3D11Present();
+                        D3D11Present();
+                    }
                 }
 
                 VirtualFree(gameMemory.PermanentArena.Base, 0, MEM_RELEASE);

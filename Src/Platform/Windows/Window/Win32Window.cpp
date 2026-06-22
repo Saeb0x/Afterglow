@@ -3,6 +3,7 @@
 static bool ShouldQuit;
 static bool ResizePending;
 static WindowDimensions PendingResizeDimensions;
+static bool Minimized;
 
 void Win32ShowWindow(HWND windowHandle)
 {
@@ -40,8 +41,13 @@ static LRESULT CALLBACK Win32WindowCallback(HWND windowHandle,
 
         case WM_SIZE:
         {
-            ResizePending = true;
-            Win32GetWindowDimensions(windowHandle, &PendingResizeDimensions);
+            Minimized = (wParam == SIZE_MINIMIZED);
+
+            if(!Minimized)
+            {
+                ResizePending = true;
+                Win32GetWindowDimensions(windowHandle, &PendingResizeDimensions);
+            }
         } break;
 
         case WM_PAINT:
@@ -125,4 +131,9 @@ bool Win32WindowConsumeResize(WindowDimensions* outDims)
     }
     
     return(false);
+}
+
+bool Win32WindowIsMinimized()
+{
+    return(Minimized);
 }

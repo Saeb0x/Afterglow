@@ -15,6 +15,7 @@ bool Win32CreateWindow(HINSTANCE instance, const char* title, int32 width, int32
 void Win32ProcessPendingMessages();
 bool Win32WindowShouldQuit();
 bool Win32WindowConsumeResize(WindowDimensions* outDims);
+bool Win32WindowIsMinimized();
 
 void Win32ShowWindow(HWND windowHandle);
 void Win32GetWindowDimensions(HWND windowHandle, WindowDimensions* outDims);

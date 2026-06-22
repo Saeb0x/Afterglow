@@ -4,6 +4,8 @@ static ID3D11Device* Device;
 static ID3D11DeviceContext* Context;
 static IDXGISwapChain1* SwapChain;
 static ID3D11RenderTargetView* RenderTargetView;
+static ID3D11Texture2D* DepthStencilBuffer;
+static ID3D11DepthStencilView* DepthStencilView;
 
 static void D3D11SetViewport(int32 width, int32 height)
 {
@@ -26,6 +28,28 @@ static bool D3D11CreateRenderTargetView()
 
     HRESULT result = Device->CreateRenderTargetView(backBuffer, 0, &RenderTargetView);
     backBuffer->Release();
+
+    return(SUCCEEDED(result));
+}
+
+static bool D3D11CreateDepthStencilView(int32 width, int32 height)
+{
+    D3D11_TEXTURE2D_DESC depthDesc = {};
+    depthDesc.Width = width;
+    depthDesc.Height = height;
+    depthDesc.MipLevels = 1;
+    depthDesc.ArraySize = 1;
+    depthDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+    depthDesc.SampleDesc.Count = 1;
+    depthDesc.Usage = D3D11_USAGE_DEFAULT;
+    depthDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+
+    if(FAILED(Device->CreateTexture2D(&depthDesc, 0, &DepthStencilBuffer)))
+    {
+        return(false);
+    }
+
+    HRESULT result = Device->CreateDepthStencilView(DepthStencilBuffer, 0, &DepthStencilView);
 
     return(SUCCEEDED(result));
 }
@@ -146,6 +170,11 @@ bool D3D11InitRenderer(HWND windowHandle, int32 width, int32 height)
         return(false);
     }
 
+    if(!D3D11CreateDepthStencilView(width, height))
+    {
+        return(false);
+    }
+
     D3D11SetViewport(width, height);
 
     return(true);
@@ -153,13 +182,29 @@ bool D3D11InitRenderer(HWND windowHandle, int32 width, int32 height)
 
 void D3D11ResizeRenderer(int32 width, int32 height)
 {
+    if(width <= 0 || height <= 0)
+    {
+        return;
+    }
+
     Context->OMSetRenderTargets(0, 0, 0);
+
     RenderTargetView->Release();
     RenderTargetView = 0;
+
+    DepthStencilView->Release();
+    DepthStencilView = 0;
+    DepthStencilBuffer->Release();
+    DepthStencilBuffer = 0;
 
     SwapChain->ResizeBuffers(0, width, height, DXGI_FORMAT_UNKNOWN, 0);
 
     if(!D3D11CreateRenderTargetView())
+    {
+        return;
+    }
+
+    if(!D3D11CreateDepthStencilView(width, height))
     {
         return;
     }
@@ -178,12 +223,24 @@ void D3D11ShutdownRenderer()
     }
 #endif
 
+    if(DepthStencilView)
+    {
+        DepthStencilView->Release();
+        DepthStencilView = 0;
+    }
+
+    if(DepthStencilBuffer)
+    {
+        DepthStencilBuffer->Release();
+        DepthStencilBuffer = 0;
+    }
+
     if(RenderTargetView)
     {
         RenderTargetView->Release();
         RenderTargetView = 0;
     }
-    
+
     if(SwapChain)
     {
         SwapChain->Release();
@@ -205,10 +262,11 @@ void D3D11ShutdownRenderer()
 
 void D3D11BeginFrame()
 {
-    Context->OMSetRenderTargets(1, &RenderTargetView, 0);
+    Context->OMSetRenderTargets(1, &RenderTargetView, DepthStencilView);
 
     real32 clearColor[4] = { 0.0f, 0.0f, 1.0f, 1.0f };
     Context->ClearRenderTargetView(RenderTargetView, clearColor);
+    Context->ClearDepthStencilView(DepthStencilView, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 }
 
 void D3D11Present()
