@@ -5,7 +5,7 @@
 #include <windows.h>
 
 #include <d3d11.h>
-#include <dxgi1_3.h>
+#include <dxgi1_6.h>
 
 bool D3D11InitRenderer(HWND windowHandle, int32 width, int32 height);
 void D3D11ResizeRenderer(int32 width, int32 height);

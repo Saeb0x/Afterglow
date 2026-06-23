@@ -54,46 +54,29 @@ static bool D3D11CreateDepthStencilView(int32 width, int32 height)
     return(SUCCEEDED(result));
 }
 
-static IDXGIAdapter1* D3D11SelectAdapter(IDXGIFactory2* factory)
+static IDXGIAdapter1* D3D11SelectAdapter(IDXGIFactory6* factory)
 {
-    // TODO(saeb): Currently always picks the adapter with the most dedicated VRAM, overriding any OS-level per-app GPU preference the user may have set. Consider respecting DXGI_GPU_PREFERENCE/EnumAdapterByGpuPreference instead of forcing highest-VRAM unconditionally.
-    IDXGIAdapter1* bestAdapter = 0;
-    SIZE_T bestVideoMemory = 0;
-
+    // NOTE(saeb): Ask DXGI for adapters in preference order. HIGH_PERFORMANCE respects the user's per-app GPU choice and otherwise favors the discrete GPU, so we just take the first hardware adapter it returns.
     IDXGIAdapter1* adapter;
-    for(UINT index = 0; factory->EnumAdapters1(index, &adapter) != DXGI_ERROR_NOT_FOUND; ++index)
+
+    for(UINT index = 0; factory->EnumAdapterByGpuPreference(index, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE, __uuidof(IDXGIAdapter1), (void**)&adapter) != DXGI_ERROR_NOT_FOUND; ++index)
     {
         DXGI_ADAPTER_DESC1 desc;
         adapter->GetDesc1(&desc);
 
-        if(desc.DedicatedVideoMemory > bestVideoMemory)
+        if(!(desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE))
         {
-            if(bestAdapter)
-            {
-                bestAdapter->Release();
-            }
-
-            bestAdapter = adapter;
-            bestVideoMemory = desc.DedicatedVideoMemory;
-        }
-        else
-        {
-            adapter->Release();
-        }
-    }
-
 #if defined(AG_DEBUG)
-    if(bestAdapter)
-    {
-        DXGI_ADAPTER_DESC1 desc;
-        bestAdapter->GetDesc1(&desc);
-
-        OutputDebugStringW(desc.Description);
-        OutputDebugStringW(L"\n");
-    }
+            OutputDebugStringW(desc.Description);
+            OutputDebugStringW(L"\n");
 #endif
+            return(adapter);
+        }
 
-    return(bestAdapter);
+        adapter->Release();
+    }
+
+    return(0);
 }
 
 bool D3D11InitRenderer(HWND windowHandle, int32 width, int32 height)
@@ -104,8 +87,8 @@ bool D3D11InitRenderer(HWND windowHandle, int32 width, int32 height)
     factoryFlags |= DXGI_CREATE_FACTORY_DEBUG;
 #endif
 
-    IDXGIFactory2* factory;
-    if(FAILED(CreateDXGIFactory2(factoryFlags, __uuidof(IDXGIFactory2), (void**)&factory)))
+    IDXGIFactory6* factory;
+    if(FAILED(CreateDXGIFactory2(factoryFlags, __uuidof(IDXGIFactory6), (void**)&factory)))
     {
         return(false);
     }
