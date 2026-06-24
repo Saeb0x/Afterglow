@@ -10,7 +10,7 @@ struct GameMemory
     MemoryArena TransientArena;
 };
 
-static void GameUpdateAndRender(GameMemory* gameMemory);
+void GameUpdateAndRender(GameMemory* gameMemory);
 
 #define AFTERGLOW_H
 #endif
