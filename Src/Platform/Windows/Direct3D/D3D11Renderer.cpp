@@ -18,7 +18,7 @@ static void D3D11SetViewport(int32 width, int32 height)
     Context->RSSetViewports(1, &viewport);
 }
 
-static bool D3D11CreateRenderTargetView()
+static bool32 D3D11CreateRenderTargetView()
 {
     ID3D11Texture2D* backBuffer;
     if(FAILED(SwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**)&backBuffer)))
@@ -32,7 +32,7 @@ static bool D3D11CreateRenderTargetView()
     return(SUCCEEDED(result));
 }
 
-static bool D3D11CreateDepthStencilView(int32 width, int32 height)
+static bool32 D3D11CreateDepthStencilView(int32 width, int32 height)
 {
     D3D11_TEXTURE2D_DESC depthDesc = {};
     depthDesc.Width = width;
@@ -79,7 +79,7 @@ static IDXGIAdapter1* D3D11SelectAdapter(IDXGIFactory6* factory)
     return(0);
 }
 
-bool D3D11InitRenderer(HWND windowHandle, int32 width, int32 height)
+bool32 D3D11InitRenderer(HWND windowHandle, int32 width, int32 height)
 {
     UINT factoryFlags = 0;
 

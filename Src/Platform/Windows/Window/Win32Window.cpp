@@ -1,9 +1,9 @@
 #include "Win32Window.h"
 
-static bool ShouldQuit;
-static bool ResizePending;
+static bool32 ShouldQuit;
+static bool32 ResizePending;
 static WindowDimensions PendingResizeDimensions;
-static bool Minimized;
+static bool32 Minimized;
 
 void Win32ShowWindow(HWND windowHandle)
 {
@@ -66,7 +66,7 @@ static LRESULT CALLBACK Win32WindowCallback(HWND windowHandle,
     return(result);
 }
 
-bool Win32CreateWindow(HINSTANCE instance, const char* title, int32 width, int32 height, HWND* outWindowHandle)
+bool32 Win32CreateWindow(HINSTANCE instance, const char* title, int32 width, int32 height, HWND* outWindowHandle)
 {
     WNDCLASSEX windowClass = {};
     windowClass.cbSize = sizeof(WNDCLASSEX);
@@ -116,12 +116,12 @@ void Win32ProcessPendingMessages()
     }
 }
 
-bool Win32WindowShouldQuit()
+bool32 Win32WindowShouldQuit()
 {
     return(ShouldQuit);
 }
 
-bool Win32WindowConsumeResize(WindowDimensions* outDims)
+bool32 Win32WindowConsumeResize(WindowDimensions* outDims)
 {
     if(ResizePending)
     {
@@ -133,7 +133,7 @@ bool Win32WindowConsumeResize(WindowDimensions* outDims)
     return(false);
 }
 
-bool Win32WindowIsMinimized()
+bool32 Win32WindowIsMinimized()
 {
     return(Minimized);
 }
