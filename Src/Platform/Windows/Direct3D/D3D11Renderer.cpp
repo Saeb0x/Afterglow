@@ -66,10 +66,6 @@ static IDXGIAdapter1* D3D11SelectAdapter(IDXGIFactory6* factory)
 
         if(!(desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE))
         {
-#if defined(AG_DEBUG)
-            OutputDebugStringW(desc.Description);
-            OutputDebugStringW(L"\n");
-#endif
             return(adapter);
         }
 
@@ -247,7 +243,7 @@ void D3D11BeginFrame()
 {
     Context->OMSetRenderTargets(1, &RenderTargetView, DepthStencilView);
 
-    real32 clearColor[4] = { 0.0f, 0.0f, 1.0f, 1.0f };
+    real32 clearColor[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
     Context->ClearRenderTargetView(RenderTargetView, clearColor);
     Context->ClearDepthStencilView(DepthStencilView, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 }

@@ -301,7 +301,7 @@ void D3D11QuadBatcherBegin(int32 width, int32 height)
         D3D11_MAPPED_SUBRESOURCE mapped;
         if(SUCCEEDED(Context->Map(QuadBatcher.ConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped)))
         {
-            memcpy(mapped.pData, &projection, sizeof(projection)); // Row-major, No transpose
+            memcpy(mapped.pData, &projection, sizeof(projection)); // Row-major, no transpose
             Context->Unmap(QuadBatcher.ConstantBuffer, 0);
         }
     }
@@ -415,10 +415,4 @@ void D3D11QuadBatcherEnd()
 
         indexOffset += indexCount;
     }
-
-#if defined(AG_DEBUG)
-    char debugLine[64];
-    wsprintfA(debugLine, "Quads: %u. DrawCalls: %u\n", QuadBatcher.QuadCount, QuadBatcher.BatchCount);
-    OutputDebugStringA(debugLine);
-#endif
 }
