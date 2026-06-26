@@ -1,13 +1,6 @@
 #include "D3D11Renderer.h"
 
-static ID3D11Device* Device;
-static ID3D11DeviceContext* Context;
-static IDXGISwapChain1* SwapChain;
-static ID3D11RenderTargetView* RenderTargetView;
-static ID3D11Texture2D* DepthStencilBuffer;
-static ID3D11DepthStencilView* DepthStencilView;
-
-static void D3D11SetViewport(int32 width, int32 height)
+static void D3D11SetViewport(D3D11RendererState* renderer, int32 width, int32 height)
 {
     D3D11_VIEWPORT viewport = {};
     viewport.Width = (real32)width;
@@ -15,24 +8,24 @@ static void D3D11SetViewport(int32 width, int32 height)
     viewport.MinDepth = 0.0f;
     viewport.MaxDepth = 1.0f;
 
-    Context->RSSetViewports(1, &viewport);
+    renderer->Context->RSSetViewports(1, &viewport);
 }
 
-static bool32 D3D11CreateRenderTargetView()
+static bool32 D3D11CreateRenderTargetView(D3D11RendererState* renderer)
 {
     ID3D11Texture2D* backBuffer;
-    if(FAILED(SwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**)&backBuffer)))
+    if(FAILED(renderer->SwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**)&backBuffer)))
     {
         return(false);
     }
-
-    HRESULT result = Device->CreateRenderTargetView(backBuffer, 0, &RenderTargetView);
+    
+    HRESULT result = renderer->Device->CreateRenderTargetView(backBuffer, 0, &renderer->RenderTargetView);
     backBuffer->Release();
 
     return(SUCCEEDED(result));
 }
 
-static bool32 D3D11CreateDepthStencilView(int32 width, int32 height)
+static bool32 D3D11CreateDepthStencilView(D3D11RendererState* renderer, int32 width, int32 height)
 {
     D3D11_TEXTURE2D_DESC depthDesc = {};
     depthDesc.Width = width;
@@ -44,12 +37,12 @@ static bool32 D3D11CreateDepthStencilView(int32 width, int32 height)
     depthDesc.Usage = D3D11_USAGE_DEFAULT;
     depthDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
 
-    if(FAILED(Device->CreateTexture2D(&depthDesc, 0, &DepthStencilBuffer)))
+    if(FAILED(renderer->Device->CreateTexture2D(&depthDesc, 0, &renderer->DepthStencilBuffer)))
     {
         return(false);
     }
 
-    HRESULT result = Device->CreateDepthStencilView(DepthStencilBuffer, 0, &DepthStencilView);
+    HRESULT result = renderer->Device->CreateDepthStencilView(renderer->DepthStencilBuffer, 0, &renderer->DepthStencilView);
 
     return(SUCCEEDED(result));
 }
@@ -75,7 +68,7 @@ static IDXGIAdapter1* D3D11SelectAdapter(IDXGIFactory6* factory)
     return(0);
 }
 
-bool32 D3D11InitRenderer(HWND windowHandle, int32 width, int32 height)
+bool32 D3D11InitRenderer(D3D11RendererState* renderer, HWND windowHandle, int32 width, int32 height)
 {
     UINT factoryFlags = 0;
 
@@ -112,9 +105,9 @@ bool32 D3D11InitRenderer(HWND windowHandle, int32 width, int32 height)
                                              featureLevels,
                                              ArrayCount(featureLevels),
                                              D3D11_SDK_VERSION,
-                                             &Device,
+                                             &renderer->Device,
                                              &supportedFeatureLevel,
-                                             &Context);
+                                             &renderer->Context);
 
     adapter->Release();
 
@@ -135,7 +128,7 @@ bool32 D3D11InitRenderer(HWND windowHandle, int32 width, int32 height)
     swapChainDesc.Scaling = DXGI_SCALING_STRETCH;
     swapChainDesc.AlphaMode = DXGI_ALPHA_MODE_UNSPECIFIED;
 
-    HRESULT swapChainResult = factory->CreateSwapChainForHwnd(Device, windowHandle, &swapChainDesc, 0, 0, &SwapChain);
+    HRESULT swapChainResult = factory->CreateSwapChainForHwnd(renderer->Device, windowHandle, &swapChainDesc, 0, 0, &renderer->SwapChain);
 
     factory->Release();
 
@@ -144,111 +137,114 @@ bool32 D3D11InitRenderer(HWND windowHandle, int32 width, int32 height)
         return(false);
     }
 
-    if(!D3D11CreateRenderTargetView())
+    if(!D3D11CreateRenderTargetView(renderer))
     {
         return(false);
     }
 
-    if(!D3D11CreateDepthStencilView(width, height))
+    if(!D3D11CreateDepthStencilView(renderer, width, height))
     {
         return(false);
     }
 
-    D3D11SetViewport(width, height);
+    D3D11SetViewport(renderer, width, height);
 
     return(true);
 }
 
-void D3D11ResizeRenderer(int32 width, int32 height)
+void D3D11ResizeRenderer(D3D11RendererState* renderer, int32 width, int32 height)
 {
     if(width <= 0 || height <= 0)
     {
         return;
     }
 
-    Context->OMSetRenderTargets(0, 0, 0);
+    renderer->Context->OMSetRenderTargets(0, 0, 0);
 
-    RenderTargetView->Release();
-    RenderTargetView = 0;
+    renderer->RenderTargetView->Release();
+    renderer->RenderTargetView = 0;
 
-    DepthStencilView->Release();
-    DepthStencilView = 0;
-    DepthStencilBuffer->Release();
-    DepthStencilBuffer = 0;
+    renderer->DepthStencilView->Release();
+    renderer->DepthStencilView = 0;
+    renderer->DepthStencilBuffer->Release();
+    renderer->DepthStencilBuffer = 0;
 
-    SwapChain->ResizeBuffers(0, width, height, DXGI_FORMAT_UNKNOWN, 0);
+    renderer->SwapChain->ResizeBuffers(0, width, height, DXGI_FORMAT_UNKNOWN, 0);
 
-    if(!D3D11CreateRenderTargetView())
+    if(!D3D11CreateRenderTargetView(renderer))
     {
         return;
     }
 
-    if(!D3D11CreateDepthStencilView(width, height))
+    if(!D3D11CreateDepthStencilView(renderer, width, height))
     {
         return;
     }
 
-    D3D11SetViewport(width, height);
+    D3D11SetViewport(renderer, width, height);
 }
 
-void D3D11ShutdownRenderer()
+void D3D11ShutdownRenderer(D3D11RendererState* renderer)
 {
 #if defined(AG_DEBUG)
-    ID3D11Debug* debug;
-    if(SUCCEEDED(Device->QueryInterface(__uuidof(ID3D11Debug), (void**)&debug)))
+    if(renderer->Device)
     {
-        debug->ReportLiveDeviceObjects(D3D11_RLDO_DETAIL);
-        debug->Release();
-    }
+        ID3D11Debug* debug;
+        if(SUCCEEDED(renderer->Device->QueryInterface(__uuidof(ID3D11Debug), (void**)&debug)))
+        {
+            debug->ReportLiveDeviceObjects(D3D11_RLDO_DETAIL);
+            debug->Release();
+        }
+    }    
 #endif
 
-    if(DepthStencilView)
+    if(renderer->DepthStencilView)
     {
-        DepthStencilView->Release();
-        DepthStencilView = 0;
+        renderer->DepthStencilView->Release();
+        renderer->DepthStencilView = 0;
     }
 
-    if(DepthStencilBuffer)
+    if(renderer->DepthStencilBuffer)
     {
-        DepthStencilBuffer->Release();
-        DepthStencilBuffer = 0;
+        renderer->DepthStencilBuffer->Release();
+        renderer->DepthStencilBuffer = 0;
     }
 
-    if(RenderTargetView)
+    if(renderer->RenderTargetView)
     {
-        RenderTargetView->Release();
-        RenderTargetView = 0;
+        renderer->RenderTargetView->Release();
+        renderer->RenderTargetView = 0;
     }
 
-    if(SwapChain)
+    if(renderer->SwapChain)
     {
-        SwapChain->Release();
-        SwapChain = 0;
+        renderer->SwapChain->Release();
+        renderer->SwapChain = 0;
     }
     
-    if(Context)
+    if(renderer->Context)
     {
-        Context->Release();
-        Context = 0;
+        renderer->Context->Release();
+        renderer->Context = 0;
     }
     
-    if(Device)
+    if(renderer->Device)
     {
-        Device->Release();
-        Device = 0;
+        renderer->Device->Release();
+        renderer->Device = 0;
     }
 }
 
-void D3D11BeginFrame()
+void D3D11BeginFrame(D3D11RendererState* renderer)
 {
-    Context->OMSetRenderTargets(1, &RenderTargetView, DepthStencilView);
+    renderer->Context->OMSetRenderTargets(1, &renderer->RenderTargetView, renderer->DepthStencilView);
 
     real32 clearColor[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
-    Context->ClearRenderTargetView(RenderTargetView, clearColor);
-    Context->ClearDepthStencilView(DepthStencilView, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+    renderer->Context->ClearRenderTargetView(renderer->RenderTargetView, clearColor);
+    renderer->Context->ClearDepthStencilView(renderer->DepthStencilView, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 }
 
-void D3D11Present()
+void D3D11Present(D3D11RendererState* renderer)
 {
-    SwapChain->Present(1, 0);
+    renderer->SwapChain->Present(1, 0);
 }

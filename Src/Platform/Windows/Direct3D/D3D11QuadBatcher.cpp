@@ -1,4 +1,5 @@
 #include "D3D11QuadBatcher.h"
+#include "D3D11Renderer.h"
 
 #include <string.h>
 
@@ -50,7 +51,7 @@ struct TextureBatch
     uint32 QuadCount;
 };
 
-struct QuadBatcherState
+struct D3D11QuadBatcherState
 {
     // CPU-side accumulation.
     Vertex2D* Vertices;
@@ -60,6 +61,8 @@ struct QuadBatcherState
     uint32 BatchCount;
 
     // GPU resources.
+    ID3D11Device* Device;
+    ID3D11DeviceContext* Context;
     ID3D11Buffer* VertexBuffer;
     ID3D11Buffer* IndexBuffer;
     ID3D11Buffer* ConstantBuffer;
@@ -75,7 +78,7 @@ struct QuadBatcherState
     int32 ViewportWidth;
     int32 ViewportHeight;
 };
-static QuadBatcherState QuadBatcher;
+static D3D11QuadBatcherState QuadBatcher;
 
 static uint32 PackColor(uint8 r, uint8 g, uint8 b, uint8 a)
 {
@@ -95,15 +98,18 @@ static bool32 D3D11CompileShader(const char* source, const char* entryPoint, con
 
     if(errorBlob)
     {
-        OutputDebugStringA((char*)errorBlob->GetBufferPointer());
+        // TODO(saeb): Logging.
         errorBlob->Release();
     }
 
     return(SUCCEEDED(result));
 }
 
-bool32 D3D11QuadBatcherInit(MemoryArena* permanentArena, MemoryArena* transientArena, uint32 maxQuads)
+bool32 D3D11InitQuadBatcher(D3D11RendererState* renderer, MemoryArena* permanentArena, MemoryArena* transientArena, uint32 maxQuads)
 {
+    QuadBatcher.Device = renderer->Device;
+    QuadBatcher.Context = renderer->Context;
+
     // NOTE(saeb): We index with uint16, so 4 verts/quad must stay within the 65536 vertex ceiling.
     Assert(maxQuads <= 16384);
 
@@ -120,7 +126,7 @@ bool32 D3D11QuadBatcherInit(MemoryArena* permanentArena, MemoryArena* transientA
     vertexBufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
     vertexBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 
-    if(FAILED(Device->CreateBuffer(&vertexBufferDesc, 0, &QuadBatcher.VertexBuffer)))
+    if(FAILED(QuadBatcher.Device->CreateBuffer(&vertexBufferDesc, 0, &QuadBatcher.VertexBuffer)))
     {
         return(false);
     }
@@ -149,7 +155,7 @@ bool32 D3D11QuadBatcherInit(MemoryArena* permanentArena, MemoryArena* transientA
     D3D11_SUBRESOURCE_DATA indexBufferData = {};
     indexBufferData.pSysMem = indices;
 
-    if(FAILED(Device->CreateBuffer(&indexBufferDesc, &indexBufferData, &QuadBatcher.IndexBuffer)))
+    if(FAILED(QuadBatcher.Device->CreateBuffer(&indexBufferDesc, &indexBufferData, &QuadBatcher.IndexBuffer)))
     {
         return(false);
     }
@@ -161,7 +167,7 @@ bool32 D3D11QuadBatcherInit(MemoryArena* permanentArena, MemoryArena* transientA
     constantBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
     constantBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 
-    if(FAILED(Device->CreateBuffer(&constantBufferDesc, 0, &QuadBatcher.ConstantBuffer)))
+    if(FAILED(QuadBatcher.Device->CreateBuffer(&constantBufferDesc, 0, &QuadBatcher.ConstantBuffer)))
     {
         return(false);
     }
@@ -179,8 +185,8 @@ bool32 D3D11QuadBatcherInit(MemoryArena* permanentArena, MemoryArena* transientA
         return(false);
     }
 
-    HRESULT vertexShaderResult = Device->CreateVertexShader(vertexShaderBlob->GetBufferPointer(), vertexShaderBlob->GetBufferSize(), 0, &QuadBatcher.VertexShader);
-    HRESULT pixelShaderResult = Device->CreatePixelShader(pixelShaderBlob->GetBufferPointer(), pixelShaderBlob->GetBufferSize(), 0, &QuadBatcher.PixelShader);
+    HRESULT vertexShaderResult = QuadBatcher.Device->CreateVertexShader(vertexShaderBlob->GetBufferPointer(), vertexShaderBlob->GetBufferSize(), 0, &QuadBatcher.VertexShader);
+    HRESULT pixelShaderResult = QuadBatcher.Device->CreatePixelShader(pixelShaderBlob->GetBufferPointer(), pixelShaderBlob->GetBufferSize(), 0, &QuadBatcher.PixelShader);
 
     // NOTE(saeb): Input layout maps Vertex2D's bytes to the VS inputs, validated against its bytecode.
     D3D11_INPUT_ELEMENT_DESC inputLayout[] =
@@ -190,7 +196,7 @@ bool32 D3D11QuadBatcherInit(MemoryArena* permanentArena, MemoryArena* transientA
         { "COLOR", 0, DXGI_FORMAT_R8G8B8A8_UNORM, 0, offsetof(Vertex2D, Color), D3D11_INPUT_PER_VERTEX_DATA, 0 }
     };
 
-    HRESULT inputLayoutResult = Device->CreateInputLayout(inputLayout, ArrayCount(inputLayout), vertexShaderBlob->GetBufferPointer(), vertexShaderBlob->GetBufferSize(), &QuadBatcher.InputLayout);
+    HRESULT inputLayoutResult = QuadBatcher.Device->CreateInputLayout(inputLayout, ArrayCount(inputLayout), vertexShaderBlob->GetBufferPointer(), vertexShaderBlob->GetBufferSize(), &QuadBatcher.InputLayout);
 
     vertexShaderBlob->Release();
     pixelShaderBlob->Release();
@@ -211,7 +217,7 @@ bool32 D3D11QuadBatcherInit(MemoryArena* permanentArena, MemoryArena* transientA
     blendDesc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
     blendDesc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
 
-    if(FAILED(Device->CreateBlendState(&blendDesc, &QuadBatcher.BlendState)))
+    if(FAILED(QuadBatcher.Device->CreateBlendState(&blendDesc, &QuadBatcher.BlendState)))
     {
         return(false);
     }
@@ -222,7 +228,7 @@ bool32 D3D11QuadBatcherInit(MemoryArena* permanentArena, MemoryArena* transientA
     depthDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
     depthDesc.StencilEnable = FALSE;
 
-    if(FAILED(Device->CreateDepthStencilState(&depthDesc, &QuadBatcher.DepthState)))
+    if(FAILED(QuadBatcher.Device->CreateDepthStencilState(&depthDesc, &QuadBatcher.DepthState)))
     {
         return(false);
     }
@@ -233,7 +239,7 @@ bool32 D3D11QuadBatcherInit(MemoryArena* permanentArena, MemoryArena* transientA
     rasterizerDesc.CullMode = D3D11_CULL_NONE;
     rasterizerDesc.DepthClipEnable = TRUE;
 
-    if(FAILED(Device->CreateRasterizerState(&rasterizerDesc, &QuadBatcher.RasterizerState)))
+    if(FAILED(QuadBatcher.Device->CreateRasterizerState(&rasterizerDesc, &QuadBatcher.RasterizerState)))
     {
         return(false);
     }
@@ -247,7 +253,7 @@ bool32 D3D11QuadBatcherInit(MemoryArena* permanentArena, MemoryArena* transientA
     samplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
     samplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
 
-    if(FAILED(Device->CreateSamplerState(&samplerDesc, &QuadBatcher.Sampler)))
+    if(FAILED(QuadBatcher.Device->CreateSamplerState(&samplerDesc, &QuadBatcher.Sampler)))
     {
         return(false);
     }
@@ -269,12 +275,12 @@ bool32 D3D11QuadBatcherInit(MemoryArena* permanentArena, MemoryArena* transientA
     whiteData.SysMemPitch = sizeof(whitePixel);
 
     ID3D11Texture2D* whiteTexture;
-    if(FAILED(Device->CreateTexture2D(&whiteDesc, &whiteData, &whiteTexture)))
+    if(FAILED(QuadBatcher.Device->CreateTexture2D(&whiteDesc, &whiteData, &whiteTexture)))
     {
         return(false);
     }
 
-    HRESULT whiteViewResult = Device->CreateShaderResourceView(whiteTexture, 0, &QuadBatcher.WhiteTexture);
+    HRESULT whiteViewResult = QuadBatcher.Device->CreateShaderResourceView(whiteTexture, 0, &QuadBatcher.WhiteTexture);
     whiteTexture->Release();
 
     if(FAILED(whiteViewResult))
@@ -299,10 +305,10 @@ void D3D11QuadBatcherBegin(int32 width, int32 height)
         DirectX::XMMATRIX projection = DirectX::XMMatrixOrthographicOffCenterLH(0.0f, (real32)width, (real32)height, 0.0f, 0.0f, 1.0f);
 
         D3D11_MAPPED_SUBRESOURCE mapped;
-        if(SUCCEEDED(Context->Map(QuadBatcher.ConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped)))
+        if(SUCCEEDED(QuadBatcher.Context->Map(QuadBatcher.ConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped)))
         {
             memcpy(mapped.pData, &projection, sizeof(projection)); // Row-major, no transpose
-            Context->Unmap(QuadBatcher.ConstantBuffer, 0);
+            QuadBatcher.Context->Unmap(QuadBatcher.ConstantBuffer, 0);
         }
     }
 }
@@ -378,31 +384,31 @@ void D3D11QuadBatcherEnd()
     }
 
     D3D11_MAPPED_SUBRESOURCE mapped;
-    if(FAILED(Context->Map(QuadBatcher.VertexBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped)))
+    if(FAILED(QuadBatcher.Context->Map(QuadBatcher.VertexBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped)))
     {
         return;
     }
 
     memcpy(mapped.pData, QuadBatcher.Vertices, QuadBatcher.QuadCount * 4 * sizeof(Vertex2D));
-    Context->Unmap(QuadBatcher.VertexBuffer, 0);
+    QuadBatcher.Context->Unmap(QuadBatcher.VertexBuffer, 0);
 
     UINT stride = sizeof(Vertex2D);
     UINT offset = 0;
 
-    Context->IASetInputLayout(QuadBatcher.InputLayout);
-    Context->IASetVertexBuffers(0, 1, &QuadBatcher.VertexBuffer, &stride, &offset);
-    Context->IASetIndexBuffer(QuadBatcher.IndexBuffer, DXGI_FORMAT_R16_UINT, 0);
-    Context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    QuadBatcher.Context->IASetInputLayout(QuadBatcher.InputLayout);
+    QuadBatcher.Context->IASetVertexBuffers(0, 1, &QuadBatcher.VertexBuffer, &stride, &offset);
+    QuadBatcher.Context->IASetIndexBuffer(QuadBatcher.IndexBuffer, DXGI_FORMAT_R16_UINT, 0);
+    QuadBatcher.Context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-    Context->VSSetShader(QuadBatcher.VertexShader, 0, 0);
-    Context->VSSetConstantBuffers(0, 1, &QuadBatcher.ConstantBuffer);
+    QuadBatcher.Context->VSSetShader(QuadBatcher.VertexShader, 0, 0);
+    QuadBatcher.Context->VSSetConstantBuffers(0, 1, &QuadBatcher.ConstantBuffer);
 
-    Context->PSSetShader(QuadBatcher.PixelShader, 0, 0);
-    Context->PSSetSamplers(0, 1, &QuadBatcher.Sampler);
+    QuadBatcher.Context->PSSetShader(QuadBatcher.PixelShader, 0, 0);
+    QuadBatcher.Context->PSSetSamplers(0, 1, &QuadBatcher.Sampler);
 
-    Context->RSSetState(QuadBatcher.RasterizerState);
-    Context->OMSetBlendState(QuadBatcher.BlendState, 0, 0xFFFFFFFF);
-    Context->OMSetDepthStencilState(QuadBatcher.DepthState, 0);
+    QuadBatcher.Context->RSSetState(QuadBatcher.RasterizerState);
+    QuadBatcher.Context->OMSetBlendState(QuadBatcher.BlendState, 0, 0xFFFFFFFF);
+    QuadBatcher.Context->OMSetDepthStencilState(QuadBatcher.DepthState, 0);
 
     UINT indexOffset = 0;
     for(uint32 batchIndex = 0; batchIndex < QuadBatcher.BatchCount; ++batchIndex)
@@ -410,8 +416,8 @@ void D3D11QuadBatcherEnd()
         TextureBatch* batch = &QuadBatcher.Batches[batchIndex];
         UINT indexCount = batch->QuadCount * 6;
 
-        Context->PSSetShaderResources(0, 1, &batch->Texture);
-        Context->DrawIndexed(indexCount, indexOffset, 0);
+        QuadBatcher.Context->PSSetShaderResources(0, 1, &batch->Texture);
+        QuadBatcher.Context->DrawIndexed(indexCount, indexOffset, 0);
 
         indexOffset += indexCount;
     }

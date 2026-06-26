@@ -1,9 +1,13 @@
 #include "Win32Window.h"
 
-static bool32 ShouldQuit;
-static bool32 ResizePending;
-static WindowDimensions PendingResizeDimensions;
-static bool32 Minimized;
+struct Win32WindowState
+{
+    bool32 ShouldQuit;
+    bool32 Minimized;
+    bool32 ResizePending;
+    WindowDimensions PendingResizeDimensions;
+};
+static Win32WindowState Window;
 
 void Win32ShowWindow(HWND windowHandle)
 {
@@ -41,12 +45,12 @@ static LRESULT CALLBACK Win32WindowCallback(HWND windowHandle,
 
         case WM_SIZE:
         {
-            Minimized = (wParam == SIZE_MINIMIZED);
+            Window.Minimized = (wParam == SIZE_MINIMIZED);
 
-            if(!Minimized)
+            if(!Window.Minimized)
             {
-                ResizePending = true;
-                Win32GetWindowDimensions(windowHandle, &PendingResizeDimensions);
+                Window.ResizePending = true;
+                Win32GetWindowDimensions(windowHandle, &Window.PendingResizeDimensions);
             }
         } break;
 
@@ -107,7 +111,7 @@ void Win32ProcessPendingMessages()
     {
         if(message.message == WM_QUIT)
         {
-            ShouldQuit = true;
+            Window.ShouldQuit = true;
             continue;
         }
         
@@ -118,15 +122,15 @@ void Win32ProcessPendingMessages()
 
 bool32 Win32WindowShouldQuit()
 {
-    return(ShouldQuit);
+    return(Window.ShouldQuit);
 }
 
 bool32 Win32WindowConsumeResize(WindowDimensions* outDims)
 {
-    if(ResizePending)
+    if(Window.ResizePending)
     {
-        *outDims = PendingResizeDimensions;
-        ResizePending = false;
+        *outDims = Window.PendingResizeDimensions;
+        Window.ResizePending = false;
         return(true);
     }
     
@@ -135,5 +139,5 @@ bool32 Win32WindowConsumeResize(WindowDimensions* outDims)
 
 bool32 Win32WindowIsMinimized()
 {
-    return(Minimized);
+    return(Window.Minimized);
 }

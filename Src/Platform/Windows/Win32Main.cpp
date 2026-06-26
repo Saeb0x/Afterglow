@@ -5,6 +5,12 @@
 
 #include <stdlib.h>
 
+#define EMB(content) \
+    do { \
+        MessageBox(0, content, "Afterglow Error", MB_OK | MB_ICONERROR); \
+        abort(); \
+    } while(0)
+
 static const char* WindowTitle =
 #if defined(AG_DEBUG)
     "Afterglow - DX11 | Debug";
@@ -33,9 +39,10 @@ int WINAPI WinMain(HINSTANCE instance,
             WindowDimensions dims;
             Win32GetWindowDimensions(windowHandle, &dims);
 
-            if(D3D11InitRenderer(windowHandle, dims.Width, dims.Height))
+            D3D11RendererState renderer = {};
+            if(D3D11InitRenderer(&renderer, windowHandle, dims.Width, dims.Height))
             {
-                if(D3D11QuadBatcherInit(&gameMemory.PermanentArena, &gameMemory.TransientArena, 16384))
+                if(D3D11InitQuadBatcher(&renderer, &gameMemory.PermanentArena, &gameMemory.TransientArena, 16384))
                 {
                     Win32ShowWindow(windowHandle);
 
@@ -52,45 +59,45 @@ int WINAPI WinMain(HINSTANCE instance,
 
                         if(Win32WindowConsumeResize(&dims))
                         {
-                            D3D11ResizeRenderer(dims.Width, dims.Height);
+                            D3D11ResizeRenderer(&renderer, dims.Width, dims.Height);
                         }
 
                         gameMemory.TransientArena.Used = 0;
                         if(!Win32WindowIsMinimized())
                         {
-                            D3D11BeginFrame();
+                            D3D11BeginFrame(&renderer);
                             D3D11QuadBatcherBegin(dims.Width, dims.Height);
 
                             GameUpdateAndRender(&gameMemory);
 
                             D3D11QuadBatcherEnd();
-                            D3D11Present();
+                            D3D11Present(&renderer);
                         }
                     }
 
                     VirtualFree(gameMemory.PermanentArena.Base, 0, MEM_RELEASE);
+                    D3D11ShutdownRenderer(&renderer);
                 }
                 else
                 {
-                    abort();
+                    D3D11ShutdownRenderer(&renderer);
+                    EMB("Quad batcher initialization failed!");
                 }
             }
             else
             {
-                abort();
+                EMB("Renderer initialization failed!");
             }
         }
         else
         {
-            abort();
+            EMB("Window creation failed!");
         }
     }
     else
     {
-        abort();
+        EMB("Game memory allocation failed!");
     }
-
-    D3D11ShutdownRenderer();
 
     return(0);
 }
