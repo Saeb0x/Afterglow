@@ -2,6 +2,7 @@
 
 #include "Core/Types.h"
 #include "Core/MemoryArena.h"
+#include "RenderCommands.h"
 
 struct GameMemory
 {
@@ -10,7 +11,7 @@ struct GameMemory
     MemoryArena TransientArena;
 };
 
-void GameUpdateAndRender(GameMemory* gameMemory);
+void GameUpdateAndRender(GameMemory* gameMemory, RenderCommands* renderCommands);
 
 #define AFTERGLOW_H
 #endif

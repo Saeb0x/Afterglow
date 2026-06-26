@@ -44,8 +44,11 @@ int WINAPI WinMain(HINSTANCE instance,
             {
                 if(D3D11InitQuadBatcher(&renderer, &gameMemory.PermanentArena, &gameMemory.TransientArena, 16384))
                 {
-                    Win32ShowWindow(windowHandle);
+                    RenderCommands renderCommands = {};
+                    renderCommands.MaxQuads = 16384;
+                    renderCommands.Quads = PushArray(&gameMemory.PermanentArena, RenderCommandQuad, renderCommands.MaxQuads);
 
+                    Win32ShowWindow(windowHandle);
                     bool32 running = true;
                     while(running)
                     {
@@ -68,7 +71,15 @@ int WINAPI WinMain(HINSTANCE instance,
                             D3D11BeginFrame(&renderer);
                             D3D11QuadBatcherBegin(dims.Width, dims.Height);
 
-                            GameUpdateAndRender(&gameMemory);
+                            renderCommands.QuadCount = 0;
+                            GameUpdateAndRender(&gameMemory, &renderCommands);
+
+                            for(uint32 i = 0; i < renderCommands.QuadCount; ++i)
+                            {
+                                RenderCommandQuad* quad = &renderCommands.Quads[i];
+                                ID3D11ShaderResourceView* texture = 0;
+                                D3D11QuadBatcherPushQuad(quad->X, quad->Y, quad->Width, quad->Height, quad->U0, quad->V0, quad->U1, quad->V1, texture, quad->Color);
+                            }
 
                             D3D11QuadBatcherEnd();
                             D3D11Present(&renderer);
