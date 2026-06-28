@@ -1,4 +1,5 @@
 #include "Assets/FontFormat.h"
+#include "Assets/TextureFormat.h"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "Deps/stb_image.h"
@@ -59,18 +60,8 @@ static char* ReadEntireFile(const char* path, size_t* outSize)
     return(buffer);
 }
 
-int main(int argc, char** argv)
+static int CookFont(const char* fontPath, const char* pngPath, const char* outPath)
 {
-    if(argc != 4)
-    {
-        fprintf(stderr, "Usage: AgCooker.exe <font.fnt> <atlas.png> <output.agfont>\n");
-        return(1);
-    }
-
-    const char* fontPath = argv[1];
-    const char* pngPath = argv[2];
-    const char* outPath = argv[3];
-
     // NOTE(saeb): Decode the atlas with stb_image, keep only the alpha channel.
     int32 imageWidth, imageHeight, imageChannels;
 
@@ -166,6 +157,76 @@ int main(int argc, char** argv)
     free(alphaPixels);
 
     printf("Cooked %s (%dx%d atlas, lineHeight=%d) -> %s\n", fontPath, imageWidth, imageHeight, lineHeight, outPath);
-
     return(0);
+}
+
+static int CookTexture(const char* pngPath, const char* outPath)
+{
+    int32 width, height, channels;
+
+    uint8* pixels = stbi_load(pngPath, &width, &height, &channels, 4);
+    if(!pixels)
+    {
+        fprintf(stderr, "Failed to load %s: %s\n", pngPath, stbi_failure_reason());
+        return(1);
+    }
+
+    TextureFileHeader header = {};
+    char textureIdentifier[4] = TEXTURE_IDENTIFIER;
+    memcpy(header.Identifier, textureIdentifier, 4);
+    header.Version = TEXTURE_VERSION;
+    header.Width = width;
+    header.Height = height;
+
+    FILE* outFile = fopen(outPath, "wb");
+    if(!outFile)
+    {
+        fprintf(stderr, "Failed to open %s for writing\n", outPath);
+        stbi_image_free(pixels);
+        return(1);
+    }
+    
+    fwrite(&header, sizeof(header), 1, outFile);
+    fwrite(pixels, 1, width * height * 4, outFile);
+
+    fclose(outFile);
+    stbi_image_free(pixels);
+
+    printf("Cooked %s (%dx%d RGBA) -> %s\n", pngPath, width, height, outPath);
+    return(0);
+}
+
+int main(int argc, char** argv)
+{
+    if(argc < 2)
+    {
+        fprintf(stderr, "Usage: AgCooker.exe <font|texture> ...\n");
+        return(1);
+    }
+
+    const char* assetType = argv[1];
+
+    if(strcmp(assetType, "font") == 0)
+    {
+        if(argc != 5)
+        {
+            fprintf(stderr, "Usage: AgCooker.exe font <in.fnt> <in.png> <out.agfont>\n");
+            return(1);
+        }
+
+        return(CookFont(argv[2], argv[3], argv[4]));
+    }
+    else if(strcmp(assetType, "texture") == 0)
+    {
+        if(argc != 4)
+        {
+            fprintf(stderr, "Usage: AgCooker.exe texture <in.png> <out.agtex>\n");
+            return(1);
+        }
+
+        return(CookTexture(argv[2], argv[3]));
+    }
+
+    fprintf(stderr, "Unknown asset type '%s'\n", assetType);
+    return(1);
 }

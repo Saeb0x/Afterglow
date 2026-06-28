@@ -4,6 +4,7 @@
 #include "Direct3D/D3D11QuadBatcher.cpp"
 #include "IO/Win32File.cpp"
 #include "Font/Win32Font.cpp"
+#include "Texture/Win32Texture.cpp"
 
 #define EMB(content) \
     do { \
