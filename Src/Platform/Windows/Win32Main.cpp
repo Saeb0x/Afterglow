@@ -1,9 +1,9 @@
-#include "Afterglow.cpp"
+#include "Game/Afterglow.cpp"
 #include "Window/Win32Window.cpp"
 #include "Direct3D/D3D11Renderer.cpp"
 #include "Direct3D/D3D11QuadBatcher.cpp"
-
-#include <stdlib.h>
+#include "IO/Win32File.cpp"
+#include "Font/Win32Font.cpp"
 
 #define EMB(content) \
     do { \
@@ -28,10 +28,10 @@ int WINAPI WinMain(HINSTANCE instance,
     LPVOID gameMemoryBlock = VirtualAlloc(0, permanentArenaSize + transientArenaSize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
 
     GameMemory gameMemory = {};
-    InitializeArena(&gameMemory.PermanentArena, permanentArenaSize, gameMemoryBlock);
-    InitializeArena(&gameMemory.TransientArena, transientArenaSize, (uint8*)gameMemoryBlock + permanentArenaSize);
+    InitializeArena(&gameMemory.Permanent, permanentArenaSize, gameMemoryBlock);
+    InitializeArena(&gameMemory.Transient, transientArenaSize, (uint8*)gameMemoryBlock + permanentArenaSize);
 
-    if(gameMemory.PermanentArena.Base)
+    if(gameMemory.Permanent.Base)
     {
         HWND windowHandle;
         if(Win32CreateWindow(instance, WindowTitle, 1280, 720, &windowHandle))
@@ -42,11 +42,13 @@ int WINAPI WinMain(HINSTANCE instance,
             D3D11RendererState renderer = {};
             if(D3D11InitRenderer(&renderer, windowHandle, dims.Width, dims.Height))
             {
-                if(D3D11InitQuadBatcher(&renderer, &gameMemory.PermanentArena, &gameMemory.TransientArena, 16384))
+                if(D3D11InitQuadBatcher(&renderer, &gameMemory.Permanent, &gameMemory.Transient, 16384))
                 {
                     RenderCommands renderCommands = {};
                     renderCommands.MaxQuads = 16384;
-                    renderCommands.Quads = PushArray(&gameMemory.PermanentArena, RenderCommandQuad, renderCommands.MaxQuads);
+                    renderCommands.Quads = PushArray(&gameMemory.Permanent, RenderCommandQuad, renderCommands.MaxQuads);
+
+                    GameAssets gameAssets = {};
 
                     Win32ShowWindow(windowHandle);
                     bool32 running = true;
@@ -65,28 +67,29 @@ int WINAPI WinMain(HINSTANCE instance,
                             D3D11ResizeRenderer(&renderer, dims.Width, dims.Height);
                         }
 
-                        gameMemory.TransientArena.Used = 0;
+                        gameMemory.Transient.Used = 0;
                         if(!Win32WindowIsMinimized())
                         {
                             D3D11BeginFrame(&renderer);
                             D3D11QuadBatcherBegin(dims.Width, dims.Height);
-
                             renderCommands.QuadCount = 0;
-                            GameUpdateAndRender(&gameMemory, &renderCommands);
 
-                            for(uint32 i = 0; i < renderCommands.QuadCount; ++i)
-                            {
-                                RenderCommandQuad* quad = &renderCommands.Quads[i];
-                                ID3D11ShaderResourceView* texture = 0;
-                                D3D11QuadBatcherPushQuad(quad->X, quad->Y, quad->Width, quad->Height, quad->U0, quad->V0, quad->U1, quad->V1, texture, quad->Color);
-                            }
+                            GameContext context = {};
+                            context.Memory = &gameMemory;
+                            context.Assets = &gameAssets;
+                            context.Render = &renderCommands;
+                            context.ScreenWidth = dims.Width;
+                            context.ScreenHeight = dims.Height;
 
+                            GameUpdateAndRender(&context);
+
+                            D3D11QuadBatcherSubmitCommands(&renderCommands);
                             D3D11QuadBatcherEnd();
                             D3D11Present(&renderer);
                         }
                     }
 
-                    VirtualFree(gameMemory.PermanentArena.Base, 0, MEM_RELEASE);
+                    VirtualFree(gameMemory.Permanent.Base, 0, MEM_RELEASE);
                     D3D11ShutdownRenderer(&renderer);
                 }
                 else

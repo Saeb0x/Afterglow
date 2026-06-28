@@ -1,5 +1,6 @@
 #include "D3D11QuadBatcher.h"
 #include "D3D11Renderer.h"
+#include "Engine/RenderCommands.h"
 
 #include <string.h>
 
@@ -43,12 +44,25 @@ float4 PSMain(PSInput input) : SV_TARGET
 {
     return Texture.Sample(Sampler, input.UV) * input.Color;
 }
+
+float4 PSMainAlpha(PSInput input) : SV_TARGET
+{
+    float coverage = Texture.Sample(Sampler, input.UV).r;
+    return float4(1.0f, 1.0f, 1.0f, coverage) * input.Color;
+}
 )HLSL";
 
 struct TextureBatch
 {
+    QuadKind Kind;
     ID3D11ShaderResourceView* Texture;
     uint32 QuadCount;
+};
+
+struct TextureRegistryEntry
+{
+    ID3D11ShaderResourceView* Texture;
+    QuadKind Kind;
 };
 
 struct D3D11QuadBatcherState
@@ -68,6 +82,7 @@ struct D3D11QuadBatcherState
     ID3D11Buffer* ConstantBuffer;
     ID3D11VertexShader* VertexShader;
     ID3D11PixelShader* PixelShader;
+    ID3D11PixelShader* PixelShaderAlpha;
     ID3D11InputLayout* InputLayout;
     ID3D11BlendState* BlendState;
     ID3D11DepthStencilState* DepthState;
@@ -77,6 +92,9 @@ struct D3D11QuadBatcherState
 
     int32 ViewportWidth;
     int32 ViewportHeight;
+
+    TextureRegistryEntry TextureRegistry[MAX_TEXTURE_HANDLES];
+    uint32 TextureRegistryCount;
 };
 static D3D11QuadBatcherState QuadBatcher;
 
@@ -100,7 +118,64 @@ static bool32 D3D11CompileShader(const char* source, const char* entryPoint, con
     return(SUCCEEDED(result));
 }
 
-bool32 D3D11InitQuadBatcher(D3D11RendererState* renderer, MemoryArena* permanentArena, MemoryArena* transientArena, uint32 maxQuads)
+static void D3D11QuadBatcherAppendQuad(QuadKind kind, ID3D11ShaderResourceView* resolvedTexture, real32 x, real32 y, real32 w, real32 h, real32 u0, real32 v0, real32 u1, real32 v1, uint32 color)
+{
+    Assert(QuadBatcher.QuadCount < QuadBatcher.MaxQuads);
+    if(QuadBatcher.QuadCount >= QuadBatcher.MaxQuads)
+    {
+        return;
+    }
+
+    // NOTE(saeb): Order-preserving batching: extend the current run, or open a new one when the texture or kind changes.
+    if(QuadBatcher.BatchCount == 0 || QuadBatcher.Batches[QuadBatcher.BatchCount - 1].Texture != resolvedTexture || QuadBatcher.Batches[QuadBatcher.BatchCount - 1].Kind != kind)
+    {
+        Assert(QuadBatcher.BatchCount < MAX_TEXTURE_BATCHES);
+        if(QuadBatcher.BatchCount >= MAX_TEXTURE_BATCHES)
+        {
+            return;
+        }
+
+        TextureBatch* newBatch = &QuadBatcher.Batches[QuadBatcher.BatchCount++];
+        newBatch->Texture = resolvedTexture;
+        newBatch->Kind = kind;
+        newBatch->QuadCount = 0;
+    }
+
+    // NOTE(saeb): Write the 4 corners in the order the index buffer expects: TL, TR, BL, BR.
+    Vertex2D* quad = QuadBatcher.Vertices + (QuadBatcher.QuadCount * 4);
+
+    real32 x1 = x + w;
+    real32 y1 = y + h;
+
+    quad[0].Position[0] = x;
+    quad[0].Position[1] = y;
+    quad[0].UV[0] = u0;
+    quad[0].UV[1] = v0;
+    quad[0].Color = color;
+
+    quad[1].Position[0] = x1;
+    quad[1].Position[1] = y;
+    quad[1].UV[0] = u1;
+    quad[1].UV[1] = v0;
+    quad[1].Color = color;
+
+    quad[2].Position[0] = x;
+    quad[2].Position[1] = y1;
+    quad[2].UV[0] = u0;
+    quad[2].UV[1] = v1;
+    quad[2].Color = color;
+
+    quad[3].Position[0] = x1;
+    quad[3].Position[1] = y1;
+    quad[3].UV[0] = u1;
+    quad[3].UV[1] = v1;
+    quad[3].Color = color;
+
+    QuadBatcher.Batches[QuadBatcher.BatchCount - 1].QuadCount++;
+    QuadBatcher.QuadCount++;
+}
+
+bool32 D3D11InitQuadBatcher(D3D11RendererState* renderer, MemoryArena* permanent, MemoryArena* transient, uint32 maxQuads)
 {
     QuadBatcher.Device = renderer->Device;
     QuadBatcher.Context = renderer->Context;
@@ -111,9 +186,10 @@ bool32 D3D11InitQuadBatcher(D3D11RendererState* renderer, MemoryArena* permanent
     QuadBatcher.MaxQuads = maxQuads;
     QuadBatcher.QuadCount = 0;
     QuadBatcher.BatchCount = 0;
+    QuadBatcher.TextureRegistryCount = 1;
 
-    QuadBatcher.Vertices = PushArray(permanentArena, Vertex2D, maxQuads * 4);
-    QuadBatcher.Batches = PushArray(permanentArena, TextureBatch, MAX_TEXTURE_BATCHES);
+    QuadBatcher.Vertices = PushArray(permanent, Vertex2D, maxQuads * 4);
+    QuadBatcher.Batches = PushArray(permanent, TextureBatch, MAX_TEXTURE_BATCHES);
 
     D3D11_BUFFER_DESC vertexBufferDesc = {};
     vertexBufferDesc.ByteWidth = maxQuads * 4 * sizeof(Vertex2D);
@@ -127,7 +203,7 @@ bool32 D3D11InitQuadBatcher(D3D11RendererState* renderer, MemoryArena* permanent
     }
 
     uint32 indexCount = maxQuads * 6;
-    uint16* indices = PushArray(transientArena, uint16, indexCount);
+    uint16* indices = PushArray(transient, uint16, indexCount);
 
     for(uint32 quadIndex = 0; quadIndex < maxQuads; ++quadIndex)
     {
@@ -180,8 +256,17 @@ bool32 D3D11InitQuadBatcher(D3D11RendererState* renderer, MemoryArena* permanent
         return(false);
     }
 
+    ID3DBlob* pixelShaderAlphaBlob;
+    if(!D3D11CompileShader(QuadShaderSource, "PSMainAlpha", "ps_5_0", &pixelShaderAlphaBlob))
+    {
+        vertexShaderBlob->Release();
+        pixelShaderBlob->Release();
+        return(false);
+    }
+
     HRESULT vertexShaderResult = QuadBatcher.Device->CreateVertexShader(vertexShaderBlob->GetBufferPointer(), vertexShaderBlob->GetBufferSize(), 0, &QuadBatcher.VertexShader);
     HRESULT pixelShaderResult = QuadBatcher.Device->CreatePixelShader(pixelShaderBlob->GetBufferPointer(), pixelShaderBlob->GetBufferSize(), 0, &QuadBatcher.PixelShader);
+    HRESULT pixelShaderAlphaResult = QuadBatcher.Device->CreatePixelShader(pixelShaderAlphaBlob->GetBufferPointer(), pixelShaderAlphaBlob->GetBufferSize(), 0, &QuadBatcher.PixelShaderAlpha);
 
     // NOTE(saeb): Input layout maps Vertex2D's bytes to the VS inputs, validated against its bytecode.
     D3D11_INPUT_ELEMENT_DESC inputLayout[] =
@@ -195,8 +280,9 @@ bool32 D3D11InitQuadBatcher(D3D11RendererState* renderer, MemoryArena* permanent
 
     vertexShaderBlob->Release();
     pixelShaderBlob->Release();
+    pixelShaderAlphaBlob->Release();
 
-    if(FAILED(vertexShaderResult) || FAILED(pixelShaderResult) || FAILED(inputLayoutResult))
+    if(FAILED(vertexShaderResult) || FAILED(pixelShaderResult) || FAILED(pixelShaderAlphaResult) || FAILED(inputLayoutResult))
     {
         return(false);
     }
@@ -310,65 +396,56 @@ void D3D11QuadBatcherBegin(int32 width, int32 height)
 
 void D3D11QuadBatcherPushQuad(real32 x, real32 y, real32 w, real32 h, real32 u0, real32 v0, real32 u1, real32 v1, ID3D11ShaderResourceView* texture, uint32 color)
 {
-    Assert(QuadBatcher.QuadCount < QuadBatcher.MaxQuads);
-    if(QuadBatcher.QuadCount >= QuadBatcher.MaxQuads)
+    // NOTE(saeb): No texture means a solid-color quad reusing the 1x1 white texture.
+    QuadKind kind = texture ? TEXTURED : SOLID;
+    ID3D11ShaderResourceView* resolvedTexture = texture ? texture : QuadBatcher.WhiteTexture;
+
+    D3D11QuadBatcherAppendQuad(kind, resolvedTexture, x, y, w, h, u0, v0, u1, v1, color);
+}
+
+void D3D11QuadBatcherPushGlyphQuad(real32 x, real32 y, real32 w, real32 h, real32 u0, real32 v0, real32 u1, real32 v1, ID3D11ShaderResourceView* atlas, uint32 color)
+{
+    Assert(atlas != 0);
+    D3D11QuadBatcherAppendQuad(GLYPH, atlas, x, y, w, h, u0, v0, u1, v1, color);
+}
+
+uint32 D3D11QuadBatcherRegisterTexture(ID3D11ShaderResourceView* texture, QuadKind kind)
+{
+    Assert(QuadBatcher.TextureRegistryCount < MAX_TEXTURE_HANDLES);
+    if(QuadBatcher.TextureRegistryCount >= MAX_TEXTURE_HANDLES)
     {
-        return;
+        return(0);
     }
 
-    // NOTE(saeb): Solid-color quads (no texture) reuse the 1x1 white texture.
-    ID3D11ShaderResourceView* resolvedTexture = texture;
-    if(!resolvedTexture)
-    {
-        resolvedTexture = QuadBatcher.WhiteTexture;
-    }
+    uint32 handle = QuadBatcher.TextureRegistryCount++;
+    QuadBatcher.TextureRegistry[handle].Texture = texture;
+    QuadBatcher.TextureRegistry[handle].Kind = kind;
+    return(handle);
+}
 
-    // NOTE(saeb): Order-preserving batching: extend the current run, or open a new one when the texture changes (or this is the first quad of the frame).
-    if(QuadBatcher.BatchCount == 0 || QuadBatcher.Batches[QuadBatcher.BatchCount - 1].Texture != resolvedTexture)
+void D3D11QuadBatcherSubmitCommands(RenderCommands* commands)
+{
+    for(uint32 i = 0; i < commands->QuadCount; ++i)
     {
-        Assert(QuadBatcher.BatchCount < MAX_TEXTURE_BATCHES);
-        if(QuadBatcher.BatchCount >= MAX_TEXTURE_BATCHES)
+        RenderCommandQuad* quad = &commands->Quads[i];
+
+        if(quad->TextureHandle == 0)
         {
-            return;
+            D3D11QuadBatcherPushQuad(quad->X, quad->Y, quad->Width, quad->Height, quad->U0, quad->V0, quad->U1, quad->V1, 0, quad->Color);
+            continue;
         }
 
-        TextureBatch* newBatch = &QuadBatcher.Batches[QuadBatcher.BatchCount++];
-        newBatch->Texture = resolvedTexture;
-        newBatch->QuadCount = 0;
+        TextureRegistryEntry* entry = &QuadBatcher.TextureRegistry[quad->TextureHandle];
+
+        if(entry->Kind == GLYPH)
+        {
+            D3D11QuadBatcherPushGlyphQuad(quad->X, quad->Y, quad->Width, quad->Height, quad->U0, quad->V0, quad->U1, quad->V1, entry->Texture, quad->Color);
+        }
+        else
+        {
+            D3D11QuadBatcherPushQuad(quad->X, quad->Y, quad->Width, quad->Height, quad->U0, quad->V0, quad->U1, quad->V1, entry->Texture, quad->Color);
+        }
     }
-
-    // NOTE(saeb): Write the 4 corners in the order the index buffer expects: TL, TR, BL, BR.
-    Vertex2D* quad = QuadBatcher.Vertices + (QuadBatcher.QuadCount * 4);
-
-    real32 x1 = x + w;
-    real32 y1 = y + h;
-
-    quad[0].Position[0] = x;
-    quad[0].Position[1] = y;
-    quad[0].UV[0] = u0;
-    quad[0].UV[1] = v0;
-    quad[0].Color = color;
-
-    quad[1].Position[0] = x1;
-    quad[1].Position[1] = y;
-    quad[1].UV[0] = u1;
-    quad[1].UV[1] = v0;
-    quad[1].Color = color;
-
-    quad[2].Position[0] = x;
-    quad[2].Position[1] = y1;
-    quad[2].UV[0] = u0;
-    quad[2].UV[1] = v1;
-    quad[2].Color = color;
-
-    quad[3].Position[0] = x1;
-    quad[3].Position[1] = y1;
-    quad[3].UV[0] = u1;
-    quad[3].UV[1] = v1;
-    quad[3].Color = color;
-
-    QuadBatcher.Batches[QuadBatcher.BatchCount - 1].QuadCount++;
-    QuadBatcher.QuadCount++;
 }
 
 void D3D11QuadBatcherEnd()
@@ -398,7 +475,6 @@ void D3D11QuadBatcherEnd()
     QuadBatcher.Context->VSSetShader(QuadBatcher.VertexShader, 0, 0);
     QuadBatcher.Context->VSSetConstantBuffers(0, 1, &QuadBatcher.ConstantBuffer);
 
-    QuadBatcher.Context->PSSetShader(QuadBatcher.PixelShader, 0, 0);
     QuadBatcher.Context->PSSetSamplers(0, 1, &QuadBatcher.Sampler);
 
     QuadBatcher.Context->RSSetState(QuadBatcher.RasterizerState);
@@ -411,6 +487,8 @@ void D3D11QuadBatcherEnd()
         TextureBatch* batch = &QuadBatcher.Batches[batchIndex];
         UINT indexCount = batch->QuadCount * 6;
 
+        ID3D11PixelShader* pixelShader = (batch->Kind == GLYPH) ? QuadBatcher.PixelShaderAlpha : QuadBatcher.PixelShader;
+        QuadBatcher.Context->PSSetShader(pixelShader, 0, 0);
         QuadBatcher.Context->PSSetShaderResources(0, 1, &batch->Texture);
         QuadBatcher.Context->DrawIndexed(indexCount, indexOffset, 0);
 
