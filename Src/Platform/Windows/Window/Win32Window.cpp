@@ -77,6 +77,7 @@ bool32 Win32CreateWindow(HINSTANCE instance, const char* title, int32 width, int
     windowClass.style = CS_OWNDC | CS_HREDRAW | CS_VREDRAW;
     windowClass.lpfnWndProc = Win32WindowCallback;
     windowClass.hInstance = instance;
+    windowClass.hCursor = LoadCursor(0, IDC_ARROW);
     windowClass.lpszClassName = "AfterglowWindowClass";
 
     if(!RegisterClassEx(&windowClass))
