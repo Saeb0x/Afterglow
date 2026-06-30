@@ -4,7 +4,7 @@ setlocal EnableDelayedExpansion
 call vcvarsall.bat x64 >nul 2>&1
 if %errorlevel% neq 0 (
     echo [Afterglow] Failed to call vcvarsall.bat. Ensure Microsoft C/C++ build tools are installed and vcvarsall.bat is accessible from the current environment.
-    exit /b 1
+    exit /b
 )
 
 set MODE=debug
@@ -35,7 +35,7 @@ goto end
 echo.
 echo [Afterglow] Build failed.
 popd
-exit /b 1
+exit /b
 
 :end
 endlocal

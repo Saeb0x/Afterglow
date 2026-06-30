@@ -12,10 +12,9 @@ if /i "%MODE%"=="debug" (
 
 if not exist "%EXE%" (
     echo [Afterglow] "%EXE%" not found. Run Build.bat %MODE% first.
-    exit /b 1
+    exit /b
 )
 
-echo [Afterglow] Running...
 "%EXE%"
 
 endlocal
