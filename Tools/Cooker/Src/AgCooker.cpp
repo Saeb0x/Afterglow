@@ -1,5 +1,5 @@
-#include "Assets/FontFormat.h"
-#include "Assets/TextureFormat.h"
+#include "Engine/FontFormat.h"
+#include "Engine/TextureFormat.h"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "Deps/stb_image.h"
