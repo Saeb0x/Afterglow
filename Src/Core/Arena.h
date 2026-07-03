@@ -1,30 +1,26 @@
-#if !defined(MEMORY_ARENA_H)
+#if !defined(ARENA_H)
 
 #include "Types.h"
 
-#include <string.h>
-
-struct MemoryArena
+struct Arena
 {
-    uint8* Base;
+    uint8* BaseAddress;
     uint64 Size;
     uint64 Used;
 };
 
-static void InitializeArena(MemoryArena* arena, uint64 size, void* base)
+static void InitializeArena(Arena* arena, void* baseAddress, uint64 size)
 {
-    arena->Base = (uint8*)base;
+    arena->BaseAddress = (uint8*)baseAddress;
     arena->Size = size;
     arena->Used = 0;
 }
 
-static void* PushSize(MemoryArena* arena, uint64 size)
+static void* PushSize(Arena* arena, uint64 size)
 {
     Assert(arena->Used + size <= arena->Size);
 
-    void* result = arena->Base + arena->Used;
-    memset(result, 0, size);
-
+    void* result = arena->BaseAddress + arena->Used;
     arena->Used += size;
 
     return(result);
@@ -33,5 +29,5 @@ static void* PushSize(MemoryArena* arena, uint64 size)
 #define PushStruct(arena, type) (type*)PushSize(arena, sizeof(type))
 #define PushArray(arena, type, count) (type*)PushSize(arena, sizeof(type) * (count))
 
-#define MEMORY_ARENA_H
+#define ARENA_H
 #endif

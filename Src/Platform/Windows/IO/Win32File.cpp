@@ -2,7 +2,7 @@
 
 #include <windows.h>
 
-ReadFileResult Win32ReadEntireFile(MemoryArena* transient, const char* path)
+ReadFileResult Win32ReadEntireFile(Arena* transient, const char* path)
 {
     ReadFileResult result = {};
 

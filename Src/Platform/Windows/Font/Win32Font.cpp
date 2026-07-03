@@ -5,7 +5,7 @@
 
 #include <string.h>
 
-bool32 FontLoad(D3D11RendererState* renderer, MemoryArena* transient, Font* font, const char* path)
+bool32 FontLoad(D3D11RendererState* renderer, Arena* transient, Font* font, const char* path)
 {
     uint64 transientMark = transient->Used;
 

@@ -1,4 +1,6 @@
 #include "Afterglow.h"
+#include "Engine/RenderCommands.h"
+#include "GameAssets.h"
 
 #include <stdlib.h>
 

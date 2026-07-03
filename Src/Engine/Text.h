@@ -1,7 +1,7 @@
 #if !defined(TEXT_H)
 
 #include "Core/Types.h"
-#include "Assets/FontFormat.h"
+#include "FontFormat.h"
 #include "RenderCommands.h"
 
 struct Font

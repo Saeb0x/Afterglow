@@ -1,16 +1,12 @@
 #include "Game/Afterglow.cpp"
+
+#include "Win32Utils.h"
 #include "Window/Win32Window.cpp"
 #include "Direct3D/D3D11Renderer.cpp"
 #include "Direct3D/D3D11QuadBatcher.cpp"
 #include "IO/Win32File.cpp"
 #include "Font/Win32Font.cpp"
 #include "Texture/Win32Texture.cpp"
-
-#define EMB(content) \
-    do { \
-        MessageBox(0, content, "Afterglow Error", MB_OK | MB_ICONERROR); \
-        abort(); \
-    } while(0)
 
 static const char* WindowTitle =
 #if defined(AG_DEBUG)
@@ -25,14 +21,14 @@ int WINAPI WinMain(HINSTANCE instance,
                    int)
 {
     uint64 permanentArenaSize = Megabytes(64);
-    uint64 transientArenaSize = Gigabytes(2);
-    LPVOID gameMemoryBlock = VirtualAlloc(0, permanentArenaSize + transientArenaSize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+    uint64 transientArenaSize = Gigabytes(1);
+    void* gameMemoryBlock = (void*)VirtualAlloc(0, permanentArenaSize + transientArenaSize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
 
     GameMemory gameMemory = {};
-    InitializeArena(&gameMemory.Permanent, permanentArenaSize, gameMemoryBlock);
-    InitializeArena(&gameMemory.Transient, transientArenaSize, (uint8*)gameMemoryBlock + permanentArenaSize);
+    InitializeArena(&gameMemory.Permanent, gameMemoryBlock, permanentArenaSize);
+    InitializeArena(&gameMemory.Transient, (uint8*)gameMemoryBlock + permanentArenaSize, transientArenaSize);
 
-    if(gameMemory.Permanent.Base)
+    if(gameMemory.Permanent.BaseAddress)
     {
         HWND windowHandle;
         if(Win32CreateWindow(instance, WindowTitle, 1280, 720, &windowHandle))
@@ -90,7 +86,7 @@ int WINAPI WinMain(HINSTANCE instance,
                         }
                     }
 
-                    VirtualFree(gameMemory.Permanent.Base, 0, MEM_RELEASE);
+                    VirtualFree(gameMemory.Permanent.BaseAddress, 0, MEM_RELEASE);
                     D3D11ShutdownRenderer(&renderer);
                 }
                 else

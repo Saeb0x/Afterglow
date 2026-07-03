@@ -2,11 +2,11 @@
 #include "Platform/Windows/Direct3D/D3D11Renderer.h"
 #include "Platform/Windows/Direct3D/D3D11QuadBatcher.h"
 #include "Platform/Windows/IO/Win32File.h"
-#include "Assets/TextureFormat.h"
+#include "Engine/TextureFormat.h"
 
 #include <string.h>
 
-bool32 TextureLoad(D3D11RendererState* renderer, MemoryArena* transient, Texture* texture, const char* path)
+bool32 TextureLoad(D3D11RendererState* renderer, Arena* transient, Texture* texture, const char* path)
 {
     uint64 transientMark = transient->Used;
 

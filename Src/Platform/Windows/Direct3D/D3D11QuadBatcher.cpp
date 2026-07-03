@@ -175,7 +175,7 @@ static void D3D11QuadBatcherAppendQuad(QuadKind kind, ID3D11ShaderResourceView* 
     QuadBatcher.QuadCount++;
 }
 
-bool32 D3D11InitQuadBatcher(D3D11RendererState* renderer, MemoryArena* permanent, MemoryArena* transient, uint32 maxQuads)
+bool32 D3D11InitQuadBatcher(D3D11RendererState* renderer, Arena* permanent, Arena* transient, uint32 maxQuads)
 {
     QuadBatcher.Device = renderer->Device;
     QuadBatcher.Context = renderer->Context;

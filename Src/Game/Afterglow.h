@@ -1,15 +1,16 @@
 #if !defined(AFTERGLOW_H)
 
 #include "Core/Types.h"
-#include "Core/MemoryArena.h"
-#include "Engine/RenderCommands.h"
-#include "GameAssets.h"
+#include "Core/Arena.h"
+
+struct RenderCommands;
+struct GameAssets;
 
 struct GameMemory
 {
     bool32 Initialized;
-    MemoryArena Permanent;
-    MemoryArena Transient;
+    Arena Permanent;
+    Arena Transient;
 };
 
 struct GameContext
