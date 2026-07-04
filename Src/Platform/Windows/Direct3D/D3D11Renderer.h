@@ -8,7 +8,7 @@
 #include <d3d11.h>
 #include <dxgi1_6.h>
 
-#define MAX_TEXTURE_BATCHES 1024
+#define MAX_UI_PASS_BATCHES 1024
 #define MAX_TEXTURE_HANDLES 256
 
 struct RenderCommands;

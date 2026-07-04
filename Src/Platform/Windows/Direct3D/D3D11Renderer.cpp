@@ -236,8 +236,8 @@ static void D3D11UIPassAppendQuad(D3D11RendererState* renderer, QuadKind kind, I
     // NOTE(saeb): Order-preserving batching: extend the current run, or open a new one when the texture or kind changes.
     if(uiPass->BatchCount == 0 || uiPass->Batches[uiPass->BatchCount - 1].Texture != resolvedTexture || uiPass->Batches[uiPass->BatchCount - 1].Kind != kind)
     {
-        Assert(uiPass->BatchCount < MAX_TEXTURE_BATCHES);
-        if(uiPass->BatchCount >= MAX_TEXTURE_BATCHES)
+        Assert(uiPass->BatchCount < MAX_UI_PASS_BATCHES);
+        if(uiPass->BatchCount >= MAX_UI_PASS_BATCHES)
         {
             return;
         }
@@ -310,7 +310,7 @@ static bool32 D3D11InitUIPass(D3D11RendererState* renderer, Arena* permanent, Ar
     uiPass->TextureRegistryCount = 1;
 
     uiPass->Vertices = PushArray(permanent, Vertex2D, maxQuads * 4);
-    uiPass->Batches = PushArray(permanent, TextureBatch, MAX_TEXTURE_BATCHES);
+    uiPass->Batches = PushArray(permanent, TextureBatch, MAX_UI_PASS_BATCHES);
 
     D3D11_BUFFER_DESC vertexBufferDesc = {};
     vertexBufferDesc.ByteWidth = maxQuads * 4 * sizeof(Vertex2D);
