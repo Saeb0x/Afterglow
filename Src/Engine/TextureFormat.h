@@ -1,14 +1,15 @@
 #if !defined(TEXTURE_FORMAT_H)
 
 #include "Core/Types.h"
+#include "AssetFormat.h"
 
 #define TEXTURE_IDENTIFIER { 'A', 'G', 'T', 'X' }
 #define TEXTURE_VERSION 1
 
 struct TextureFileHeader
 {
-    char Identifier[4];
-    uint32 Version;
+    AssetHeader Header;
+
     int32 Width;
     int32 Height;
 };

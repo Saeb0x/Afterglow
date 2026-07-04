@@ -132,11 +132,11 @@ static int CookFont(const char* fontPath, const char* pngPath, const char* outPa
 
     free(fontText);
 
-    // NOTE(saeb): Write the .agfont: header, then 256 glyphs, then raw alpha pixels.
+    // NOTE(saeb): Write the .aga: header, then 256 glyphs, then raw alpha pixels.
     FontFileHeader header = {};
     char fontIdentifier[4] = FONT_IDENTIFIER;
-    memcpy(header.Identifier, fontIdentifier, 4);
-    header.Version = FONT_VERSION;
+    memcpy(header.Header.Identifier, fontIdentifier, 4);
+    header.Header.Version = FONT_VERSION;
     header.AtlasWidth = imageWidth;
     header.AtlasHeight = imageHeight;
     header.LineHeight = lineHeight;
@@ -173,8 +173,8 @@ static int CookTexture(const char* pngPath, const char* outPath)
 
     TextureFileHeader header = {};
     char textureIdentifier[4] = TEXTURE_IDENTIFIER;
-    memcpy(header.Identifier, textureIdentifier, 4);
-    header.Version = TEXTURE_VERSION;
+    memcpy(header.Header.Identifier, textureIdentifier, 4);
+    header.Header.Version = TEXTURE_VERSION;
     header.Width = width;
     header.Height = height;
 
@@ -210,7 +210,7 @@ int main(int argc, char** argv)
     {
         if(argc != 5)
         {
-            fprintf(stderr, "Usage: AgCooker.exe font <in.fnt> <in.png> <out.agfont>\n");
+            fprintf(stderr, "Usage: AgCooker.exe font <in.fnt> <in.png> <out.aga>\n");
             return(1);
         }
 
@@ -220,7 +220,7 @@ int main(int argc, char** argv)
     {
         if(argc != 4)
         {
-            fprintf(stderr, "Usage: AgCooker.exe texture <in.png> <out.agtex>\n");
+            fprintf(stderr, "Usage: AgCooker.exe texture <in.png> <out.aga>\n");
             return(1);
         }
 

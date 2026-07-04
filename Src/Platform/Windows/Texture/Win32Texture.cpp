@@ -19,7 +19,7 @@ bool32 TextureLoad(D3D11RendererState* renderer, Arena* transient, Texture* text
     TextureFileHeader* header = (TextureFileHeader*)file.Data;
 
     char textureIdentifier[4] = TEXTURE_IDENTIFIER;
-    if(memcmp(header->Identifier, textureIdentifier, 4) != 0 || header->Version != TEXTURE_VERSION)
+    if(memcmp(header->Header.Identifier, textureIdentifier, 4) != 0 || header->Header.Version != TEXTURE_VERSION)
     {
         transient->Used = transientMark;
         return(false);

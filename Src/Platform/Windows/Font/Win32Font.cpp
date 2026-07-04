@@ -18,7 +18,7 @@ bool32 FontLoad(D3D11RendererState* renderer, Arena* transient, Font* font, cons
     FontFileHeader* header = (FontFileHeader*)file.Data;
 
     char fontIdentifier[4] = FONT_IDENTIFIER;
-    if(memcmp(header->Identifier, fontIdentifier, 4) != 0 || header->Version != FONT_VERSION || header->GlyphCount != 256)
+    if(memcmp(header->Header.Identifier, fontIdentifier, 4) != 0 || header->Header.Version != FONT_VERSION || header->GlyphCount != 256)
     {
         transient->Used = transientMark;
         return(false);

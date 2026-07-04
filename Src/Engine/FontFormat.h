@@ -1,14 +1,15 @@
 #if !defined(FONT_FORMAT_H)
 
 #include "Core/Types.h"
+#include "AssetFormat.h"
 
 #define FONT_IDENTIFIER { 'A', 'G', 'F', 'T' }
 #define FONT_VERSION 1
 
 struct FontFileHeader
 {
-    char Identifier[4];
-    uint32 Version;
+    AssetHeader Header;
+
     int32 AtlasWidth;
     int32 AtlasHeight;
     int32 LineHeight;
