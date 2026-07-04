@@ -27,7 +27,7 @@ typedef double real64;
 #if defined(AG_DEBUG)
     #define Assert(expression) if(!(expression)) { *(int32*)0 = 0; }
 #else
-    #define Assert(expression)
+    #define Assert(expression) ((void)0)
 #endif
 
 #define TYPES_H
