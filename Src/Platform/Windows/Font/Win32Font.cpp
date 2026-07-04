@@ -1,6 +1,5 @@
 #include "Win32Font.h"
 #include "Platform/Windows/Direct3D/D3D11Renderer.h"
-#include "Platform/Windows/Direct3D/D3D11QuadBatcher.h"
 #include "Platform/Windows/IO/Win32File.h"
 
 #include <string.h>
@@ -74,6 +73,6 @@ bool32 FontLoad(D3D11RendererState* renderer, Arena* transient, Font* font, cons
         return(false);
     }
 
-    font->TextureHandle = D3D11QuadBatcherRegisterTexture(atlasSRV, GLYPH);
+    font->TextureHandle = D3D11RegisterTexture(renderer, atlasSRV, GLYPH);
     return(true);
 }

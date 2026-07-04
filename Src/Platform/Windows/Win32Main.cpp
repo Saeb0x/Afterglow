@@ -3,7 +3,6 @@
 #include "Win32Utils.h"
 #include "Window/Win32Window.cpp"
 #include "Direct3D/D3D11Renderer.cpp"
-#include "Direct3D/D3D11QuadBatcher.cpp"
 #include "IO/Win32File.cpp"
 #include "Font/Win32Font.cpp"
 #include "Texture/Win32Texture.cpp"
@@ -15,10 +14,7 @@ static const char* WindowTitle =
     "Afterglow";
 #endif
 
-int WINAPI WinMain(HINSTANCE instance,
-                   HINSTANCE,
-                   LPSTR,
-                   int)
+int WINAPI WinMain(HINSTANCE instance, HINSTANCE, LPSTR, int)
 {
     uint64 permanentArenaSize = Megabytes(64);
     uint64 transientArenaSize = Gigabytes(1);
@@ -37,63 +33,55 @@ int WINAPI WinMain(HINSTANCE instance,
             Win32GetWindowDimensions(windowHandle, &dims);
 
             D3D11RendererState renderer = {};
-            if(D3D11InitRenderer(&renderer, windowHandle, dims.Width, dims.Height))
+            if(D3D11InitRenderer(&renderer, windowHandle, dims.Width, dims.Height, &gameMemory.Permanent, &gameMemory.Transient, 16384))
             {
-                if(D3D11InitQuadBatcher(&renderer, &gameMemory.Permanent, &gameMemory.Transient, 16384))
+                RenderCommands renderCommands = {};
+                renderCommands.MaxQuads = 16384;
+                renderCommands.Quads = PushArray(&gameMemory.Permanent, RenderCommandQuad, renderCommands.MaxQuads);
+
+                GameAssets gameAssets = {};
+
+                Win32ShowWindow(windowHandle);
+                bool32 running = true;
+                while(running)
                 {
-                    RenderCommands renderCommands = {};
-                    renderCommands.MaxQuads = 16384;
-                    renderCommands.Quads = PushArray(&gameMemory.Permanent, RenderCommandQuad, renderCommands.MaxQuads);
+                    Win32ProcessPendingMessages();
 
-                    GameAssets gameAssets = {};
-
-                    Win32ShowWindow(windowHandle);
-                    bool32 running = true;
-                    while(running)
+                    if(Win32WindowShouldQuit())
                     {
-                        Win32ProcessPendingMessages();
-
-                        if(Win32WindowShouldQuit())
-                        {
-                            running = false;
-                            break;
-                        }
-
-                        if(Win32WindowConsumeResize(&dims))
-                        {
-                            D3D11ResizeRenderer(&renderer, dims.Width, dims.Height);
-                        }
-
-                        gameMemory.Transient.Used = 0;
-                        if(!Win32WindowIsMinimized())
-                        {
-                            D3D11BeginFrame(&renderer);
-                            D3D11QuadBatcherBegin(dims.Width, dims.Height);
-                            renderCommands.QuadCount = 0;
-
-                            GameContext context = {};
-                            context.Memory = &gameMemory;
-                            context.Assets = &gameAssets;
-                            context.Render = &renderCommands;
-                            context.ScreenWidth = dims.Width;
-                            context.ScreenHeight = dims.Height;
-
-                            GameUpdateAndRender(&context);
-
-                            D3D11QuadBatcherSubmitCommands(&renderCommands);
-                            D3D11QuadBatcherEnd();
-                            D3D11Present(&renderer);
-                        }
+                        running = false;
+                        break;
                     }
 
-                    VirtualFree(gameMemory.Permanent.BaseAddress, 0, MEM_RELEASE);
-                    D3D11ShutdownRenderer(&renderer);
+                    if(Win32WindowConsumeResize(&dims))
+                    {
+                        D3D11ResizeRenderer(&renderer, dims.Width, dims.Height);
+                    }
+
+                    gameMemory.Transient.Used = 0;
+                    if(!Win32WindowIsMinimized())
+                    {
+                        D3D11BeginFrame(&renderer);
+                        D3D11BeginUIPass(&renderer, dims.Width, dims.Height);
+                        renderCommands.QuadCount = 0;
+
+                        GameContext context = {};
+                        context.Memory = &gameMemory;
+                        context.Assets = &gameAssets;
+                        context.Render = &renderCommands;
+                        context.ScreenWidth = dims.Width;
+                        context.ScreenHeight = dims.Height;
+
+                        GameUpdateAndRender(&context);
+
+                        D3D11SubmitRenderCommands(&renderer, &renderCommands);
+                        D3D11EndUIPass(&renderer);
+                        D3D11Present(&renderer);
+                    }
                 }
-                else
-                {
-                    D3D11ShutdownRenderer(&renderer);
-                    EMB("Quad batcher initialization failed!");
-                }
+
+                VirtualFree(gameMemory.Permanent.BaseAddress, 0, MEM_RELEASE);
+                D3D11ShutdownRenderer(&renderer);
             }
             else
             {

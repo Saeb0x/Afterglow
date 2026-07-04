@@ -1,6 +1,5 @@
 #include "Win32Texture.h"
 #include "Platform/Windows/Direct3D/D3D11Renderer.h"
-#include "Platform/Windows/Direct3D/D3D11QuadBatcher.h"
 #include "Platform/Windows/IO/Win32File.h"
 #include "Engine/TextureFormat.h"
 
@@ -70,7 +69,7 @@ bool32 TextureLoad(D3D11RendererState* renderer, Arena* transient, Texture* text
 
     texture->Width = header->Width;
     texture->Height = header->Height;
-    texture->TextureHandle = D3D11QuadBatcherRegisterTexture(srv, TEXTURED);
+    texture->TextureHandle = D3D11RegisterTexture(renderer, srv, TEXTURED);
 
     return(true);
 }
