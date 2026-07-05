@@ -20,7 +20,9 @@ struct GameContext
     RenderCommands* Render;
 
     int32 ScreenWidth;
-    int32 ScreenHeight;    
+    int32 ScreenHeight;
+
+    real32 DeltaTime;
 };
 
 void GameUpdateAndRender(GameContext* context);

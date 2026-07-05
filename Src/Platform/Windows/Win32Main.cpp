@@ -6,6 +6,7 @@
 #include "IO/Win32File.cpp"
 #include "Font/Win32Font.cpp"
 #include "Texture/Win32Texture.cpp"
+#include "Time/Win32Time.cpp"
 
 static const char* WindowTitle =
 #if defined(AG_DEBUG)
@@ -41,6 +42,14 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, LPSTR, int)
 
                 GameAssets gameAssets = {};
 
+                GameContext context = {};
+                context.Memory = &gameMemory;
+                context.Render = &renderCommands;
+                context.Assets = &gameAssets;
+
+                LARGE_INTEGER perfCounterFrequency = Win32GetPerformanceCounterFrequency();
+                LARGE_INTEGER lastCounter = Win32GetPerformanceCounterTicks();
+
                 Win32ShowWindow(windowHandle);
                 bool32 running = true;
                 while(running)
@@ -65,10 +74,6 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, LPSTR, int)
                         D3D11BeginUIPass(&renderer, dims.Width, dims.Height);
                         renderCommands.QuadCount = 0;
 
-                        GameContext context = {};
-                        context.Memory = &gameMemory;
-                        context.Assets = &gameAssets;
-                        context.Render = &renderCommands;
                         context.ScreenWidth = dims.Width;
                         context.ScreenHeight = dims.Height;
 
@@ -78,6 +83,11 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, LPSTR, int)
                         D3D11EndUIPass(&renderer);
                         D3D11Present(&renderer);
                     }
+
+                    LARGE_INTEGER endCounter = Win32GetPerformanceCounterTicks();
+                    context.DeltaTime = Win32GetSecondsElapsed(perfCounterFrequency, lastCounter, endCounter);;
+                    
+                    lastCounter = endCounter;
                 }
 
                 VirtualFree(gameMemory.Permanent.BaseAddress, 0, MEM_RELEASE);
