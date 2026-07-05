@@ -7,6 +7,7 @@
 #include "Font/Win32Font.cpp"
 #include "Texture/Win32Texture.cpp"
 #include "Time/Win32Time.cpp"
+#include "Assets/Win32AssetManager.cpp"
 
 static const char* WindowTitle =
 #if defined(AG_DEBUG)
@@ -41,15 +42,20 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, LPSTR, int)
                 renderCommands.Quads = PushArray(&gameMemory.Permanent, RenderCommandQuad, renderCommands.MaxQuads);
 
                 GameAssets gameAssets = {};
+                AssetManager assetManager = {};
+                AssetManagerInit(&assetManager, &renderer);
 
                 GameContext context = {};
                 context.Memory = &gameMemory;
                 context.Render = &renderCommands;
                 context.Assets = &gameAssets;
+                context.Loader = &assetManager;
 
                 LARGE_INTEGER perfCounterFrequency = Win32GetPerformanceCounterFrequency();
                 LARGE_INTEGER lastCounter = Win32GetPerformanceCounterTicks();
 
+                GameInit(&context);
+                
                 Win32ShowWindow(windowHandle);
                 bool32 running = true;
                 while(running)
@@ -85,8 +91,14 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, LPSTR, int)
                     }
 
                     LARGE_INTEGER endCounter = Win32GetPerformanceCounterTicks();
-                    context.DeltaTime = Win32GetSecondsElapsed(perfCounterFrequency, lastCounter, endCounter);;
-                    
+                    context.DeltaTime = Win32GetSecondsElapsed(perfCounterFrequency, lastCounter, endCounter);
+
+                    real32 maxDeltaTime = 0.1f;
+                    if(context.DeltaTime > maxDeltaTime)
+                    {
+                        context.DeltaTime = maxDeltaTime;
+                    }
+
                     lastCounter = endCounter;
                 }
 

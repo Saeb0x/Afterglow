@@ -1,22 +1,52 @@
 #include "Afterglow.h"
 #include "Engine/RenderCommands.h"
+#include "Engine/AssetManager.h"
 #include "GameAssets.h"
 
-#include <stdlib.h>
+void GameInit(GameContext* context)
+{
+    AssetManagerLoadFont(context->Loader, &context->Memory->Transient, &context->Assets->UIFont, "Data/UIFont.aga");
+}
+
+static bool32 BounceAxis(real32* position, real32* velocity, real32 min, real32 max, real32 deltaTime)
+{
+    *position += *velocity * deltaTime;
+
+    if(*position <= min || *position >= max)
+    {
+        *velocity = -(*velocity);
+        return(true);
+    }
+
+    return(false);
+}
 
 void GameUpdateAndRender(GameContext* context)
 {
-    for(uint8 i = 0; i < 100; ++i)
+    static real32 textX = 100.0f;
+    static real32 textY = 100.0f;
+    static real32 velocityX = 200.0f;
+    static real32 velocityY = 200.0f;
+
+    static const uint32 BounceColors[] =
     {
-        real32 width = (real32)((rand() % 100) + 1);
-        real32 height = (real32)((rand() % 100) + 1);
-        real32 x = (real32)((rand() % context->ScreenWidth) - width);
-        real32 y = (real32)((rand() % context->ScreenHeight) - height);
+        PackColor(255, 0, 0, 255),
+        PackColor(0, 255, 0, 255),
+        PackColor(0, 0, 255, 255),
+    };
+    static uint32 colorIndex = 0;
 
-        uint8 r = (uint8)(rand() % 256);
-        uint8 g = (uint8)(rand() % 256);
-        uint8 b = (uint8)(rand() % 256);
+    const char* text = "Afterglow";
+    int32 textWidth = TextWidth(&context->Assets->UIFont, text);
+    int32 textHeight = context->Assets->UIFont.LineHeight;
 
-        PushQuad(context->Render, x, y, width, height, PackColor(r, g, b, 255));
+    bool32 bouncedX = BounceAxis(&textX, &velocityX, 0.0f, (real32)(context->ScreenWidth - textWidth), context->DeltaTime);
+    bool32 bouncedY = BounceAxis(&textY, &velocityY, 0.0f, (real32)(context->ScreenHeight - textHeight), context->DeltaTime);
+
+    if(bouncedX || bouncedY)
+    {
+        colorIndex = (colorIndex + 1) % ArrayCount(BounceColors);
     }
+
+    PushText(context->Render, &context->Assets->UIFont, textX, textY, text, BounceColors[colorIndex]);
 }

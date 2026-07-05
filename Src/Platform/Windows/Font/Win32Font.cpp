@@ -74,5 +74,7 @@ bool32 FontLoad(D3D11RendererState* renderer, Arena* transient, Font* font, cons
     }
 
     font->TextureHandle = D3D11RegisterTexture(renderer, atlasSRV, GLYPH);
+    font->State = LOADED;
+
     return(true);
 }

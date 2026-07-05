@@ -2,9 +2,11 @@
 
 #include "Core/Types.h"
 #include "RenderCommands.h"
+#include "AssetState.h"
 
 struct Texture
 {
+    AssetState State;
     uint32 TextureHandle;
     int32 Width;
     int32 Height;

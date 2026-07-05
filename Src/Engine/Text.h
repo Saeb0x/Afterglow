@@ -3,9 +3,11 @@
 #include "Core/Types.h"
 #include "FontFormat.h"
 #include "RenderCommands.h"
+#include "AssetState.h"
 
 struct Font
 {
+    AssetState State;
     uint32 TextureHandle;
     int32 AtlasWidth, AtlasHeight, LineHeight;
     FontGlyph Glyphs[256];

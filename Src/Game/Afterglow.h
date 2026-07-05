@@ -4,6 +4,7 @@
 #include "Core/Arena.h"
 
 struct RenderCommands;
+struct AssetManager;
 struct GameAssets;
 
 struct GameMemory
@@ -16,8 +17,10 @@ struct GameMemory
 struct GameContext
 {
     GameMemory* Memory;
-    GameAssets* Assets;
     RenderCommands* Render;
+    AssetManager* Loader;
+
+    GameAssets* Assets;
 
     int32 ScreenWidth;
     int32 ScreenHeight;
@@ -25,6 +28,7 @@ struct GameContext
     real32 DeltaTime;
 };
 
+void GameInit(GameContext* context);
 void GameUpdateAndRender(GameContext* context);
 
 #define AFTERGLOW_H

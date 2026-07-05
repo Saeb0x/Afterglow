@@ -70,6 +70,7 @@ bool32 TextureLoad(D3D11RendererState* renderer, Arena* transient, Texture* text
     texture->Width = header->Width;
     texture->Height = header->Height;
     texture->TextureHandle = D3D11RegisterTexture(renderer, srv, TEXTURED);
+    texture->State = LOADED;
 
     return(true);
 }

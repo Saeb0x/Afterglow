@@ -5,6 +5,7 @@
 
 struct GameAssets
 {
+    Font UIFont;
 };
 
 #define GAME_ASSETS_H
