@@ -158,7 +158,7 @@ static bool32 D3D11InitDevice(D3D11RendererState* renderer, HWND windowHandle, i
     return(true);
 }
 
-static const char* UIPassShaderSource = R"HLSL(
+static const char* QuadPassShaderSource = R"HLSL(
 cbuffer Constants : register(b0)
 {
     row_major float4x4 Projection;
@@ -223,33 +223,33 @@ static bool32 D3D11CompileShader(const char* source, const char* entryPoint, con
     return(SUCCEEDED(result));
 }
 
-static void D3D11UIPassAppendQuad(D3D11RendererState* renderer, QuadKind kind, ID3D11ShaderResourceView* resolvedTexture, real32 x, real32 y, real32 w, real32 h, real32 u0, real32 v0, real32 u1, real32 v1, uint32 color)
+static void D3D11QuadPassAppendQuad(D3D11RendererState* renderer, QuadKind kind, ID3D11ShaderResourceView* resolvedTexture, real32 x, real32 y, real32 w, real32 h, real32 u0, real32 v0, real32 u1, real32 v1, uint32 color)
 {
-    D3D11UIPass* uiPass = &renderer->UIPass;
+    D3D11QuadPass* quadPass = &renderer->QuadPass;
 
-    Assert(uiPass->QuadCount < uiPass->MaxQuads);
-    if(uiPass->QuadCount >= uiPass->MaxQuads)
+    Assert(quadPass->QuadCount < quadPass->MaxQuads);
+    if(quadPass->QuadCount >= quadPass->MaxQuads)
     {
         return;
     }
 
     // NOTE(saeb): Order-preserving batching: extend the current run, or open a new one when the texture or kind changes.
-    if(uiPass->BatchCount == 0 || uiPass->Batches[uiPass->BatchCount - 1].Texture != resolvedTexture || uiPass->Batches[uiPass->BatchCount - 1].Kind != kind)
+    if(quadPass->BatchCount == 0 || quadPass->Batches[quadPass->BatchCount - 1].Texture != resolvedTexture || quadPass->Batches[quadPass->BatchCount - 1].Kind != kind)
     {
-        Assert(uiPass->BatchCount < MAX_UI_PASS_BATCHES);
-        if(uiPass->BatchCount >= MAX_UI_PASS_BATCHES)
+        Assert(quadPass->BatchCount < MAX_QUAD_PASS_BATCHES);
+        if(quadPass->BatchCount >= MAX_QUAD_PASS_BATCHES)
         {
             return;
         }
 
-        TextureBatch* newBatch = &uiPass->Batches[uiPass->BatchCount++];
+        TextureBatch* newBatch = &quadPass->Batches[quadPass->BatchCount++];
         newBatch->Texture = resolvedTexture;
         newBatch->Kind = kind;
         newBatch->QuadCount = 0;
     }
 
     // NOTE(saeb): Write the 4 corners in the order the index buffer expects: TL, TR, BL, BR.
-    Vertex2D* quad = uiPass->Vertices + (uiPass->QuadCount * 4);
+    Vertex2D* quad = quadPass->Vertices + (quadPass->QuadCount * 4);
 
     real32 x1 = x + w;
     real32 y1 = y + h;
@@ -278,39 +278,39 @@ static void D3D11UIPassAppendQuad(D3D11RendererState* renderer, QuadKind kind, I
     quad[3].UV[1] = v1;
     quad[3].Color = color;
 
-    uiPass->Batches[uiPass->BatchCount - 1].QuadCount++;
-    uiPass->QuadCount++;
+    quadPass->Batches[quadPass->BatchCount - 1].QuadCount++;
+    quadPass->QuadCount++;
 }
 
-static void D3D11UIPassPushQuad(D3D11RendererState* renderer, real32 x, real32 y, real32 w, real32 h, real32 u0, real32 v0, real32 u1, real32 v1, ID3D11ShaderResourceView* texture, uint32 color)
+static void D3D11QuadPassPushQuad(D3D11RendererState* renderer, real32 x, real32 y, real32 w, real32 h, real32 u0, real32 v0, real32 u1, real32 v1, ID3D11ShaderResourceView* texture, uint32 color)
 {
     // NOTE(saeb): No texture means a solid-color quad reusing the 1x1 white texture.
     QuadKind kind = texture ? TEXTURED : SOLID;
-    ID3D11ShaderResourceView* resolvedTexture = texture ? texture : renderer->UIPass.WhiteTexture;
+    ID3D11ShaderResourceView* resolvedTexture = texture ? texture : renderer->QuadPass.WhiteTexture;
 
-    D3D11UIPassAppendQuad(renderer, kind, resolvedTexture, x, y, w, h, u0, v0, u1, v1, color);
+    D3D11QuadPassAppendQuad(renderer, kind, resolvedTexture, x, y, w, h, u0, v0, u1, v1, color);
 }
 
-static void D3D11UIPassPushGlyphQuad(D3D11RendererState* renderer, real32 x, real32 y, real32 w, real32 h, real32 u0, real32 v0, real32 u1, real32 v1, ID3D11ShaderResourceView* atlas, uint32 color)
+static void D3D11QuadPassPushGlyphQuad(D3D11RendererState* renderer, real32 x, real32 y, real32 w, real32 h, real32 u0, real32 v0, real32 u1, real32 v1, ID3D11ShaderResourceView* atlas, uint32 color)
 {
     Assert(atlas != 0);
-    D3D11UIPassAppendQuad(renderer, GLYPH, atlas, x, y, w, h, u0, v0, u1, v1, color);
+    D3D11QuadPassAppendQuad(renderer, GLYPH, atlas, x, y, w, h, u0, v0, u1, v1, color);
 }
 
-static bool32 D3D11InitUIPass(D3D11RendererState* renderer, Arena* permanent, Arena* transient, uint32 maxQuads)
+static bool32 D3D11InitQuadPass(D3D11RendererState* renderer, Arena* permanent, Arena* transient, uint32 maxQuads)
 {
-    D3D11UIPass* uiPass = &renderer->UIPass;
+    D3D11QuadPass* quadPass = &renderer->QuadPass;
 
     // NOTE(saeb): We index with uint16, so 4 verts/quad must stay within the 65536 vertex ceiling.
     Assert(maxQuads <= 16384);
 
-    uiPass->MaxQuads = maxQuads;
-    uiPass->QuadCount = 0;
-    uiPass->BatchCount = 0;
-    uiPass->TextureRegistryCount = 1;
+    quadPass->MaxQuads = maxQuads;
+    quadPass->QuadCount = 0;
+    quadPass->BatchCount = 0;
+    quadPass->TextureRegistryCount = 1;
 
-    uiPass->Vertices = PushArray(permanent, Vertex2D, maxQuads * 4);
-    uiPass->Batches = PushArray(permanent, TextureBatch, MAX_UI_PASS_BATCHES);
+    quadPass->Vertices = PushArray(permanent, Vertex2D, maxQuads * 4);
+    quadPass->Batches = PushArray(permanent, TextureBatch, MAX_QUAD_PASS_BATCHES);
 
     D3D11_BUFFER_DESC vertexBufferDesc = {};
     vertexBufferDesc.ByteWidth = maxQuads * 4 * sizeof(Vertex2D);
@@ -318,7 +318,7 @@ static bool32 D3D11InitUIPass(D3D11RendererState* renderer, Arena* permanent, Ar
     vertexBufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
     vertexBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 
-    if(FAILED(renderer->Device->CreateBuffer(&vertexBufferDesc, 0, &uiPass->VertexBuffer)))
+    if(FAILED(renderer->Device->CreateBuffer(&vertexBufferDesc, 0, &quadPass->VertexBuffer)))
     {
         return(false);
     }
@@ -347,7 +347,7 @@ static bool32 D3D11InitUIPass(D3D11RendererState* renderer, Arena* permanent, Ar
     D3D11_SUBRESOURCE_DATA indexBufferData = {};
     indexBufferData.pSysMem = indices;
 
-    if(FAILED(renderer->Device->CreateBuffer(&indexBufferDesc, &indexBufferData, &uiPass->IndexBuffer)))
+    if(FAILED(renderer->Device->CreateBuffer(&indexBufferDesc, &indexBufferData, &quadPass->IndexBuffer)))
     {
         return(false);
     }
@@ -359,35 +359,35 @@ static bool32 D3D11InitUIPass(D3D11RendererState* renderer, Arena* permanent, Ar
     constantBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
     constantBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 
-    if(FAILED(renderer->Device->CreateBuffer(&constantBufferDesc, 0, &uiPass->ConstantBuffer)))
+    if(FAILED(renderer->Device->CreateBuffer(&constantBufferDesc, 0, &quadPass->ConstantBuffer)))
     {
         return(false);
     }
 
     ID3DBlob* vertexShaderBlob;
-    if(!D3D11CompileShader(UIPassShaderSource, "VSMain", "vs_5_0", &vertexShaderBlob))
+    if(!D3D11CompileShader(QuadPassShaderSource, "VSMain", "vs_5_0", &vertexShaderBlob))
     {
         return(false);
     }
 
     ID3DBlob* pixelShaderBlob;
-    if(!D3D11CompileShader(UIPassShaderSource, "PSMain", "ps_5_0", &pixelShaderBlob))
+    if(!D3D11CompileShader(QuadPassShaderSource, "PSMain", "ps_5_0", &pixelShaderBlob))
     {
         vertexShaderBlob->Release();
         return(false);
     }
 
     ID3DBlob* pixelShaderAlphaBlob;
-    if(!D3D11CompileShader(UIPassShaderSource, "PSMainAlpha", "ps_5_0", &pixelShaderAlphaBlob))
+    if(!D3D11CompileShader(QuadPassShaderSource, "PSMainAlpha", "ps_5_0", &pixelShaderAlphaBlob))
     {
         vertexShaderBlob->Release();
         pixelShaderBlob->Release();
         return(false);
     }
 
-    HRESULT vertexShaderResult = renderer->Device->CreateVertexShader(vertexShaderBlob->GetBufferPointer(), vertexShaderBlob->GetBufferSize(), 0, &uiPass->VertexShader);
-    HRESULT pixelShaderResult = renderer->Device->CreatePixelShader(pixelShaderBlob->GetBufferPointer(), pixelShaderBlob->GetBufferSize(), 0, &uiPass->PixelShader);
-    HRESULT pixelShaderAlphaResult = renderer->Device->CreatePixelShader(pixelShaderAlphaBlob->GetBufferPointer(), pixelShaderAlphaBlob->GetBufferSize(), 0, &uiPass->PixelShaderAlpha);
+    HRESULT vertexShaderResult = renderer->Device->CreateVertexShader(vertexShaderBlob->GetBufferPointer(), vertexShaderBlob->GetBufferSize(), 0, &quadPass->VertexShader);
+    HRESULT pixelShaderResult = renderer->Device->CreatePixelShader(pixelShaderBlob->GetBufferPointer(), pixelShaderBlob->GetBufferSize(), 0, &quadPass->PixelShader);
+    HRESULT pixelShaderAlphaResult = renderer->Device->CreatePixelShader(pixelShaderAlphaBlob->GetBufferPointer(), pixelShaderAlphaBlob->GetBufferSize(), 0, &quadPass->PixelShaderAlpha);
 
     // NOTE(saeb): Input layout maps Vertex2D's bytes to the VS inputs, validated against its bytecode.
     D3D11_INPUT_ELEMENT_DESC inputLayout[] =
@@ -397,7 +397,7 @@ static bool32 D3D11InitUIPass(D3D11RendererState* renderer, Arena* permanent, Ar
         { "COLOR", 0, DXGI_FORMAT_R8G8B8A8_UNORM, 0, offsetof(Vertex2D, Color), D3D11_INPUT_PER_VERTEX_DATA, 0 }
     };
 
-    HRESULT inputLayoutResult = renderer->Device->CreateInputLayout(inputLayout, ArrayCount(inputLayout), vertexShaderBlob->GetBufferPointer(), vertexShaderBlob->GetBufferSize(), &uiPass->InputLayout);
+    HRESULT inputLayoutResult = renderer->Device->CreateInputLayout(inputLayout, ArrayCount(inputLayout), vertexShaderBlob->GetBufferPointer(), vertexShaderBlob->GetBufferSize(), &quadPass->InputLayout);
 
     vertexShaderBlob->Release();
     pixelShaderBlob->Release();
@@ -419,7 +419,7 @@ static bool32 D3D11InitUIPass(D3D11RendererState* renderer, Arena* permanent, Ar
     blendDesc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
     blendDesc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
 
-    if(FAILED(renderer->Device->CreateBlendState(&blendDesc, &uiPass->BlendState)))
+    if(FAILED(renderer->Device->CreateBlendState(&blendDesc, &quadPass->BlendState)))
     {
         return(false);
     }
@@ -430,7 +430,7 @@ static bool32 D3D11InitUIPass(D3D11RendererState* renderer, Arena* permanent, Ar
     depthDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
     depthDesc.StencilEnable = FALSE;
 
-    if(FAILED(renderer->Device->CreateDepthStencilState(&depthDesc, &uiPass->DepthState)))
+    if(FAILED(renderer->Device->CreateDepthStencilState(&depthDesc, &quadPass->DepthState)))
     {
         return(false);
     }
@@ -441,7 +441,7 @@ static bool32 D3D11InitUIPass(D3D11RendererState* renderer, Arena* permanent, Ar
     rasterizerDesc.CullMode = D3D11_CULL_NONE;
     rasterizerDesc.DepthClipEnable = TRUE;
 
-    if(FAILED(renderer->Device->CreateRasterizerState(&rasterizerDesc, &uiPass->RasterizerState)))
+    if(FAILED(renderer->Device->CreateRasterizerState(&rasterizerDesc, &quadPass->RasterizerState)))
     {
         return(false);
     }
@@ -455,7 +455,7 @@ static bool32 D3D11InitUIPass(D3D11RendererState* renderer, Arena* permanent, Ar
     samplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
     samplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
 
-    if(FAILED(renderer->Device->CreateSamplerState(&samplerDesc, &uiPass->Sampler)))
+    if(FAILED(renderer->Device->CreateSamplerState(&samplerDesc, &quadPass->Sampler)))
     {
         return(false);
     }
@@ -482,7 +482,7 @@ static bool32 D3D11InitUIPass(D3D11RendererState* renderer, Arena* permanent, Ar
         return(false);
     }
 
-    HRESULT whiteViewResult = renderer->Device->CreateShaderResourceView(whiteTexture, 0, &uiPass->WhiteTexture);
+    HRESULT whiteViewResult = renderer->Device->CreateShaderResourceView(whiteTexture, 0, &quadPass->WhiteTexture);
     whiteTexture->Release();
 
     if(FAILED(whiteViewResult))
@@ -500,7 +500,7 @@ bool32 D3D11InitRenderer(D3D11RendererState* renderer, HWND windowHandle, int32 
         return(false);
     }
 
-    if(!D3D11InitUIPass(renderer, permanent, transient, maxQuads))
+    if(!D3D11InitQuadPass(renderer, permanent, transient, maxQuads))
     {
         return(false);
     }
@@ -554,88 +554,88 @@ void D3D11ShutdownRenderer(D3D11RendererState* renderer)
     }
 #endif
 
-    D3D11UIPass* uiPass = &renderer->UIPass;
+    D3D11QuadPass* quadPass = &renderer->QuadPass;
 
     // NOTE(saeb): Release every texture handed to us via D3D11RegisterTexture (handle 0 is reserved/unused).
-    for(uint32 i = 1; i < uiPass->TextureRegistryCount; ++i)
+    for(uint32 i = 1; i < quadPass->TextureRegistryCount; ++i)
     {
-        if(uiPass->TextureRegistry[i].Texture)
+        if(quadPass->TextureRegistry[i].Texture)
         {
-            uiPass->TextureRegistry[i].Texture->Release();
-            uiPass->TextureRegistry[i].Texture = 0;
+            quadPass->TextureRegistry[i].Texture->Release();
+            quadPass->TextureRegistry[i].Texture = 0;
         }
     }
 
-    if(uiPass->WhiteTexture)
+    if(quadPass->WhiteTexture)
     {
-        uiPass->WhiteTexture->Release();
-        uiPass->WhiteTexture = 0;
+        quadPass->WhiteTexture->Release();
+        quadPass->WhiteTexture = 0;
     }
 
-    if(uiPass->Sampler)
+    if(quadPass->Sampler)
     {
-        uiPass->Sampler->Release();
-        uiPass->Sampler = 0;
+        quadPass->Sampler->Release();
+        quadPass->Sampler = 0;
     }
 
-    if(uiPass->RasterizerState)
+    if(quadPass->RasterizerState)
     {
-        uiPass->RasterizerState->Release();
-        uiPass->RasterizerState = 0;
+        quadPass->RasterizerState->Release();
+        quadPass->RasterizerState = 0;
     }
 
-    if(uiPass->DepthState)
+    if(quadPass->DepthState)
     {
-        uiPass->DepthState->Release();
-        uiPass->DepthState = 0;
+        quadPass->DepthState->Release();
+        quadPass->DepthState = 0;
     }
 
-    if(uiPass->BlendState)
+    if(quadPass->BlendState)
     {
-        uiPass->BlendState->Release();
-        uiPass->BlendState = 0;
+        quadPass->BlendState->Release();
+        quadPass->BlendState = 0;
     }
 
-    if(uiPass->InputLayout)
+    if(quadPass->InputLayout)
     {
-        uiPass->InputLayout->Release();
-        uiPass->InputLayout = 0;
+        quadPass->InputLayout->Release();
+        quadPass->InputLayout = 0;
     }
 
-    if(uiPass->PixelShaderAlpha)
+    if(quadPass->PixelShaderAlpha)
     {
-        uiPass->PixelShaderAlpha->Release();
-        uiPass->PixelShaderAlpha = 0;
+        quadPass->PixelShaderAlpha->Release();
+        quadPass->PixelShaderAlpha = 0;
     }
     
-    if(uiPass->PixelShader)
+    if(quadPass->PixelShader)
     {
-        uiPass->PixelShader->Release();
-        uiPass->PixelShader = 0;
+        quadPass->PixelShader->Release();
+        quadPass->PixelShader = 0;
     }
     
-    if(uiPass->VertexShader)
+    if(quadPass->VertexShader)
     {
-        uiPass->VertexShader->Release();
-        uiPass->VertexShader = 0;
+        quadPass->VertexShader->Release();
+        quadPass->VertexShader = 0;
     }
     
-    if(uiPass->ConstantBuffer)
+    if(quadPass->ConstantBuffer)
     {
-        uiPass->ConstantBuffer->Release();
-        uiPass->ConstantBuffer = 0;
+        quadPass->ConstantBuffer->Release();
+        quadPass->ConstantBuffer = 0;
     }
     
-    if(uiPass->IndexBuffer)
+    if(quadPass->IndexBuffer)
     {
-        uiPass->IndexBuffer->Release();
-        uiPass->IndexBuffer = 0;
+        quadPass->IndexBuffer->Release();
+        quadPass->IndexBuffer = 0;
     }
     
-    if(uiPass->VertexBuffer)
+    if(quadPass->VertexBuffer)
     {
-        uiPass->VertexBuffer->Release();
-        uiPass->VertexBuffer = 0;
+        quadPass->VertexBuffer->Release();
+        quadPass->VertexBuffer = 0;
     }
 
     if(renderer->DepthStencilView)
@@ -689,49 +689,49 @@ void D3D11Present(D3D11RendererState* renderer)
     renderer->SwapChain->Present(1, 0);
 }
 
-void D3D11BeginUIPass(D3D11RendererState* renderer, int32 width, int32 height)
+void D3D11BeginQuadPass(D3D11RendererState* renderer, int32 width, int32 height)
 {
-    D3D11UIPass* uiPass = &renderer->UIPass;
+    D3D11QuadPass* quadPass = &renderer->QuadPass;
 
-    uiPass->QuadCount = 0;
-    uiPass->BatchCount = 0;
+    quadPass->QuadCount = 0;
+    quadPass->BatchCount = 0;
 
     // NOTE(saeb): Rebuild + upload the projection only when the size actually changed.
-    if(width != uiPass->ViewportWidth || height != uiPass->ViewportHeight)
+    if(width != quadPass->ViewportWidth || height != quadPass->ViewportHeight)
     {
-        uiPass->ViewportWidth = width;
-        uiPass->ViewportHeight = height;
+        quadPass->ViewportWidth = width;
+        quadPass->ViewportHeight = height;
 
         DirectX::XMMATRIX projection = DirectX::XMMatrixOrthographicOffCenterLH(0.0f, (real32)width, (real32)height, 0.0f, 0.0f, 1.0f);
 
         D3D11_MAPPED_SUBRESOURCE mapped;
-        if(SUCCEEDED(renderer->Context->Map(uiPass->ConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped)))
+        if(SUCCEEDED(renderer->Context->Map(quadPass->ConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped)))
         {
             memcpy(mapped.pData, &projection, sizeof(projection)); // Row-major, no transpose
-            renderer->Context->Unmap(uiPass->ConstantBuffer, 0);
+            renderer->Context->Unmap(quadPass->ConstantBuffer, 0);
         }
     }
 }
 
 uint32 D3D11RegisterTexture(D3D11RendererState* renderer, ID3D11ShaderResourceView* texture, QuadKind kind)
 {
-    D3D11UIPass* uiPass = &renderer->UIPass;
+    D3D11QuadPass* quadPass = &renderer->QuadPass;
 
-    Assert(uiPass->TextureRegistryCount < MAX_TEXTURE_HANDLES);
-    if(uiPass->TextureRegistryCount >= MAX_TEXTURE_HANDLES)
+    Assert(quadPass->TextureRegistryCount < MAX_TEXTURE_HANDLES);
+    if(quadPass->TextureRegistryCount >= MAX_TEXTURE_HANDLES)
     {
         return(0);
     }
 
-    uint32 handle = uiPass->TextureRegistryCount++;
-    uiPass->TextureRegistry[handle].Texture = texture;
-    uiPass->TextureRegistry[handle].Kind = kind;
+    uint32 handle = quadPass->TextureRegistryCount++;
+    quadPass->TextureRegistry[handle].Texture = texture;
+    quadPass->TextureRegistry[handle].Kind = kind;
     return(handle);
 }
 
 void D3D11SubmitRenderCommands(D3D11RendererState* renderer, RenderCommands* commands)
 {
-    D3D11UIPass* uiPass = &renderer->UIPass;
+    D3D11QuadPass* quadPass = &renderer->QuadPass;
 
     for(uint32 i = 0; i < commands->QuadCount; ++i)
     {
@@ -739,65 +739,65 @@ void D3D11SubmitRenderCommands(D3D11RendererState* renderer, RenderCommands* com
 
         if(quad->TextureHandle == 0)
         {
-            D3D11UIPassPushQuad(renderer, quad->X, quad->Y, quad->Width, quad->Height, quad->U0, quad->V0, quad->U1, quad->V1, 0, quad->Color);
+            D3D11QuadPassPushQuad(renderer, quad->X, quad->Y, quad->Width, quad->Height, quad->U0, quad->V0, quad->U1, quad->V1, 0, quad->Color);
             continue;
         }
 
-        TextureRegistryEntry* entry = &uiPass->TextureRegistry[quad->TextureHandle];
+        TextureRegistryEntry* entry = &quadPass->TextureRegistry[quad->TextureHandle];
 
         if(entry->Kind == GLYPH)
         {
-            D3D11UIPassPushGlyphQuad(renderer, quad->X, quad->Y, quad->Width, quad->Height, quad->U0, quad->V0, quad->U1, quad->V1, entry->Texture, quad->Color);
+            D3D11QuadPassPushGlyphQuad(renderer, quad->X, quad->Y, quad->Width, quad->Height, quad->U0, quad->V0, quad->U1, quad->V1, entry->Texture, quad->Color);
         }
         else
         {
-            D3D11UIPassPushQuad(renderer, quad->X, quad->Y, quad->Width, quad->Height, quad->U0, quad->V0, quad->U1, quad->V1, entry->Texture, quad->Color);
+            D3D11QuadPassPushQuad(renderer, quad->X, quad->Y, quad->Width, quad->Height, quad->U0, quad->V0, quad->U1, quad->V1, entry->Texture, quad->Color);
         }
     }
 }
 
-void D3D11EndUIPass(D3D11RendererState* renderer)
+void D3D11EndQuadPass(D3D11RendererState* renderer)
 {
-    D3D11UIPass* uiPass = &renderer->UIPass;
+    D3D11QuadPass* quadPass = &renderer->QuadPass;
 
-    if(uiPass->QuadCount == 0)
+    if(quadPass->QuadCount == 0)
     {
         return;
     }
 
     D3D11_MAPPED_SUBRESOURCE mapped;
-    if(FAILED(renderer->Context->Map(uiPass->VertexBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped)))
+    if(FAILED(renderer->Context->Map(quadPass->VertexBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped)))
     {
         return;
     }
 
-    memcpy(mapped.pData, uiPass->Vertices, uiPass->QuadCount * 4 * sizeof(Vertex2D));
-    renderer->Context->Unmap(uiPass->VertexBuffer, 0);
+    memcpy(mapped.pData, quadPass->Vertices, quadPass->QuadCount * 4 * sizeof(Vertex2D));
+    renderer->Context->Unmap(quadPass->VertexBuffer, 0);
 
     UINT stride = sizeof(Vertex2D);
     UINT offset = 0;
 
-    renderer->Context->IASetInputLayout(uiPass->InputLayout);
-    renderer->Context->IASetVertexBuffers(0, 1, &uiPass->VertexBuffer, &stride, &offset);
-    renderer->Context->IASetIndexBuffer(uiPass->IndexBuffer, DXGI_FORMAT_R16_UINT, 0);
+    renderer->Context->IASetInputLayout(quadPass->InputLayout);
+    renderer->Context->IASetVertexBuffers(0, 1, &quadPass->VertexBuffer, &stride, &offset);
+    renderer->Context->IASetIndexBuffer(quadPass->IndexBuffer, DXGI_FORMAT_R16_UINT, 0);
     renderer->Context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-    renderer->Context->VSSetShader(uiPass->VertexShader, 0, 0);
-    renderer->Context->VSSetConstantBuffers(0, 1, &uiPass->ConstantBuffer);
+    renderer->Context->VSSetShader(quadPass->VertexShader, 0, 0);
+    renderer->Context->VSSetConstantBuffers(0, 1, &quadPass->ConstantBuffer);
 
-    renderer->Context->PSSetSamplers(0, 1, &uiPass->Sampler);
+    renderer->Context->PSSetSamplers(0, 1, &quadPass->Sampler);
 
-    renderer->Context->RSSetState(uiPass->RasterizerState);
-    renderer->Context->OMSetBlendState(uiPass->BlendState, 0, 0xFFFFFFFF);
-    renderer->Context->OMSetDepthStencilState(uiPass->DepthState, 0);
+    renderer->Context->RSSetState(quadPass->RasterizerState);
+    renderer->Context->OMSetBlendState(quadPass->BlendState, 0, 0xFFFFFFFF);
+    renderer->Context->OMSetDepthStencilState(quadPass->DepthState, 0);
 
     UINT indexOffset = 0;
-    for(uint32 batchIndex = 0; batchIndex < uiPass->BatchCount; ++batchIndex)
+    for(uint32 batchIndex = 0; batchIndex < quadPass->BatchCount; ++batchIndex)
     {
-        TextureBatch* batch = &uiPass->Batches[batchIndex];
+        TextureBatch* batch = &quadPass->Batches[batchIndex];
         UINT indexCount = batch->QuadCount * 6;
 
-        ID3D11PixelShader* pixelShader = (batch->Kind == GLYPH) ? uiPass->PixelShaderAlpha : uiPass->PixelShader;
+        ID3D11PixelShader* pixelShader = (batch->Kind == GLYPH) ? quadPass->PixelShaderAlpha : quadPass->PixelShader;
         renderer->Context->PSSetShader(pixelShader, 0, 0);
         renderer->Context->PSSetShaderResources(0, 1, &batch->Texture);
         renderer->Context->DrawIndexed(indexCount, indexOffset, 0);

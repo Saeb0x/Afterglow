@@ -77,7 +77,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, LPSTR, int)
                     if(!Win32WindowIsMinimized())
                     {
                         D3D11BeginFrame(&renderer);
-                        D3D11BeginUIPass(&renderer, dims.Width, dims.Height);
+                        D3D11BeginQuadPass(&renderer, dims.Width, dims.Height);
                         renderCommands.QuadCount = 0;
 
                         context.ScreenWidth = dims.Width;
@@ -86,7 +86,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, LPSTR, int)
                         GameUpdateAndRender(&context);
 
                         D3D11SubmitRenderCommands(&renderer, &renderCommands);
-                        D3D11EndUIPass(&renderer);
+                        D3D11EndQuadPass(&renderer);
                         D3D11Present(&renderer);
                     }
 

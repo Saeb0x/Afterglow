@@ -8,7 +8,7 @@
 #include <d3d11.h>
 #include <dxgi1_6.h>
 
-#define MAX_UI_PASS_BATCHES 1024
+#define MAX_QUAD_PASS_BATCHES 1024
 #define MAX_TEXTURE_HANDLES 256
 
 struct RenderCommands;
@@ -40,7 +40,7 @@ struct TextureRegistryEntry
     QuadKind Kind;
 };
 
-struct D3D11UIPass
+struct D3D11QuadPass
 {
     // CPU-side accumulation.
     Vertex2D* Vertices;
@@ -79,7 +79,7 @@ struct D3D11RendererState
     ID3D11Texture2D* DepthStencilBuffer;
     ID3D11DepthStencilView* DepthStencilView;
 
-    D3D11UIPass UIPass;
+    D3D11QuadPass QuadPass;
     // NOTE(saeb): Later comes PBRPass and PostProcessPass.
 };
 
@@ -90,9 +90,9 @@ void D3D11ShutdownRenderer(D3D11RendererState* renderer);
 void D3D11BeginFrame(D3D11RendererState* renderer);
 void D3D11Present(D3D11RendererState* renderer);
 
-void D3D11BeginUIPass(D3D11RendererState* renderer, int32 width, int32 height);
+void D3D11BeginQuadPass(D3D11RendererState* renderer, int32 width, int32 height);
 void D3D11SubmitRenderCommands(D3D11RendererState* renderer, RenderCommands* commands);
-void D3D11EndUIPass(D3D11RendererState* renderer);
+void D3D11EndQuadPass(D3D11RendererState* renderer);
 
 uint32 D3D11RegisterTexture(D3D11RendererState* renderer, ID3D11ShaderResourceView* texture, QuadKind kind);
 
