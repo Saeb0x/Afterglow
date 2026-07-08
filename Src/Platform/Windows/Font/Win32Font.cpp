@@ -6,12 +6,12 @@
 
 bool32 FontLoad(D3D11RendererState* renderer, Arena* transient, Font* font, const char* path)
 {
-    uint64 transientMark = transient->Used;
+    TempMemory temp = BeginTempMemory(transient);
 
     ReadFileResult file = Win32ReadEntireFile(transient, path);
     if(!file.Data || file.Size < sizeof(FontFileHeader))
     {
-        transient->Used = transientMark;
+        EndTempMemory(temp);
         return(false);
     }
 
@@ -20,14 +20,14 @@ bool32 FontLoad(D3D11RendererState* renderer, Arena* transient, Font* font, cons
     char fontIdentifier[4] = FONT_IDENTIFIER;
     if(memcmp(header->Header.Identifier, fontIdentifier, 4) != 0 || header->Header.Version != FONT_VERSION || header->GlyphCount != 256)
     {
-        transient->Used = transientMark;
+        EndTempMemory(temp);
         return(false);
     }
 
     uint64 expectedSize = sizeof(FontFileHeader) + (sizeof(FontGlyph) * header->GlyphCount) + ((uint64)header->AtlasWidth * (uint64)header->AtlasHeight);
     if(file.Size != expectedSize)
     {
-        transient->Used = transientMark;
+        EndTempMemory(temp);
         return(false);
     }
 
@@ -37,9 +37,9 @@ bool32 FontLoad(D3D11RendererState* renderer, Arena* transient, Font* font, cons
 
     FontGlyph* glyphs = (FontGlyph*)((uint8*)file.Data + sizeof(FontFileHeader));
     memcpy(font->Glyphs, glyphs, sizeof(FontGlyph) * 256);
-    
+
     uint8* pixels = (uint8*)glyphs + (sizeof(FontGlyph) * header->GlyphCount);
-    
+
     D3D11_TEXTURE2D_DESC textureDesc = {};
     textureDesc.Width = font->AtlasWidth;
     textureDesc.Height = font->AtlasHeight;
@@ -57,13 +57,13 @@ bool32 FontLoad(D3D11RendererState* renderer, Arena* transient, Font* font, cons
     ID3D11Texture2D* texture = 0;
     HRESULT textureResult = renderer->Device->CreateTexture2D(&textureDesc, &textureData, &texture);
 
-    transient->Used = transientMark;
+    EndTempMemory(temp);
 
     if(FAILED(textureResult))
     {
         return(false);
     }
-
+    
     ID3D11ShaderResourceView* atlasSRV = 0;
     HRESULT viewResult = renderer->Device->CreateShaderResourceView(texture, 0, &atlasSRV);
     texture->Release();
