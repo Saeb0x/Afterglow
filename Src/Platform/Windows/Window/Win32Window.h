@@ -4,6 +4,8 @@
 
 #include <windows.h>
 
+struct GameInput;
+
 struct WindowDimensions
 {
     int32 Width;
@@ -12,7 +14,7 @@ struct WindowDimensions
 
 bool32 Win32CreateWindow(HINSTANCE instance, const char* title, int32 width, int32 height, HWND* outWindowHandle);
 
-void Win32ProcessPendingMessages();
+void Win32ProcessPendingMessages(GameInput* input);
 bool32 Win32WindowShouldQuit();
 bool32 Win32WindowConsumeResize(WindowDimensions* outDims);
 bool32 Win32WindowIsMinimized();

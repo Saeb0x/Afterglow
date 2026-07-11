@@ -2,6 +2,9 @@
 #include "Engine/RenderCommands.h"
 #include "Engine/AssetManager.h"
 #include "GameAssets.h"
+#include "Engine/Input.h"
+
+#include <stdio.h>
 
 void GameInit(GameContext* context)
 {
@@ -49,4 +52,9 @@ void GameUpdateAndRender(GameContext* context)
     }
 
     PushText(context->Render, &context->Assets->UIFont, textX, textY, text, BounceColors[colorIndex]);
+
+    char mouseCoordsBuffer[128];
+    snprintf(mouseCoordsBuffer, sizeof(mouseCoordsBuffer), "Mouse X,Y: %u, %u", context->Input->Mouse.X, context->Input->Mouse.Y);
+
+    PushText(context->Render, &context->Assets->UIFont, 200, 200, mouseCoordsBuffer, PackColor(255, 255, 255, 255));
 }

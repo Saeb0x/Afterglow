@@ -6,6 +6,7 @@
 struct RenderCommands;
 struct AssetManager;
 struct GameAssets;
+struct GameInput;
 
 struct GameMemory
 {
@@ -19,6 +20,7 @@ struct GameContext
     GameMemory* Memory;
     RenderCommands* Render;
     AssetManager* Loader;
+    GameInput* Input;
 
     GameAssets* Assets;
 

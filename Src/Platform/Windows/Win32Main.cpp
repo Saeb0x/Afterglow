@@ -8,6 +8,7 @@
 #include "Texture/Win32Texture.cpp"
 #include "Time/Win32Time.cpp"
 #include "Assets/Win32AssetManager.cpp"
+#include "Input/Win32Input.cpp"
 
 static const char* WindowTitle =
 #if defined(AG_DEBUG)
@@ -45,11 +46,14 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, LPSTR, int)
                 AssetManager assetManager = {};
                 AssetManagerInit(&assetManager, &renderer);
 
+                GameInput input = {};
+
                 GameContext context = {};
                 context.Memory = &gameMemory;
                 context.Render = &renderCommands;
                 context.Assets = &gameAssets;
                 context.Loader = &assetManager;
+                context.Input = &input;
 
                 LARGE_INTEGER perfCounterFrequency = Win32GetPerformanceCounterFrequency();
                 LARGE_INTEGER lastCounter = Win32GetPerformanceCounterTicks();
@@ -60,7 +64,8 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, LPSTR, int)
                 bool32 running = true;
                 while(running)
                 {
-                    Win32ProcessPendingMessages();
+                    Win32BeginInputFrame(&input);
+                    Win32ProcessPendingMessages(&input);
 
                     if(Win32WindowShouldQuit())
                     {

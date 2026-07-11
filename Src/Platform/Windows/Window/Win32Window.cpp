@@ -1,4 +1,5 @@
 #include "Win32Window.h"
+#include "Platform/Windows/Input/Win32Input.h"
 
 struct Win32WindowState
 {
@@ -105,7 +106,7 @@ bool32 Win32CreateWindow(HINSTANCE instance, const char* title, int32 width, int
     return(true);
 }
 
-void Win32ProcessPendingMessages()
+void Win32ProcessPendingMessages(GameInput* input)
 {
     MSG message;
     while(PeekMessage(&message, 0, 0, 0, PM_REMOVE))
@@ -115,7 +116,9 @@ void Win32ProcessPendingMessages()
             Window.ShouldQuit = true;
             continue;
         }
-        
+
+        Win32ProcessInputMessage(input, message.message, message.wParam, message.lParam);
+
         TranslateMessage(&message);
         DispatchMessage(&message);
     }
