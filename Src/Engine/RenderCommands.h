@@ -17,11 +17,6 @@ struct RenderCommands
     uint32 MaxQuads;
 };
 
-static uint32 PackColor(uint8 r, uint8 g, uint8 b, uint8 a)
-{
-    return ((uint32)a << 24) | ((uint32)b << 16) | ((uint32)g << 8) | (uint32)r;
-}
-
 static void PushTexturedQuad(RenderCommands* commands, real32 x, real32 y, real32 width, real32 height, real32 u0, real32 v0, real32 u1, real32 v1, uint32 textureHandle, uint32 color)
 {
     Assert(commands->QuadCount < commands->MaxQuads);

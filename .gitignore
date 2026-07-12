@@ -2,3 +2,8 @@
 Build/
 Docs/
 /Data/
+
+# Emacs
+.#*
+*~
+#*#

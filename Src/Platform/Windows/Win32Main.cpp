@@ -19,15 +19,20 @@ static const char* WindowTitle =
 
 int WINAPI WinMain(HINSTANCE instance, HINSTANCE, LPSTR, int)
 {
+    uint64 engineArenaSize = Megabytes(16);
     uint64 permanentArenaSize = Megabytes(64);
     uint64 transientArenaSize = Gigabytes(1);
-    void* gameMemoryBlock = (void*)VirtualAlloc(0, permanentArenaSize + transientArenaSize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+    uint64 totalSize = engineArenaSize + permanentArenaSize + transientArenaSize;
 
+    void* memoryBlock = (void*)VirtualAlloc(0, totalSize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+
+    Arena engineMemory = {};
     GameMemory gameMemory = {};
-    InitializeArena(&gameMemory.Permanent, gameMemoryBlock, permanentArenaSize);
-    InitializeArena(&gameMemory.Transient, (uint8*)gameMemoryBlock + permanentArenaSize, transientArenaSize);
+    InitializeArena(&engineMemory, memoryBlock, engineArenaSize);
+    InitializeArena(&gameMemory.Permanent, (uint8*)memoryBlock + engineArenaSize, permanentArenaSize);
+    InitializeArena(&gameMemory.Transient, (uint8*)memoryBlock + engineArenaSize + permanentArenaSize, transientArenaSize);
 
-    if(gameMemory.Permanent.BaseAddress)
+    if(engineMemory.BaseAddress)
     {
         HWND windowHandle;
         if(Win32CreateWindow(instance, WindowTitle, 1280, 720, &windowHandle))
@@ -36,11 +41,11 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, LPSTR, int)
             Win32GetWindowDimensions(windowHandle, &dims);
 
             D3D11RendererState renderer = {};
-            if(D3D11InitRenderer(&renderer, windowHandle, dims.Width, dims.Height, &gameMemory.Permanent, &gameMemory.Transient, 16384))
+            if(D3D11InitRenderer(&renderer, windowHandle, dims.Width, dims.Height, &engineMemory, &gameMemory.Transient, 16384))
             {
                 RenderCommands renderCommands = {};
                 renderCommands.MaxQuads = 16384;
-                renderCommands.Quads = PushArray(&gameMemory.Permanent, RenderCommandQuad, renderCommands.MaxQuads);
+                renderCommands.Quads = PushArray(&engineMemory, RenderCommandQuad, renderCommands.MaxQuads);
 
                 GameAssets gameAssets = {};
                 AssetManager assetManager = {};
@@ -93,6 +98,9 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, LPSTR, int)
                         D3D11SubmitRenderCommands(&renderer, &renderCommands);
                         D3D11EndQuadPass(&renderer);
                         D3D11Present(&renderer);
+#if defined(AG_DEBUG)
+                        context.DrawCallCount = renderer.QuadPass.BatchCount;
+#endif
                     }
 
                     LARGE_INTEGER endCounter = Win32GetPerformanceCounterTicks();
@@ -107,8 +115,8 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, LPSTR, int)
                     lastCounter = endCounter;
                 }
 
-                VirtualFree(gameMemory.Permanent.BaseAddress, 0, MEM_RELEASE);
                 D3D11ShutdownRenderer(&renderer);
+                VirtualFree(engineMemory.BaseAddress, 0, MEM_RELEASE);
             }
             else
             {

@@ -13,20 +13,20 @@ struct Font
     FontGlyph Glyphs[256];
 };
 
-static int32 TextWidth(Font* font, const char* text)
+static real32 TextWidth(Font* font, const char* text, real32 scale)
 {
-    int32 width = 0;
+    real32 width = 0.0f;
 
     for(const char* c = text; *c; ++c)
     {
         FontGlyph* glyph = &font->Glyphs[(uint8)*c];
-        width += glyph->XAdvance;
+        width += (real32)glyph->XAdvance * scale;
     }
 
     return(width);
 }
 
-static void PushText(RenderCommands* commands, Font* font, real32 x, real32 y, const char* text, uint32 color)
+static void PushText(RenderCommands* commands, Font* font, real32 x, real32 y, const char* text, uint32 color, real32 scale)
 {
     real32 cursorX = x;
 
@@ -41,10 +41,10 @@ static void PushText(RenderCommands* commands, Font* font, real32 x, real32 y, c
             real32 u1 = (real32)(glyph->X + glyph->Width) / (real32)font->AtlasWidth;
             real32 v1 = (real32)(glyph->Y + glyph->Height) / (real32)font->AtlasHeight;
 
-            PushTexturedQuad(commands, cursorX + (real32)glyph->XOffset, y + (real32)glyph->YOffset, (real32)glyph->Width, (real32)glyph->Height, u0, v0, u1, v1, font->TextureHandle, color);
+            PushTexturedQuad(commands, cursorX + (real32)glyph->XOffset * scale, y + (real32)glyph->YOffset * scale, (real32)glyph->Width * scale, (real32)glyph->Height * scale, u0, v0, u1, v1, font->TextureHandle, color);
         }
 
-        cursorX += (real32)glyph->XAdvance;
+        cursorX += (real32)glyph->XAdvance * scale;
     }
 }
 

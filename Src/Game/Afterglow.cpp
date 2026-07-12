@@ -6,55 +6,64 @@
 
 #include <stdio.h>
 
-void GameInit(GameContext* context)
+#if defined(AG_DEBUG)
+static void CommandPerf(Console* console, const char* args, void* data)
 {
-    AssetManagerLoadFont(context->Loader, &context->Memory->Transient, &context->Assets->UIFont, "Data/UIFont.aga");
+    GameContext* context = (GameContext*)data;
+    GameState* state = (GameState*)context->Memory->Permanent.BaseAddress;
+
+    state->ShowPerf = !state->ShowPerf;
+    ConsolePrint(console, state->ShowPerf ? "perf: on" : "perf: off");
 }
 
-static bool32 BounceAxis(real32* position, real32* velocity, real32 min, real32 max, real32 deltaTime)
+static void DrawPerfOverlay(GameContext* context, Font* font)
 {
-    *position += *velocity * deltaTime;
+    char buffer[128];
+    real32 scale = 0.5f;
+    real32 lineHeight = (real32)font->LineHeight * scale;
+    real32 x = 8.0f;
+    real32 y = context->ScreenHeight - 100.0f;
 
-    if(*position <= min || *position >= max)
-    {
-        *velocity = -(*velocity);
-        return(true);
-    }
+    real32 frameMs = context->DeltaTime * 1000.0f;
+    real32 fps = (context->DeltaTime > 0.0f) ? (1.0f / context->DeltaTime) : 0.0f;
 
-    return(false);
+    sprintf_s(buffer, sizeof(buffer), "FPS: %.1f", fps);
+    PushText(context->Render, font, x, y, buffer, WHITE, scale);
+    y += lineHeight;
+
+    sprintf_s(buffer, sizeof(buffer), "Frame: %.2f ms", frameMs);
+    PushText(context->Render, font, x, y, buffer, WHITE, scale);
+    y += lineHeight;
+
+    sprintf_s(buffer, sizeof(buffer), "Draw calls: %u", context->DrawCallCount);
+    PushText(context->Render, font, x, y, buffer, WHITE, scale);
+}
+#endif
+
+void GameInit(GameContext* context)
+{
+    GameState* state = PushStruct(&context->Memory->Permanent, GameState);
+
+    AssetManagerLoadFont(context->Loader, &context->Memory->Transient, &context->Assets->UIFont, "Data/UIFont.aga");
+
+#if defined(AG_DEBUG)
+    ConsoleInit(&state->Console, context);
+    ConsoleRegisterCommand(&state->Console, "perf",  CommandPerf);
+
+    state->ShowPerf = false;
+#endif
 }
 
 void GameUpdateAndRender(GameContext* context)
 {
-    static real32 textX = 100.0f;
-    static real32 textY = 100.0f;
-    static real32 velocityX = 200.0f;
-    static real32 velocityY = 200.0f;
+    GameState* state = (GameState*)context->Memory->Permanent.BaseAddress;
 
-    static const uint32 BounceColors[] =
+#if defined(AG_DEBUG)
+    if(state->ShowPerf)
     {
-        PackColor(255, 0, 0, 255),
-        PackColor(0, 255, 0, 255),
-        PackColor(0, 0, 255, 255),
-    };
-    static uint32 colorIndex = 0;
-
-    const char* text = "Afterglow";
-    int32 textWidth = TextWidth(&context->Assets->UIFont, text);
-    int32 textHeight = context->Assets->UIFont.LineHeight;
-
-    bool32 bouncedX = BounceAxis(&textX, &velocityX, 0.0f, (real32)(context->ScreenWidth - textWidth), context->DeltaTime);
-    bool32 bouncedY = BounceAxis(&textY, &velocityY, 0.0f, (real32)(context->ScreenHeight - textHeight), context->DeltaTime);
-
-    if(bouncedX || bouncedY)
-    {
-        colorIndex = (colorIndex + 1) % ArrayCount(BounceColors);
+        DrawPerfOverlay(context, &context->Assets->UIFont);
     }
 
-    PushText(context->Render, &context->Assets->UIFont, textX, textY, text, BounceColors[colorIndex]);
-
-    char mouseCoordsBuffer[128];
-    snprintf(mouseCoordsBuffer, sizeof(mouseCoordsBuffer), "Mouse X,Y: %u, %u", context->Input->Mouse.X, context->Input->Mouse.Y);
-
-    PushText(context->Render, &context->Assets->UIFont, 200, 200, mouseCoordsBuffer, PackColor(255, 255, 255, 255));
+    ConsoleUpdateAndRender(&state->Console, context->Input, context->Render, &context->Assets->UIFont, context->ScreenWidth, context->ScreenHeight);
+#endif
 }

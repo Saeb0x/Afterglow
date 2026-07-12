@@ -3,6 +3,10 @@
 #include "Core/Types.h"
 #include "Core/Arena.h"
 
+#if defined(AG_DEBUG)
+#include "Engine/Console.h"
+#endif
+
 struct RenderCommands;
 struct AssetManager;
 struct GameAssets;
@@ -13,6 +17,14 @@ struct GameMemory
     bool32 Initialized;
     Arena Permanent;
     Arena Transient;
+};
+
+struct GameState
+{
+#if defined(AG_DEBUG)
+    Console Console;
+    bool32 ShowPerf;
+#endif
 };
 
 struct GameContext
@@ -28,6 +40,10 @@ struct GameContext
     int32 ScreenHeight;
 
     real32 DeltaTime;
+
+#if defined(AG_DEBUG)
+    uint32 DrawCallCount;
+#endif
 };
 
 void GameInit(GameContext* context);
