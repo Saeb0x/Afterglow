@@ -41,7 +41,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, LPSTR, int)
             Win32GetWindowDimensions(windowHandle, &dims);
 
             D3D11RendererState renderer = {};
-            if(D3D11InitRenderer(&renderer, windowHandle, dims.Width, dims.Height, &engineMemory, &gameMemory.Transient, 16384))
+            if(D3D11InitRenderer(&renderer, windowHandle, dims.Width, dims.Height, &engineMemory, 16384))
             {
                 RenderCommands renderCommands = {};
                 renderCommands.MaxQuads = 16384;

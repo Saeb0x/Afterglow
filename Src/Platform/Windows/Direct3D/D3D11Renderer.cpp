@@ -166,9 +166,10 @@ cbuffer Constants : register(b0)
 
 struct VSInput
 {
-    float2 Position : POSITION;
-    float2 UV : TEXCOORD;
-    float4 Color : COLOR;
+    float2 Corner : POSITION;   // Per-vertex: unit quad corner
+    float4 Rect   : RECT;       // Per-instance: x, y, width, height
+    float4 UVRect : UVRECT;     // Per-instance: u0, v0, u1, v1
+    float4 Color  : COLOR;      // Per-instance
 };
 
 struct PSInput
@@ -180,9 +181,12 @@ struct PSInput
 
 PSInput VSMain(VSInput input)
 {
+    float2 position = input.Rect.xy + input.Corner * input.Rect.zw;
+    float2 uv = lerp(input.UVRect.xy, input.UVRect.zw, input.Corner);
+
     PSInput output;
-    output.Position = mul(float4(input.Position, 0.0f, 1.0f), Projection);
-    output.UV = input.UV;
+    output.Position = mul(float4(position, 0.0f, 1.0f), Projection);
+    output.UV = uv;
     output.Color = input.Color;
 
     return output;
@@ -227,8 +231,8 @@ static void D3D11QuadPassAppendQuad(D3D11RendererState* renderer, QuadKind kind,
 {
     D3D11QuadPass* quadPass = &renderer->QuadPass;
 
-    Assert(quadPass->QuadCount < quadPass->MaxQuads);
-    if(quadPass->QuadCount >= quadPass->MaxQuads)
+    Assert(quadPass->InstanceCount < quadPass->MaxQuads);
+    if(quadPass->InstanceCount >= quadPass->MaxQuads)
     {
         return;
     }
@@ -245,41 +249,26 @@ static void D3D11QuadPassAppendQuad(D3D11RendererState* renderer, QuadKind kind,
         TextureBatch* newBatch = &quadPass->Batches[quadPass->BatchCount++];
         newBatch->Texture = resolvedTexture;
         newBatch->Kind = kind;
-        newBatch->QuadCount = 0;
+        newBatch->InstanceCount = 0;
     }
 
-    // NOTE(saeb): Write the 4 corners in the order the index buffer expects: TL, TR, BL, BR.
-    Vertex2D* quad = quadPass->Vertices + (quadPass->QuadCount * 4);
+    // NOTE(saeb): One record per quad; the vertex shader expands it against the shared unit quad.
+    QuadInstance* instance = quadPass->Instances + quadPass->InstanceCount;
 
-    real32 x1 = x + w;
-    real32 y1 = y + h;
+    instance->Rect[0] = x;
+    instance->Rect[1] = y;
+    instance->Rect[2] = w;
+    instance->Rect[3] = h;
 
-    quad[0].Position[0] = x;
-    quad[0].Position[1] = y;
-    quad[0].UV[0] = u0;
-    quad[0].UV[1] = v0;
-    quad[0].Color = color;
+    instance->UV[0] = u0;
+    instance->UV[1] = v0;
+    instance->UV[2] = u1;
+    instance->UV[3] = v1;
 
-    quad[1].Position[0] = x1;
-    quad[1].Position[1] = y;
-    quad[1].UV[0] = u1;
-    quad[1].UV[1] = v0;
-    quad[1].Color = color;
+    instance->Color = color;
 
-    quad[2].Position[0] = x;
-    quad[2].Position[1] = y1;
-    quad[2].UV[0] = u0;
-    quad[2].UV[1] = v1;
-    quad[2].Color = color;
-
-    quad[3].Position[0] = x1;
-    quad[3].Position[1] = y1;
-    quad[3].UV[0] = u1;
-    quad[3].UV[1] = v1;
-    quad[3].Color = color;
-
-    quadPass->Batches[quadPass->BatchCount - 1].QuadCount++;
-    quadPass->QuadCount++;
+    quadPass->Batches[quadPass->BatchCount - 1].InstanceCount++;
+    quadPass->InstanceCount++;
 }
 
 static void D3D11QuadPassPushQuad(D3D11RendererState* renderer, real32 x, real32 y, real32 w, real32 h, real32 u0, real32 v0, real32 u1, real32 v1, ID3D11ShaderResourceView* texture, uint32 color)
@@ -297,57 +286,62 @@ static void D3D11QuadPassPushGlyphQuad(D3D11RendererState* renderer, real32 x, r
     D3D11QuadPassAppendQuad(renderer, GLYPH, atlas, x, y, w, h, u0, v0, u1, v1, color);
 }
 
-static bool32 D3D11InitQuadPass(D3D11RendererState* renderer, Arena* permanent, Arena* transient, uint32 maxQuads)
+static bool32 D3D11InitQuadPass(D3D11RendererState* renderer, Arena* permanent, uint32 maxQuads)
 {
     D3D11QuadPass* quadPass = &renderer->QuadPass;
 
-    // NOTE(saeb): We index with uint16, so 4 verts/quad must stay within the 65536 vertex ceiling.
-    Assert(maxQuads <= 16384);
-
     quadPass->MaxQuads = maxQuads;
-    quadPass->QuadCount = 0;
+    quadPass->InstanceCount = 0;
     quadPass->BatchCount = 0;
     quadPass->TextureRegistryCount = 1;
 
-    quadPass->Vertices = PushArray(permanent, Vertex2D, maxQuads * 4);
+    quadPass->Instances = PushArray(permanent, QuadInstance, maxQuads);
     quadPass->Batches = PushArray(permanent, TextureBatch, MAX_QUAD_PASS_BATCHES);
 
-    D3D11_BUFFER_DESC vertexBufferDesc = {};
-    vertexBufferDesc.ByteWidth = maxQuads * 4 * sizeof(Vertex2D);
-    vertexBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
-    vertexBufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-    vertexBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+    // NOTE(saeb): Shared unit quad - every quad is this geometry expanded by its instance rect.
+    static const QuadVertex unitQuad[] =
+        {
+            { { 0.0f, 0.0f } },
+            { { 1.0f, 0.0f } },
+            { { 0.0f, 1.0f } },
+            { { 1.0f, 1.0f } }
+        };
+    static const uint16 unitIndices[] = { 0, 1, 2, 2, 1, 3 }; // Triangle 1: TL, TR, BL - Triangle 2: BL, TR, BR
 
-    if(FAILED(renderer->Device->CreateBuffer(&vertexBufferDesc, 0, &quadPass->VertexBuffer)))
+    D3D11_BUFFER_DESC vertexBufferDesc = {};
+    vertexBufferDesc.ByteWidth = sizeof(unitQuad);
+    vertexBufferDesc.Usage = D3D11_USAGE_IMMUTABLE;
+    vertexBufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+
+    D3D11_SUBRESOURCE_DATA vertexBufferData = {};
+    vertexBufferData.pSysMem = unitQuad;
+
+    if(FAILED(renderer->Device->CreateBuffer(&vertexBufferDesc, &vertexBufferData, &quadPass->UnitQuadBuffer)))
     {
         return(false);
     }
 
-    uint32 indexCount = maxQuads * 6;
-    uint16* indices = PushArray(transient, uint16, indexCount);
-
-    for(uint32 quadIndex = 0; quadIndex < maxQuads; ++quadIndex)
-    {
-        uint16 base = (uint16)(quadIndex * 4);
-        uint32 i = quadIndex * 6;
-
-        indices[i + 0] = base + 0; // Triangle 1: TL, TR, BL
-        indices[i + 1] = base + 1;
-        indices[i + 2] = base + 2;
-        indices[i + 3] = base + 2; // Triangle 2: BL, TR, BR
-        indices[i + 4] = base + 1;
-        indices[i + 5] = base + 3;
-    }
-
     D3D11_BUFFER_DESC indexBufferDesc = {};
-    indexBufferDesc.ByteWidth = indexCount * sizeof(uint16);
+    indexBufferDesc.ByteWidth = sizeof(unitIndices);
     indexBufferDesc.Usage = D3D11_USAGE_IMMUTABLE;
     indexBufferDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
 
     D3D11_SUBRESOURCE_DATA indexBufferData = {};
-    indexBufferData.pSysMem = indices;
+    indexBufferData.pSysMem = unitIndices;
 
     if(FAILED(renderer->Device->CreateBuffer(&indexBufferDesc, &indexBufferData, &quadPass->IndexBuffer)))
+    {
+        return(false);
+    }
+
+    // NOTE(saeb): Per-quad instance data, rewritten every frame.
+    D3D11_BUFFER_DESC instanceBufferDesc = {};
+    instanceBufferDesc.ByteWidth = maxQuads * sizeof(QuadInstance);
+    instanceBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
+    instanceBufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+    instanceBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+
+    if(FAILED(renderer->Device->CreateBuffer(&instanceBufferDesc, 0, &quadPass->InstanceBuffer)))
     {
         return(false);
     }
@@ -389,12 +383,13 @@ static bool32 D3D11InitQuadPass(D3D11RendererState* renderer, Arena* permanent, 
     HRESULT pixelShaderResult = renderer->Device->CreatePixelShader(pixelShaderBlob->GetBufferPointer(), pixelShaderBlob->GetBufferSize(), 0, &quadPass->PixelShader);
     HRESULT pixelShaderAlphaResult = renderer->Device->CreatePixelShader(pixelShaderAlphaBlob->GetBufferPointer(), pixelShaderAlphaBlob->GetBufferSize(), 0, &quadPass->PixelShaderAlpha);
 
-    // NOTE(saeb): Input layout maps Vertex2D's bytes to the VS inputs, validated against its bytecode.
+    // NOTE(saeb): Slot 0 is the shared unit quad (per-vertex); slot 1 is per-instance quad data.
     D3D11_INPUT_ELEMENT_DESC inputLayout[] =
     {
-        { "POSITION", 0, DXGI_FORMAT_R32G32_FLOAT, 0, offsetof(Vertex2D, Position), D3D11_INPUT_PER_VERTEX_DATA, 0 },
-        { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, offsetof(Vertex2D, UV), D3D11_INPUT_PER_VERTEX_DATA, 0 },
-        { "COLOR", 0, DXGI_FORMAT_R8G8B8A8_UNORM, 0, offsetof(Vertex2D, Color), D3D11_INPUT_PER_VERTEX_DATA, 0 }
+        { "POSITION", 0, DXGI_FORMAT_R32G32_FLOAT, 0, offsetof(QuadVertex, Corner), D3D11_INPUT_PER_VERTEX_DATA, 0 },
+        { "RECT", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, offsetof(QuadInstance, Rect), D3D11_INPUT_PER_INSTANCE_DATA, 1 },
+        { "UVRECT", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, offsetof(QuadInstance, UV), D3D11_INPUT_PER_INSTANCE_DATA, 1 },
+        { "COLOR", 0, DXGI_FORMAT_R8G8B8A8_UNORM, 1, offsetof(QuadInstance, Color), D3D11_INPUT_PER_INSTANCE_DATA, 1 }
     };
 
     HRESULT inputLayoutResult = renderer->Device->CreateInputLayout(inputLayout, ArrayCount(inputLayout), vertexShaderBlob->GetBufferPointer(), vertexShaderBlob->GetBufferSize(), &quadPass->InputLayout);
@@ -493,14 +488,14 @@ static bool32 D3D11InitQuadPass(D3D11RendererState* renderer, Arena* permanent, 
     return(true);
 }
 
-bool32 D3D11InitRenderer(D3D11RendererState* renderer, HWND windowHandle, int32 width, int32 height, Arena* permanent, Arena* transient, uint32 maxQuads)
+bool32 D3D11InitRenderer(D3D11RendererState* renderer, HWND windowHandle, int32 width, int32 height, Arena* permanent, uint32 maxQuads)
 {
     if(!D3D11InitDevice(renderer, windowHandle, width, height))
     {
         return(false);
     }
 
-    if(!D3D11InitQuadPass(renderer, permanent, transient, maxQuads))
+    if(!D3D11InitQuadPass(renderer, permanent, maxQuads))
     {
         return(false);
     }
@@ -631,11 +626,17 @@ void D3D11ShutdownRenderer(D3D11RendererState* renderer)
         quadPass->IndexBuffer->Release();
         quadPass->IndexBuffer = 0;
     }
-    
-    if(quadPass->VertexBuffer)
+
+    if(quadPass->InstanceBuffer)
     {
-        quadPass->VertexBuffer->Release();
-        quadPass->VertexBuffer = 0;
+        quadPass->InstanceBuffer->Release();
+        quadPass->InstanceBuffer = 0;
+    }
+
+    if(quadPass->UnitQuadBuffer)
+    {
+        quadPass->UnitQuadBuffer->Release();
+        quadPass->UnitQuadBuffer = 0;
     }
 
     if(renderer->DepthStencilView)
@@ -693,7 +694,7 @@ void D3D11BeginQuadPass(D3D11RendererState* renderer, int32 width, int32 height)
 {
     D3D11QuadPass* quadPass = &renderer->QuadPass;
 
-    quadPass->QuadCount = 0;
+    quadPass->InstanceCount = 0;
     quadPass->BatchCount = 0;
 
     // NOTE(saeb): Rebuild + upload the projection only when the size actually changed.
@@ -760,25 +761,26 @@ void D3D11EndQuadPass(D3D11RendererState* renderer)
 {
     D3D11QuadPass* quadPass = &renderer->QuadPass;
 
-    if(quadPass->QuadCount == 0)
+    if(quadPass->InstanceCount == 0)
     {
         return;
     }
 
     D3D11_MAPPED_SUBRESOURCE mapped;
-    if(FAILED(renderer->Context->Map(quadPass->VertexBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped)))
+    if(FAILED(renderer->Context->Map(quadPass->InstanceBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped)))
     {
         return;
     }
 
-    memcpy(mapped.pData, quadPass->Vertices, quadPass->QuadCount * 4 * sizeof(Vertex2D));
-    renderer->Context->Unmap(quadPass->VertexBuffer, 0);
+    memcpy(mapped.pData, quadPass->Instances, quadPass->InstanceCount * sizeof(QuadInstance));
+    renderer->Context->Unmap(quadPass->InstanceBuffer, 0);
 
-    UINT stride = sizeof(Vertex2D);
-    UINT offset = 0;
+    ID3D11Buffer* vertexBuffers[2] = { quadPass->UnitQuadBuffer, quadPass->InstanceBuffer };
+    UINT strides[2] = { sizeof(QuadVertex), sizeof(QuadInstance) };
+    UINT offsets[2] = { 0, 0 };
 
     renderer->Context->IASetInputLayout(quadPass->InputLayout);
-    renderer->Context->IASetVertexBuffers(0, 1, &quadPass->VertexBuffer, &stride, &offset);
+    renderer->Context->IASetVertexBuffers(0, 2, vertexBuffers, strides, offsets);
     renderer->Context->IASetIndexBuffer(quadPass->IndexBuffer, DXGI_FORMAT_R16_UINT, 0);
     renderer->Context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
@@ -791,17 +793,16 @@ void D3D11EndQuadPass(D3D11RendererState* renderer)
     renderer->Context->OMSetBlendState(quadPass->BlendState, 0, 0xFFFFFFFF);
     renderer->Context->OMSetDepthStencilState(quadPass->DepthState, 0);
 
-    UINT indexOffset = 0;
+    UINT instanceOffset = 0;
     for(uint32 batchIndex = 0; batchIndex < quadPass->BatchCount; ++batchIndex)
     {
         TextureBatch* batch = &quadPass->Batches[batchIndex];
-        UINT indexCount = batch->QuadCount * 6;
 
         ID3D11PixelShader* pixelShader = (batch->Kind == GLYPH) ? quadPass->PixelShaderAlpha : quadPass->PixelShader;
         renderer->Context->PSSetShader(pixelShader, 0, 0);
         renderer->Context->PSSetShaderResources(0, 1, &batch->Texture);
-        renderer->Context->DrawIndexed(indexCount, indexOffset, 0);
+        renderer->Context->DrawIndexedInstanced(6, batch->InstanceCount, 0, 0, instanceOffset);
 
-        indexOffset += indexCount;
+        instanceOffset += batch->InstanceCount;
     }
 }

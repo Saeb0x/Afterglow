@@ -20,10 +20,15 @@ enum QuadKind
     GLYPH
 };
 
-struct Vertex2D
+struct QuadVertex
 {
-    real32 Position[2];
-    real32 UV[2];
+    real32 Corner[2];
+};
+
+struct QuadInstance
+{
+    real32 Rect[4];
+    real32 UV[4];
     uint32 Color;
 };
 
@@ -31,7 +36,7 @@ struct TextureBatch
 {
     QuadKind Kind;
     ID3D11ShaderResourceView* Texture;
-    uint32 QuadCount;
+    uint32 InstanceCount;
 };
 
 struct TextureRegistryEntry
@@ -42,15 +47,14 @@ struct TextureRegistryEntry
 
 struct D3D11QuadPass
 {
-    // CPU-side accumulation.
-    Vertex2D* Vertices;
+    QuadInstance* Instances;
     TextureBatch* Batches;
     uint32 MaxQuads;
-    uint32 QuadCount;
+    uint32 InstanceCount;
     uint32 BatchCount;
 
-    // GPU resources.
-    ID3D11Buffer* VertexBuffer;
+    ID3D11Buffer* UnitQuadBuffer;
+    ID3D11Buffer* InstanceBuffer;
     ID3D11Buffer* IndexBuffer;
     ID3D11Buffer* ConstantBuffer;
     ID3D11VertexShader* VertexShader;
@@ -83,7 +87,7 @@ struct D3D11RendererState
     // NOTE(saeb): Later comes PBRPass and PostProcessPass.
 };
 
-bool32 D3D11InitRenderer(D3D11RendererState* renderer, HWND windowHandle, int32 width, int32 height, Arena* permanent, Arena* transient, uint32 maxQuads);
+bool32 D3D11InitRenderer(D3D11RendererState* renderer, HWND windowHandle, int32 width, int32 height, Arena* permanent, uint32 maxQuads);
 void D3D11ResizeRenderer(D3D11RendererState* renderer, int32 width, int32 height);
 void D3D11ShutdownRenderer(D3D11RendererState* renderer);
 
