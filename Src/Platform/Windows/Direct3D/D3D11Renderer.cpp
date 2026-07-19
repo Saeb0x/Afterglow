@@ -237,7 +237,7 @@ static void D3D11QuadPassAppendQuad(D3D11RendererState* renderer, QuadKind kind,
         return;
     }
 
-    // NOTE(saeb): Order-preserving batching: extend the current run, or open a new one when the texture or kind changes.
+    // NOTE(saeb): Input arrives sorted, so quads sharing texture + kind are adjacent and collapse into one batch.
     if(quadPass->BatchCount == 0 || quadPass->Batches[quadPass->BatchCount - 1].Texture != resolvedTexture || quadPass->Batches[quadPass->BatchCount - 1].Kind != kind)
     {
         Assert(quadPass->BatchCount < MAX_QUAD_PASS_BATCHES);
@@ -288,6 +288,9 @@ static void D3D11QuadPassPushGlyphQuad(D3D11RendererState* renderer, real32 x, r
 
 static bool32 D3D11InitQuadPass(D3D11RendererState* renderer, Arena* permanent, uint32 maxQuads)
 {
+    // NOTE(saeb): The sort key packs the submission index into 16 bits.
+    Assert(maxQuads <= 65536);
+
     D3D11QuadPass* quadPass = &renderer->QuadPass;
 
     quadPass->MaxQuads = maxQuads;
@@ -297,6 +300,8 @@ static bool32 D3D11InitQuadPass(D3D11RendererState* renderer, Arena* permanent, 
 
     quadPass->Instances = PushArray(permanent, QuadInstance, maxQuads);
     quadPass->Batches = PushArray(permanent, TextureBatch, MAX_QUAD_PASS_BATCHES);
+    quadPass->SortKeys = PushArray(permanent, uint64, maxQuads);
+    quadPass->SortScratch = PushArray(permanent, uint64, maxQuads);
 
     // NOTE(saeb): Shared unit quad - every quad is this geometry expanded by its instance rect.
     static const QuadVertex unitQuad[] =
@@ -730,13 +735,96 @@ uint32 D3D11RegisterTexture(D3D11RendererState* renderer, ID3D11ShaderResourceVi
     return(handle);
 }
 
+// NOTE(saeb): 64-bit key, most significant field wins: 63..56 Layer (8) | 55..44 Material (12) | 43..32 Texture (12) | 31..16 Depth (16) | 15..0 Index (16).
+static uint64 D3D11PackQuadSortKey(uint32 layer, uint32 material, uint32 texture, uint32 depth, uint32 index)
+{
+    // Index lives in the low bits so ties fall back to submission order and the sort is total.
+    return(((uint64)(layer & 0xFF) << 56) | ((uint64)(material & 0xFFF) << 44) | ((uint64)(texture & 0xFFF) << 32) | ((uint64)(depth & 0xFFFF) << 16) | ((uint64)(index & 0xFFFF)));
+}
+
+static void D3D11RadixSortKeys(uint64* keys, uint64* scratch, uint32 count)
+{
+    if(count < 2)
+    {
+        return;
+    }
+
+    // NOTE(saeb): Histogram all 8 byte columns in one read pass so uniform columns can be skipped.
+    uint32 histogram[8][256] = {};
+    for(uint32 i = 0; i < count; ++i)
+    {
+        uint64 key = keys[i];
+        for(uint32 byteIndex = 0; byteIndex < 8; ++byteIndex)
+        {
+            ++histogram[byteIndex][(key >> (byteIndex * 8)) & 0xFF];
+        }
+    }
+
+    uint64* source = keys;
+    uint64* destination = scratch;
+
+    for(uint32 byteIndex = 0; byteIndex < 8; ++byteIndex)
+    {
+        uint32 shift = byteIndex * 8;
+        uint32* buckets = histogram[byteIndex];
+
+        // Every key shares this byte, so the pass would just copy - skip it.
+        if(buckets[(source[0] >> shift) & 0xFF] == count)
+        {
+            continue;
+        }
+
+        uint32 offsets[256];
+        uint32 sum = 0;
+        for(uint32 bucket = 0; bucket < 256; ++bucket)
+        {
+            offsets[bucket] = sum;
+            sum += buckets[bucket];
+        }
+
+        for(uint32 i = 0; i < count; ++i)
+        {
+            uint64 key = source[i];
+            destination[offsets[(key >> shift) & 0xFF]++] = key;
+        }
+
+        uint64* temp = source;
+        source = destination;
+        destination = temp;
+    }
+
+    // An odd number of executed passes leaves the result in scratch.
+    if(source != keys)
+    {
+        memcpy(keys, source, count * sizeof(uint64));
+    }
+}
+
 void D3D11SubmitRenderCommands(D3D11RendererState* renderer, RenderCommands* commands)
 {
     D3D11QuadPass* quadPass = &renderer->QuadPass;
 
-    for(uint32 i = 0; i < commands->QuadCount; ++i)
+    uint32 count = commands->QuadCount;
+    if(count > quadPass->MaxQuads)
+    {
+        count = quadPass->MaxQuads;
+    }
+
+    for(uint32 i = 0; i < count; ++i)
     {
         RenderCommandQuad* quad = &commands->Quads[i];
+
+        QuadKind kind = (quad->TextureHandle == 0) ? SOLID : quadPass->TextureRegistry[quad->TextureHandle].Kind;
+
+        quadPass->SortKeys[i] = D3D11PackQuadSortKey(quad->Layer, kind, quad->TextureHandle, 0, i);
+    }
+
+    D3D11RadixSortKeys(quadPass->SortKeys, quadPass->SortScratch, count);
+
+    for(uint32 sortedIndex = 0; sortedIndex < count; ++sortedIndex)
+    {
+        uint32 quadIndex = (uint32)(quadPass->SortKeys[sortedIndex] & 0xFFFF);
+        RenderCommandQuad* quad = &commands->Quads[quadIndex];
 
         if(quad->TextureHandle == 0)
         {

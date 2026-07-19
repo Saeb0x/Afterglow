@@ -159,6 +159,8 @@ static void ConsoleUpdateAndRender(Console* console, GameInput* input, RenderCom
         console->Opened = false;
     }
 
+    render->CurrentLayer = 1; // Console sits above the HUD
+
     real32 padding = 8.0f;
     real32 textScale = 0.6f;
     real32 lineHeight = (real32)font->LineHeight * textScale;

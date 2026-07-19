@@ -8,6 +8,7 @@ struct RenderCommandQuad
     real32 U0, V0, U1, V1;
     uint32 TextureHandle;
     uint32 Color;
+    uint8 Layer;
 };
 
 struct RenderCommands
@@ -15,6 +16,7 @@ struct RenderCommands
     RenderCommandQuad* Quads;
     uint32 QuadCount;
     uint32 MaxQuads;
+    uint8 CurrentLayer;
 };
 
 static void PushTexturedQuad(RenderCommands* commands, real32 x, real32 y, real32 width, real32 height, real32 u0, real32 v0, real32 u1, real32 v1, uint32 textureHandle, uint32 color)
@@ -36,6 +38,7 @@ static void PushTexturedQuad(RenderCommands* commands, real32 x, real32 y, real3
     quad->V1 = v1;
     quad->TextureHandle = textureHandle;
     quad->Color = color;
+    quad->Layer = commands->CurrentLayer;
 }
 
 static void PushQuad(RenderCommands* commands, real32 x, real32 y, real32 width, real32 height, uint32 color)

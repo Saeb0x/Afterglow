@@ -72,6 +72,9 @@ struct D3D11QuadPass
 
     TextureRegistryEntry TextureRegistry[MAX_TEXTURE_HANDLES];
     uint32 TextureRegistryCount;
+
+    uint64* SortKeys;
+    uint64* SortScratch;
 };
 
 struct D3D11RendererState
