@@ -4,7 +4,7 @@ setlocal EnableDelayedExpansion
 call vcvarsall.bat x64 >nul 2>&1
 if %errorlevel% neq 0 (
     echo [Afterglow Tools] Failed to call vcvarsall.bat. Ensure Microsoft C/C++ build tools are installed and vcvarsall.bat is accessible from the current environment.
-    exit /b
+    exit /b 1
 )
 
 set OUT_DIR=%~dp0..\Build\Tools
@@ -12,7 +12,7 @@ if not exist "%OUT_DIR%" mkdir "%OUT_DIR%"
 pushd "%OUT_DIR%"
 
 echo [Afterglow Tools] Compiling and linking cooker [debug]...
-cl /nologo /Zi /I "%~dp0Cooker" /I "%~dp0..\Src" "%~dp0Cooker\Src\AgCooker.cpp" /Fd"AgCooker.pdb" /Fe"AgCooker.exe"
+cl /nologo /Zi /I "%~dp0Cooker" /I "%~dp0..\Src" "%~dp0Cooker\Src\AgCooker.cpp" /Fd"AgCooker.pdb" /Fe"AgCooker.exe" /link d3dcompiler.lib
 if !errorlevel! neq 0 goto error
 
 echo.
@@ -24,7 +24,7 @@ goto end
 echo.
 echo [Afterglow Tools] Build failed.
 popd
-exit /b
+exit /b 1
 
 :end
 endlocal

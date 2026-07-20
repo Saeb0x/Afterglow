@@ -1,9 +1,10 @@
 #include "D3D11Renderer.h"
 #include "Engine/RenderCommands.h"
+#include "Engine/ShaderFormat.h"
+#include "Platform/Windows/IO/Win32File.h"
 
 #include <string.h>
 
-#include <d3dcompiler.h>
 #include <directxmath.h>
 
 static void D3D11SetViewport(D3D11RendererState* renderer, int32 width, int32 height)
@@ -158,73 +159,37 @@ static bool32 D3D11InitDevice(D3D11RendererState* renderer, HWND windowHandle, i
     return(true);
 }
 
-static const char* QuadPassShaderSource = R"HLSL(
-cbuffer Constants : register(b0)
+struct D3D11ShaderBytecode
 {
-    row_major float4x4 Projection;
+    void* Data;
+    uint32 Size;
 };
 
-struct VSInput
+static bool32 D3D11ReadShaderFile(Arena* transient, const char* path, uint32 expectedStage, D3D11ShaderBytecode* outBytecode)
 {
-    float2 Corner : POSITION;   // Per-vertex: unit quad corner
-    float4 Rect   : RECT;       // Per-instance: x, y, width, height
-    float4 UVRect : UVRECT;     // Per-instance: u0, v0, u1, v1
-    float4 Color  : COLOR;      // Per-instance
-};
-
-struct PSInput
-{
-    float4 Position : SV_POSITION;
-    float2 UV : TEXCOORD;
-    float4 Color : COLOR;
-};
-
-PSInput VSMain(VSInput input)
-{
-    float2 position = input.Rect.xy + input.Corner * input.Rect.zw;
-    float2 uv = lerp(input.UVRect.xy, input.UVRect.zw, input.Corner);
-
-    PSInput output;
-    output.Position = mul(float4(position, 0.0f, 1.0f), Projection);
-    output.UV = uv;
-    output.Color = input.Color;
-
-    return output;
-}
-
-Texture2D Texture : register(t0);
-SamplerState Sampler : register(s0);
-
-float4 PSMain(PSInput input) : SV_TARGET
-{
-    return Texture.Sample(Sampler, input.UV) * input.Color;
-}
-
-float4 PSMainAlpha(PSInput input) : SV_TARGET
-{
-    float coverage = Texture.Sample(Sampler, input.UV).r;
-    return float4(1.0f, 1.0f, 1.0f, coverage) * input.Color;
-}
-)HLSL";
-
-static bool32 D3D11CompileShader(const char* source, const char* entryPoint, const char* target, ID3DBlob** outBlob)
-{
-    UINT flags = 0;
-
-#if defined(AG_DEBUG)
-    flags |= D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
-#endif
-
-    ID3DBlob* errorBlob = 0;
-    HRESULT result = D3DCompile(source, strlen(source), 0, 0, 0, entryPoint, target, flags, 0, outBlob, &errorBlob);
-
-    if(errorBlob)
+    ReadFileResult file = Win32ReadEntireFile(transient, path);
+    if(!file.Data || file.Size < sizeof(ShaderFileHeader))
     {
-        // TODO(saeb): Logging.
-        errorBlob->Release();
+        return(false);
     }
 
-    return(SUCCEEDED(result));
+    ShaderFileHeader* header = (ShaderFileHeader*)file.Data;
+
+    char shaderIdentifier[4] = SHADER_IDENTIFIER;
+    if(memcmp(header->Header.Identifier, shaderIdentifier, 4) != 0 || header->Header.Version != SHADER_VERSION || header->Stage != expectedStage)
+    {
+        return(false);
+    }
+    
+    if(file.Size != sizeof(ShaderFileHeader) + header->BytecodeSize)
+    {
+        return(false);
+    }
+
+    outBytecode->Data = (uint8*)file.Data + sizeof(ShaderFileHeader);
+    outBytecode->Size = header->BytecodeSize;
+
+    return(true);
 }
 
 static void D3D11QuadPassAppendQuad(D3D11RendererState* renderer, uint32 materialHandle, ID3D11ShaderResourceView* texture, real32 x, real32 y, real32 w, real32 h, real32 u0, real32 v0, real32 u1, real32 v1, uint32 color)
@@ -272,7 +237,7 @@ static void D3D11QuadPassAppendQuad(D3D11RendererState* renderer, uint32 materia
     quadPass->InstanceCount++;
 }
 
-static bool32 D3D11InitQuadPass(D3D11RendererState* renderer, Arena* permanent, uint32 maxQuads)
+static bool32 D3D11InitQuadPass(D3D11RendererState* renderer, Arena* permanent, Arena* transient, uint32 maxQuads)
 {
     // NOTE(saeb): The sort key packs the submission index into 16 bits.
     Assert(maxQuads <= 65536);
@@ -349,30 +314,21 @@ static bool32 D3D11InitQuadPass(D3D11RendererState* renderer, Arena* permanent, 
         return(false);
     }
 
-    ID3DBlob* vertexShaderBlob;
-    if(!D3D11CompileShader(QuadPassShaderSource, "VSMain", "vs_5_0", &vertexShaderBlob))
+    TempMemory shaderMemory = BeginTempMemory(transient);
+
+    D3D11ShaderBytecode vertexBytecode;
+    D3D11ShaderBytecode pixelBytecode;
+    D3D11ShaderBytecode pixelAlphaBytecode;
+
+    if(!D3D11ReadShaderFile(transient, "Data/QuadVS.aga", SHADER_STAGE_VERTEX, &vertexBytecode) || !D3D11ReadShaderFile(transient, "Data/QuadPS.aga", SHADER_STAGE_PIXEL, &pixelBytecode) || !D3D11ReadShaderFile(transient, "Data/QuadPSAlpha.aga", SHADER_STAGE_PIXEL, &pixelAlphaBytecode))
     {
+        EndTempMemory(shaderMemory);
         return(false);
     }
 
-    ID3DBlob* pixelShaderBlob;
-    if(!D3D11CompileShader(QuadPassShaderSource, "PSMain", "ps_5_0", &pixelShaderBlob))
-    {
-        vertexShaderBlob->Release();
-        return(false);
-    }
-
-    ID3DBlob* pixelShaderAlphaBlob;
-    if(!D3D11CompileShader(QuadPassShaderSource, "PSMainAlpha", "ps_5_0", &pixelShaderAlphaBlob))
-    {
-        vertexShaderBlob->Release();
-        pixelShaderBlob->Release();
-        return(false);
-    }
-
-    HRESULT vertexShaderResult = renderer->Device->CreateVertexShader(vertexShaderBlob->GetBufferPointer(), vertexShaderBlob->GetBufferSize(), 0, &quadPass->VertexShader);
-    HRESULT pixelShaderResult = renderer->Device->CreatePixelShader(pixelShaderBlob->GetBufferPointer(), pixelShaderBlob->GetBufferSize(), 0, &quadPass->PixelShader);
-    HRESULT pixelShaderAlphaResult = renderer->Device->CreatePixelShader(pixelShaderAlphaBlob->GetBufferPointer(), pixelShaderAlphaBlob->GetBufferSize(), 0, &quadPass->PixelShaderAlpha);
+    HRESULT vertexShaderResult = renderer->Device->CreateVertexShader(vertexBytecode.Data, vertexBytecode.Size, 0, &quadPass->VertexShader);
+    HRESULT pixelShaderResult = renderer->Device->CreatePixelShader(pixelBytecode.Data, pixelBytecode.Size, 0, &quadPass->PixelShader);
+    HRESULT pixelShaderAlphaResult = renderer->Device->CreatePixelShader(pixelAlphaBytecode.Data, pixelAlphaBytecode.Size, 0, &quadPass->PixelShaderAlpha);
 
     // NOTE(saeb): Slot 0 is the shared unit quad (per-vertex); slot 1 is per-instance quad data.
     D3D11_INPUT_ELEMENT_DESC inputLayout[] =
@@ -383,11 +339,9 @@ static bool32 D3D11InitQuadPass(D3D11RendererState* renderer, Arena* permanent, 
         { "COLOR", 0, DXGI_FORMAT_R8G8B8A8_UNORM, 1, offsetof(QuadInstance, Color), D3D11_INPUT_PER_INSTANCE_DATA, 1 }
     };
 
-    HRESULT inputLayoutResult = renderer->Device->CreateInputLayout(inputLayout, ArrayCount(inputLayout), vertexShaderBlob->GetBufferPointer(), vertexShaderBlob->GetBufferSize(), &quadPass->InputLayout);
+    HRESULT inputLayoutResult = renderer->Device->CreateInputLayout(inputLayout, ArrayCount(inputLayout), vertexBytecode.Data, vertexBytecode.Size, &quadPass->InputLayout);
 
-    vertexShaderBlob->Release();
-    pixelShaderBlob->Release();
-    pixelShaderAlphaBlob->Release();
+    EndTempMemory(shaderMemory);
 
     if(FAILED(vertexShaderResult) || FAILED(pixelShaderResult) || FAILED(pixelShaderAlphaResult) || FAILED(inputLayoutResult))
     {
@@ -492,7 +446,7 @@ static bool32 D3D11InitQuadPass(D3D11RendererState* renderer, Arena* permanent, 
     return(true);
 }
 
-bool32 D3D11InitRenderer(D3D11RendererState* renderer, HWND windowHandle, int32 width, int32 height, Arena* permanent, uint32 maxQuads)
+bool32 D3D11InitRenderer(D3D11RendererState* renderer, HWND windowHandle, int32 width, int32 height, Arena* permanent, Arena* transient, uint32 maxQuads)
 {
     if(!D3D11InitDevice(renderer, windowHandle, width, height))
     {
@@ -501,7 +455,7 @@ bool32 D3D11InitRenderer(D3D11RendererState* renderer, HWND windowHandle, int32 
 
     renderer->MaterialCount = 1;
 
-    if(!D3D11InitQuadPass(renderer, permanent, maxQuads))
+    if(!D3D11InitQuadPass(renderer, permanent, transient, maxQuads))
     {
         return(false);
     }

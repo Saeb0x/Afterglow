@@ -98,7 +98,7 @@ struct D3D11RendererState
     uint32 MaterialCount;
 };
 
-bool32 D3D11InitRenderer(D3D11RendererState* renderer, HWND windowHandle, int32 width, int32 height, Arena* permanent, uint32 maxQuads);
+bool32 D3D11InitRenderer(D3D11RendererState* renderer, HWND windowHandle, int32 width, int32 height, Arena* permanent, Arena* transient, uint32 maxQuads);
 void D3D11ResizeRenderer(D3D11RendererState* renderer, int32 width, int32 height);
 void D3D11ShutdownRenderer(D3D11RendererState* renderer);
 

@@ -1,12 +1,63 @@
 #include "Engine/FontFormat.h"
 #include "Engine/TextureFormat.h"
+#include "Engine/ShaderFormat.h"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "Deps/stb_image.h"
+#include <windows.h>
+#include <d3dcompiler.h>
 
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+
+static bool32 GetFileWriteTime(const char* path, FILETIME* outTime)
+{
+    WIN32_FILE_ATTRIBUTE_DATA data;
+    if(!GetFileAttributesExA(path, GetFileExInfoStandard, &data))
+    {
+        return(false);
+    }
+
+    *outTime = data.ftLastWriteTime;
+    return(true);
+}
+
+static bool32 IsUpToDate(const char* outPath, const char** sourcePaths, int sourceCount)
+{
+    FILETIME outputTime;
+    if(!GetFileWriteTime(outPath, &outputTime))
+    {
+        return(false);
+    }
+
+    for(int i = 0; i < sourceCount; ++i)
+    {
+        FILETIME sourceTime;
+        if(!GetFileWriteTime(sourcePaths[i], &sourceTime))
+        {
+            return(false);
+        }
+
+        if(CompareFileTime(&sourceTime, &outputTime) > 0)
+        {
+            return(false);
+        }
+    }
+
+    // NOTE(saeb): A rebuilt cooker can change the output format, so treat the cooker itself as an input.
+    char cookerPath[MAX_PATH];
+    if(GetModuleFileNameA(0, cookerPath, sizeof(cookerPath)))
+    {
+        FILETIME cookerTime;
+        if(GetFileWriteTime(cookerPath, &cookerTime) && CompareFileTime(&cookerTime, &outputTime) > 0)
+        {
+            return(false);
+        }
+    }
+
+    return(true);
+}
 
 // NOTE(saeb): Parse the signed integer following "key=" within a single line.
 static int32 ParseKeyInt(char* lineStart, char* lineEnd, const char* key)
@@ -62,6 +113,13 @@ static char* ReadEntireFile(const char* path, size_t* outSize)
 
 static int CookFont(const char* fontPath, const char* pngPath, const char* outPath)
 {
+    const char* sources[] = { fontPath, pngPath };
+    if(IsUpToDate(outPath, sources, 2))
+    {
+        printf("Up to date: %s\n", outPath);
+        return(0);
+    }
+
     // NOTE(saeb): Decode the atlas with stb_image, keep only the alpha channel.
     int32 imageWidth, imageHeight, imageChannels;
 
@@ -162,6 +220,13 @@ static int CookFont(const char* fontPath, const char* pngPath, const char* outPa
 
 static int CookTexture(const char* pngPath, const char* outPath)
 {
+    const char* sources[] = { pngPath };
+    if(IsUpToDate(outPath, sources, 1))
+    {
+        printf("Up to date: %s\n", outPath);
+        return(0);
+    }
+
     int32 width, height, channels;
 
     uint8* pixels = stbi_load(pngPath, &width, &height, &channels, 4);
@@ -196,11 +261,100 @@ static int CookTexture(const char* pngPath, const char* outPath)
     return(0);
 }
 
+static int CookShader(const char* hlslPath, const char* entryPoint, const char* target, const char* outPath)
+{
+    const char* sources[] = { hlslPath };
+    if(IsUpToDate(outPath, sources, 1))
+    {
+        printf("Up to date: %s\n", outPath);
+        return(0);
+    }
+
+    FILE* sourceFile = fopen(hlslPath, "rb");
+    if(!sourceFile)
+    {
+        fprintf(stderr, "Failed to open %s\n", hlslPath);
+        return(1);
+    }
+
+    fseek(sourceFile, 0, SEEK_END);
+    long sourceSize = ftell(sourceFile);
+    fseek(sourceFile, 0, SEEK_SET);
+
+    char* source = (char*)malloc(sourceSize);
+    fread(source, 1, sourceSize, sourceFile);
+    fclose(sourceFile);
+
+    uint32 stage;
+    if(strncmp(target, "vs_", 3) == 0)
+    {
+        stage = SHADER_STAGE_VERTEX;
+    }
+    else if(strncmp(target, "ps_", 3) == 0)
+    {
+        stage = SHADER_STAGE_PIXEL;
+    }
+    else
+    {
+        fprintf(stderr, "Unsupported shader target '%s'\n", target);
+        free(source);
+        return(1);
+    }
+
+    ID3DBlob* bytecode = 0;
+    ID3DBlob* errors = 0;
+    HRESULT result = D3DCompile(source, sourceSize, hlslPath, 0, D3D_COMPILE_STANDARD_FILE_INCLUDE, entryPoint, target, D3DCOMPILE_OPTIMIZATION_LEVEL3, 0, &bytecode, &errors);
+
+    free(source);
+
+    if(errors)
+    {
+        fprintf(stderr, "%s\n", (const char*)errors->GetBufferPointer());
+        errors->Release();
+    }
+    
+    if(FAILED(result))
+    {
+        fprintf(stderr, "Failed to compile %s:%s\n", hlslPath, entryPoint);
+
+        if(bytecode)
+        {
+            bytecode->Release();
+        }
+
+        return(1);
+    }
+
+    ShaderFileHeader header = {};
+    char shaderIdentifier[4] = SHADER_IDENTIFIER;
+    memcpy(header.Header.Identifier, shaderIdentifier, 4);
+    header.Header.Version = SHADER_VERSION;
+    header.Stage = stage;
+    header.BytecodeSize = (uint32)bytecode->GetBufferSize();
+
+    FILE* outFile = fopen(outPath, "wb");
+    if(!outFile)
+    {
+        fprintf(stderr, "Failed to open %s for writing\n", outPath);
+        bytecode->Release();
+        return(1);
+    }
+
+    fwrite(&header, sizeof(header), 1, outFile);
+    fwrite(bytecode->GetBufferPointer(), 1, header.BytecodeSize, outFile);
+
+    fclose(outFile);
+    printf("Cooked %s:%s (%s, %u bytes) -> %s\n", hlslPath, entryPoint, target, header.BytecodeSize, outPath);
+
+    bytecode->Release();
+    return(0);
+}
+
 int main(int argc, char** argv)
 {
     if(argc < 2)
     {
-        fprintf(stderr, "Usage: AgCooker.exe <font|texture> ...\n");
+        fprintf(stderr, "Usage: AgCooker.exe <font|texture|shader> ...\n");
         return(1);
     }
 
@@ -225,6 +379,16 @@ int main(int argc, char** argv)
         }
 
         return(CookTexture(argv[2], argv[3]));
+    }
+    else if(strcmp(assetType, "shader") == 0)
+    {
+        if(argc != 6)
+        {
+            fprintf(stderr, "Usage: AgCooker.exe shader <in.hlsl> <entry> <target> <out.aga>\n");
+            return(1);
+        }
+
+        return(CookShader(argv[2], argv[3], argv[4], argv[5]));
     }
 
     fprintf(stderr, "Unknown asset type '%s'\n", assetType);

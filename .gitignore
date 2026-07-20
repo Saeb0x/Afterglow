@@ -2,6 +2,8 @@
 Build/
 Docs/
 /Data/
+/Assets/*
+!/Assets/Shaders/
 
 # Emacs
 .#*
