@@ -90,6 +90,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, LPSTR, int)
                         D3D11BeginQuadPass(&renderer, dims.Width, dims.Height);
                         renderCommands.QuadCount = 0;
                         renderCommands.CurrentLayer = 0;
+                        renderCommands.CurrentMaterial = 0;
 
                         context.ScreenWidth = dims.Width;
                         context.ScreenHeight = dims.Height;

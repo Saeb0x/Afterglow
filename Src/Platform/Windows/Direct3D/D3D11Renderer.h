@@ -10,14 +10,17 @@
 
 #define MAX_QUAD_PASS_BATCHES 1024
 #define MAX_TEXTURE_HANDLES 256
+#define MAX_MATERIALS 64
 
 struct RenderCommands;
 
-enum QuadKind
+struct Material
 {
-    SOLID,
-    TEXTURED,
-    GLYPH
+    ID3D11VertexShader* VertexShader;
+    ID3D11PixelShader* PixelShader;
+    ID3D11BlendState* BlendState;
+    ID3D11DepthStencilState* DepthState;
+    ID3D11RasterizerState* RasterizerState;
 };
 
 struct QuadVertex
@@ -32,9 +35,9 @@ struct QuadInstance
     uint32 Color;
 };
 
-struct TextureBatch
+struct DrawBatch
 {
-    QuadKind Kind;
+    uint32 MaterialHandle;
     ID3D11ShaderResourceView* Texture;
     uint32 InstanceCount;
 };
@@ -42,13 +45,13 @@ struct TextureBatch
 struct TextureRegistryEntry
 {
     ID3D11ShaderResourceView* Texture;
-    QuadKind Kind;
+    uint32 MaterialHandle;
 };
 
 struct D3D11QuadPass
 {
     QuadInstance* Instances;
-    TextureBatch* Batches;
+    DrawBatch* Batches;
     uint32 MaxQuads;
     uint32 InstanceCount;
     uint32 BatchCount;
@@ -72,6 +75,8 @@ struct D3D11QuadPass
 
     TextureRegistryEntry TextureRegistry[MAX_TEXTURE_HANDLES];
     uint32 TextureRegistryCount;
+    uint32 StandardMaterial;
+    uint32 GlyphMaterial;
 
     uint64* SortKeys;
     uint64* SortScratch;
@@ -88,6 +93,9 @@ struct D3D11RendererState
 
     D3D11QuadPass QuadPass;
     // NOTE(saeb): Later comes PBRPass and PostProcessPass.
+
+    Material Materials[MAX_MATERIALS];
+    uint32 MaterialCount;
 };
 
 bool32 D3D11InitRenderer(D3D11RendererState* renderer, HWND windowHandle, int32 width, int32 height, Arena* permanent, uint32 maxQuads);
@@ -101,7 +109,8 @@ void D3D11BeginQuadPass(D3D11RendererState* renderer, int32 width, int32 height)
 void D3D11SubmitRenderCommands(D3D11RendererState* renderer, RenderCommands* commands);
 void D3D11EndQuadPass(D3D11RendererState* renderer);
 
-uint32 D3D11RegisterTexture(D3D11RendererState* renderer, ID3D11ShaderResourceView* texture, QuadKind kind);
+uint32 D3D11RegisterTexture(D3D11RendererState* renderer, ID3D11ShaderResourceView* texture, uint32 materialHandle);
+uint32 D3D11RegisterMaterial(D3D11RendererState* renderer, Material* material);
 
 #define D3D11RENDERER_H
 #endif

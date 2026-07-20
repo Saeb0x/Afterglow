@@ -227,18 +227,19 @@ static bool32 D3D11CompileShader(const char* source, const char* entryPoint, con
     return(SUCCEEDED(result));
 }
 
-static void D3D11QuadPassAppendQuad(D3D11RendererState* renderer, QuadKind kind, ID3D11ShaderResourceView* resolvedTexture, real32 x, real32 y, real32 w, real32 h, real32 u0, real32 v0, real32 u1, real32 v1, uint32 color)
+static void D3D11QuadPassAppendQuad(D3D11RendererState* renderer, uint32 materialHandle, ID3D11ShaderResourceView* texture, real32 x, real32 y, real32 w, real32 h, real32 u0, real32 v0, real32 u1, real32 v1, uint32 color)
 {
     D3D11QuadPass* quadPass = &renderer->QuadPass;
 
+    Assert(materialHandle != 0);
     Assert(quadPass->InstanceCount < quadPass->MaxQuads);
     if(quadPass->InstanceCount >= quadPass->MaxQuads)
     {
         return;
     }
 
-    // NOTE(saeb): Input arrives sorted, so quads sharing texture + kind are adjacent and collapse into one batch.
-    if(quadPass->BatchCount == 0 || quadPass->Batches[quadPass->BatchCount - 1].Texture != resolvedTexture || quadPass->Batches[quadPass->BatchCount - 1].Kind != kind)
+    // NOTE(saeb): Input arrives sorted, so quads sharing material + texture are adjacent and collapse into one batch.
+    if(quadPass->BatchCount == 0 || quadPass->Batches[quadPass->BatchCount - 1].Texture != texture || quadPass->Batches[quadPass->BatchCount - 1].MaterialHandle != materialHandle)
     {
         Assert(quadPass->BatchCount < MAX_QUAD_PASS_BATCHES);
         if(quadPass->BatchCount >= MAX_QUAD_PASS_BATCHES)
@@ -246,9 +247,9 @@ static void D3D11QuadPassAppendQuad(D3D11RendererState* renderer, QuadKind kind,
             return;
         }
 
-        TextureBatch* newBatch = &quadPass->Batches[quadPass->BatchCount++];
-        newBatch->Texture = resolvedTexture;
-        newBatch->Kind = kind;
+        DrawBatch* newBatch = &quadPass->Batches[quadPass->BatchCount++];
+        newBatch->Texture = texture;
+        newBatch->MaterialHandle = materialHandle;
         newBatch->InstanceCount = 0;
     }
 
@@ -271,21 +272,6 @@ static void D3D11QuadPassAppendQuad(D3D11RendererState* renderer, QuadKind kind,
     quadPass->InstanceCount++;
 }
 
-static void D3D11QuadPassPushQuad(D3D11RendererState* renderer, real32 x, real32 y, real32 w, real32 h, real32 u0, real32 v0, real32 u1, real32 v1, ID3D11ShaderResourceView* texture, uint32 color)
-{
-    // NOTE(saeb): No texture means a solid-color quad reusing the 1x1 white texture.
-    QuadKind kind = texture ? TEXTURED : SOLID;
-    ID3D11ShaderResourceView* resolvedTexture = texture ? texture : renderer->QuadPass.WhiteTexture;
-
-    D3D11QuadPassAppendQuad(renderer, kind, resolvedTexture, x, y, w, h, u0, v0, u1, v1, color);
-}
-
-static void D3D11QuadPassPushGlyphQuad(D3D11RendererState* renderer, real32 x, real32 y, real32 w, real32 h, real32 u0, real32 v0, real32 u1, real32 v1, ID3D11ShaderResourceView* atlas, uint32 color)
-{
-    Assert(atlas != 0);
-    D3D11QuadPassAppendQuad(renderer, GLYPH, atlas, x, y, w, h, u0, v0, u1, v1, color);
-}
-
 static bool32 D3D11InitQuadPass(D3D11RendererState* renderer, Arena* permanent, uint32 maxQuads)
 {
     // NOTE(saeb): The sort key packs the submission index into 16 bits.
@@ -299,7 +285,7 @@ static bool32 D3D11InitQuadPass(D3D11RendererState* renderer, Arena* permanent, 
     quadPass->TextureRegistryCount = 1;
 
     quadPass->Instances = PushArray(permanent, QuadInstance, maxQuads);
-    quadPass->Batches = PushArray(permanent, TextureBatch, MAX_QUAD_PASS_BATCHES);
+    quadPass->Batches = PushArray(permanent, DrawBatch, MAX_QUAD_PASS_BATCHES);
     quadPass->SortKeys = PushArray(permanent, uint64, maxQuads);
     quadPass->SortScratch = PushArray(permanent, uint64, maxQuads);
 
@@ -490,6 +476,19 @@ static bool32 D3D11InitQuadPass(D3D11RendererState* renderer, Arena* permanent, 
         return(false);
     }
 
+    // NOTE(saeb): Materials reference the pass's state objects; the pass still owns and releases them.
+    Material standardMaterial = {};
+    standardMaterial.VertexShader = quadPass->VertexShader;
+    standardMaterial.PixelShader = quadPass->PixelShader;
+    standardMaterial.BlendState = quadPass->BlendState;
+    standardMaterial.DepthState = quadPass->DepthState;
+    standardMaterial.RasterizerState = quadPass->RasterizerState;
+    quadPass->StandardMaterial = D3D11RegisterMaterial(renderer, &standardMaterial);
+
+    Material glyphMaterial = standardMaterial;
+    glyphMaterial.PixelShader = quadPass->PixelShaderAlpha;
+    quadPass->GlyphMaterial = D3D11RegisterMaterial(renderer, &glyphMaterial);
+
     return(true);
 }
 
@@ -499,6 +498,8 @@ bool32 D3D11InitRenderer(D3D11RendererState* renderer, HWND windowHandle, int32 
     {
         return(false);
     }
+
+    renderer->MaterialCount = 1;
 
     if(!D3D11InitQuadPass(renderer, permanent, maxQuads))
     {
@@ -719,7 +720,7 @@ void D3D11BeginQuadPass(D3D11RendererState* renderer, int32 width, int32 height)
     }
 }
 
-uint32 D3D11RegisterTexture(D3D11RendererState* renderer, ID3D11ShaderResourceView* texture, QuadKind kind)
+uint32 D3D11RegisterTexture(D3D11RendererState* renderer, ID3D11ShaderResourceView* texture, uint32 materialHandle)
 {
     D3D11QuadPass* quadPass = &renderer->QuadPass;
 
@@ -731,7 +732,21 @@ uint32 D3D11RegisterTexture(D3D11RendererState* renderer, ID3D11ShaderResourceVi
 
     uint32 handle = quadPass->TextureRegistryCount++;
     quadPass->TextureRegistry[handle].Texture = texture;
-    quadPass->TextureRegistry[handle].Kind = kind;
+    quadPass->TextureRegistry[handle].MaterialHandle = materialHandle;
+    return(handle);
+}
+
+uint32 D3D11RegisterMaterial(D3D11RendererState* renderer, Material* material)
+{
+    Assert(renderer->MaterialCount < MAX_MATERIALS);
+    if(renderer->MaterialCount >= MAX_MATERIALS)
+    {
+        return(0);
+    }
+
+    uint32 handle = renderer->MaterialCount++;
+    renderer->Materials[handle] = *material;
+
     return(handle);
 }
 
@@ -814,34 +829,30 @@ void D3D11SubmitRenderCommands(D3D11RendererState* renderer, RenderCommands* com
     {
         RenderCommandQuad* quad = &commands->Quads[i];
 
-        QuadKind kind = (quad->TextureHandle == 0) ? SOLID : quadPass->TextureRegistry[quad->TextureHandle].Kind;
+        // NOTE(saeb): A texture carries the material it's meant to be drawn with; the quad may override it.
+        uint32 material = (quad->TextureHandle == 0) ? quadPass->StandardMaterial : quadPass->TextureRegistry[quad->TextureHandle].MaterialHandle;
 
-        quadPass->SortKeys[i] = D3D11PackQuadSortKey(quad->Layer, kind, quad->TextureHandle, 0, i);
+        if(quad->MaterialHandle != 0)
+        {
+            material = quad->MaterialHandle;
+        }
+
+        quadPass->SortKeys[i] = D3D11PackQuadSortKey(quad->Layer, material, quad->TextureHandle, 0, i);
     }
 
     D3D11RadixSortKeys(quadPass->SortKeys, quadPass->SortScratch, count);
 
     for(uint32 sortedIndex = 0; sortedIndex < count; ++sortedIndex)
     {
-        uint32 quadIndex = (uint32)(quadPass->SortKeys[sortedIndex] & 0xFFFF);
+        uint64 key = quadPass->SortKeys[sortedIndex];
+        uint32 quadIndex = (uint32)(key & 0xFFFF);
+        uint32 material = (uint32)((key >> 44) & 0xFFF);
+
         RenderCommandQuad* quad = &commands->Quads[quadIndex];
 
-        if(quad->TextureHandle == 0)
-        {
-            D3D11QuadPassPushQuad(renderer, quad->X, quad->Y, quad->Width, quad->Height, quad->U0, quad->V0, quad->U1, quad->V1, 0, quad->Color);
-            continue;
-        }
+        ID3D11ShaderResourceView* texture = (quad->TextureHandle == 0) ? quadPass->WhiteTexture : quadPass->TextureRegistry[quad->TextureHandle].Texture;
 
-        TextureRegistryEntry* entry = &quadPass->TextureRegistry[quad->TextureHandle];
-
-        if(entry->Kind == GLYPH)
-        {
-            D3D11QuadPassPushGlyphQuad(renderer, quad->X, quad->Y, quad->Width, quad->Height, quad->U0, quad->V0, quad->U1, quad->V1, entry->Texture, quad->Color);
-        }
-        else
-        {
-            D3D11QuadPassPushQuad(renderer, quad->X, quad->Y, quad->Width, quad->Height, quad->U0, quad->V0, quad->U1, quad->V1, entry->Texture, quad->Color);
-        }
+        D3D11QuadPassAppendQuad(renderer, material, texture, quad->X, quad->Y, quad->Width, quad->Height, quad->U0, quad->V0, quad->U1, quad->V1, quad->Color);
     }
 }
 
@@ -871,23 +882,30 @@ void D3D11EndQuadPass(D3D11RendererState* renderer)
     renderer->Context->IASetVertexBuffers(0, 2, vertexBuffers, strides, offsets);
     renderer->Context->IASetIndexBuffer(quadPass->IndexBuffer, DXGI_FORMAT_R16_UINT, 0);
     renderer->Context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
-    renderer->Context->VSSetShader(quadPass->VertexShader, 0, 0);
     renderer->Context->VSSetConstantBuffers(0, 1, &quadPass->ConstantBuffer);
-
     renderer->Context->PSSetSamplers(0, 1, &quadPass->Sampler);
 
-    renderer->Context->RSSetState(quadPass->RasterizerState);
-    renderer->Context->OMSetBlendState(quadPass->BlendState, 0, 0xFFFFFFFF);
-    renderer->Context->OMSetDepthStencilState(quadPass->DepthState, 0);
-
+    uint32 boundMaterial = 0;
     UINT instanceOffset = 0;
+
     for(uint32 batchIndex = 0; batchIndex < quadPass->BatchCount; ++batchIndex)
     {
-        TextureBatch* batch = &quadPass->Batches[batchIndex];
+        DrawBatch* batch = &quadPass->Batches[batchIndex];
 
-        ID3D11PixelShader* pixelShader = (batch->Kind == GLYPH) ? quadPass->PixelShaderAlpha : quadPass->PixelShader;
-        renderer->Context->PSSetShader(pixelShader, 0, 0);
+        // NOTE(saeb): Sorted by material, so consecutive batches often share one - only rebind on change.
+        if(batch->MaterialHandle != boundMaterial)
+        {
+            Material* material = &renderer->Materials[batch->MaterialHandle];
+
+            renderer->Context->VSSetShader(material->VertexShader, 0, 0);
+            renderer->Context->PSSetShader(material->PixelShader, 0, 0);
+            renderer->Context->RSSetState(material->RasterizerState);
+            renderer->Context->OMSetBlendState(material->BlendState, 0, 0xFFFFFFFF);
+            renderer->Context->OMSetDepthStencilState(material->DepthState, 0);
+
+            boundMaterial = batch->MaterialHandle;
+        }
+
         renderer->Context->PSSetShaderResources(0, 1, &batch->Texture);
         renderer->Context->DrawIndexedInstanced(6, batch->InstanceCount, 0, 0, instanceOffset);
 
