@@ -1,5 +1,5 @@
-#if !defined(AFTERGLOW_H)
-#define AFTERGLOW_H
+#if !defined(AFTERGLOW_GAME_H)
+#define AFTERGLOW_GAME_H
 
 #include "Engine/Types.h"
 #include "SSTL/Memory.h"
