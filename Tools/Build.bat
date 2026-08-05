@@ -1,5 +1,5 @@
 @echo off
-setlocal EnableDelayedExpansion
+setlocal enabledelayedexpansion
 
 call vcvarsall.bat x64 >nul 2>&1
 if %errorlevel% neq 0 (
@@ -7,13 +7,13 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
-set OUT_DIR=%~dp0..\Build\Tools
-if not exist "%OUT_DIR%" mkdir "%OUT_DIR%"
-pushd "%OUT_DIR%"
+set BUILD_DIR=%~dp0..\Build\Tools
+if not exist "%BUILD_DIR%" mkdir "%BUILD_DIR%"
+pushd "%BUILD_DIR%"
 
 echo [Afterglow Tools] Compiling and linking cooker [debug]...
 cl /nologo /Zi /I "%~dp0Cooker" /I "%~dp0..\Src" "%~dp0Cooker\Src\AgCooker.cpp" /Fd"AgCooker.pdb" /Fe"AgCooker.exe" /link d3dcompiler.lib
-if !errorlevel! neq 0 goto error
+if %errorlevel% neq 0 goto
 
 echo.
 echo [Afterglow Tools] Build succeeded.
