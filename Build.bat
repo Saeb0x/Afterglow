@@ -1,5 +1,5 @@
 @echo off
-setlocal EnableDelayedExpansion
+setlocal enabledelayedexpansion
 
 call vcvarsall.bat x64 >nul 2>&1
 if %errorlevel% neq 0 (
@@ -7,22 +7,22 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
-set MODE=debug
-if /i "%1"=="release" set MODE=release
+set BUILD=debug
+if /i "%1"=="release" set BUILD=release
 
-set OUT_DIR=%~dp0Build\Debug
-if /i "%MODE%"=="release" set OUT_DIR=%~dp0Build\Release
+set BUILD_DIR=%~dp0Build\Debug
+if /i "%BUILD%"=="release" set BUILD_DIR=%~dp0Build\Release
 
-if not exist "%OUT_DIR%" mkdir "%OUT_DIR%"
-pushd "%OUT_DIR%"
+if not exist "%BUILD_DIR%" mkdir "%BUILD_DIR%"
+pushd "%BUILD_DIR%"
 
-if /i "%MODE%"=="debug" (
+if /i "%BUILD%"=="debug" (
     echo [Afterglow] Compiling and linking game [debug]...
-    cl /nologo /DAG_DEBUG /DWINVER=0x0A00 /D_WIN32_WINNT=0x0A00 /Zi /I "%~dp0Src" "%~dp0Src\Platform\Windows\Win32Main.cpp" /Fd"Afterglow.pdb" /Fe"Afterglow.exe" /link /nologo /DEBUG kernel32.lib user32.lib d3d11.lib dxgi.lib
+    cl /nologo /std:c++17 /permissive- /DAG_DEBUG /DWINVER=0x0A00 /D_WIN32_WINNT=0x0A00 /MTd /Zi /I "%~dp0Src" /I "%~dp0External\SSTL\Include" "%~dp0Src\Platform\Windows\Win32Main.cpp" /Fd"Afterglow.pdb" /Fe"Afterglow.exe" /link /nologo /DEBUG kernel32.lib user32.lib d3d11.lib dxgi.lib
     if !errorlevel! neq 0 goto error
 ) else (
     echo [Afterglow] Compiling and linking game [release]...
-    cl /nologo /DAG_RELEASE /DWINVER=0x0A00 /D_WIN32_WINNT=0x0A00 /O2 /I "%~dp0Src" "%~dp0Src\Platform\Windows\Win32Main.cpp" /Fe"Afterglow.exe" /link /nologo kernel32.lib user32.lib d3d11.lib dxgi.lib
+    cl /nologo /std:c++17 /permissive- /DAG_RELEASE /DWINVER=0x0A00 /D_WIN32_WINNT=0x0A00 /MT /O2 /I "%~dp0Src" /I "%~dp0External\SSTL\Include" "%~dp0Src\Platform\Windows\Win32Main.cpp" /Fe"Afterglow.exe" /link /nologo kernel32.lib user32.lib d3d11.lib dxgi.lib
     if !errorlevel! neq 0 goto error
 )
 
@@ -31,7 +31,9 @@ echo [Afterglow] Build succeeded.
 popd
 
 call "%~dp0Cook.bat"
-if !errorlevel! neq 0 exit /b 1
+if %errorlevel% neq 0 (
+    exit /b 1
+)
 
 goto end
 

@@ -19,20 +19,20 @@ static const char* WindowTitle =
 
 int WINAPI WinMain(HINSTANCE instance, HINSTANCE, LPSTR, int)
 {
-    uint64 engineArenaSize = Megabytes(16);
-    uint64 permanentArenaSize = Megabytes(64);
-    uint64 transientArenaSize = Gigabytes(1);
+    uint64 engineArenaSize = 16 * sstl::Megabytes;
+    uint64 permanentArenaSize = 64 * sstl::Megabytes;
+    uint64 transientArenaSize = 1 * sstl::Gigabytes;
     uint64 totalSize = engineArenaSize + permanentArenaSize + transientArenaSize;
 
     void* memoryBlock = (void*)VirtualAlloc(0, totalSize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
 
-    Arena engineMemory = {};
+    sstl::Arena engineMemory = {};
     GameMemory gameMemory = {};
-    InitializeArena(&engineMemory, memoryBlock, engineArenaSize);
-    InitializeArena(&gameMemory.Permanent, (uint8*)memoryBlock + engineArenaSize, permanentArenaSize);
-    InitializeArena(&gameMemory.Transient, (uint8*)memoryBlock + engineArenaSize + permanentArenaSize, transientArenaSize);
+    sstl::InitializeArena(&engineMemory, memoryBlock, engineArenaSize);
+    sstl::InitializeArena(&gameMemory.Permanent, (uint8*)memoryBlock + engineArenaSize, permanentArenaSize);
+    sstl::InitializeArena(&gameMemory.Transient, (uint8*)memoryBlock + engineArenaSize + permanentArenaSize, transientArenaSize);
 
-    if(engineMemory.BaseAddress)
+    if(engineMemory.Base)
     {
         HWND windowHandle;
         if(Win32CreateWindow(instance, WindowTitle, 1280, 720, &windowHandle))
@@ -45,7 +45,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, LPSTR, int)
             {
                 RenderCommands renderCommands = {};
                 renderCommands.MaxQuads = 16384;
-                renderCommands.Quads = PushArray(&engineMemory, RenderCommandQuad, renderCommands.MaxQuads);
+                renderCommands.Quads = sstl::PushArray<RenderCommandQuad>(&engineMemory, renderCommands.MaxQuads);
 
                 GameAssets gameAssets = {};
                 AssetManager assetManager = {};
@@ -118,7 +118,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, LPSTR, int)
                 }
 
                 D3D11ShutdownRenderer(&renderer);
-                VirtualFree(engineMemory.BaseAddress, 0, MEM_RELEASE);
+                VirtualFree(engineMemory.Base, 0, MEM_RELEASE);
             }
             else
             {

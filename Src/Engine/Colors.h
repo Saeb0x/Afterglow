@@ -1,6 +1,7 @@
-#if !defined(COLORS_H)
+#if !defined(AFTERGLOW_COLORS_H)
+#define AFTERGLOW_COLORS_H
 
-#include "Core/Types.h"
+#include "Engine/Types.h"
 
 static uint32 PackColor(uint8 r, uint8 g, uint8 b, uint8 a)
 {
@@ -11,5 +12,4 @@ static uint32 PackColor(uint8 r, uint8 g, uint8 b, uint8 a)
 #define WHITE PackColor(255, 255, 255, 255)
 #define SKY_BLUE PackColor(138, 187, 214, 255)
 
-#define COLORS_H
 #endif

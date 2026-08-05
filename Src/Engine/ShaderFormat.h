@@ -1,6 +1,7 @@
-#if !defined(SHADER_FORMAT_H)
+#if !defined(AFTERGLOW_SHADER_FORMAT_H)
+#define AFTERGLOW_SHADER_FORMAT_H
 
-#include "Core/Types.h"
+#include "Engine/Types.h"
 #include "AssetFormat.h"
 
 #define SHADER_IDENTIFIER { 'A', 'G', 'S', 'H' }
@@ -22,5 +23,4 @@ struct ShaderFileHeader
 
 // NOTE(saeb): Followed in the file by: BytecodeSize bytes of compiled DXBC.
 
-#define SHADER_FORMAT_H
 #endif

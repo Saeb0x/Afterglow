@@ -6,6 +6,6 @@ Docs/
 !/Assets/Shaders/
 
 # Emacs
-.#*
 *~
-#*#
+.#*
+\#*\#

@@ -1,4 +1,5 @@
-#if !defined(ASSET_STATE_H)
+#if !defined(AFTERGLOW_ASSET_STATE_H)
+#define AFTERGLOW_ASSET_STATE_H
 
 enum AssetState
 {
@@ -6,5 +7,4 @@ enum AssetState
     LOADED
 };
 
-#define ASSET_STATE_H
 #endif

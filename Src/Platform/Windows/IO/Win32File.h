@@ -1,7 +1,8 @@
-#if !defined(WIN32FILE_H)
+#if !defined(AFTERGLOW_WIN32FILE_H)
+#define AFTERGLOW_WIN32FILE_H
 
-#include "Core/Types.h"
-#include "Core/Arena.h"
+#include "Engine/Types.h"
+#include "SSTL/Memory.h"
 
 struct ReadFileResult
 {
@@ -9,7 +10,6 @@ struct ReadFileResult
     uint64 Size;
 };
 
-ReadFileResult Win32ReadEntireFile(Arena* transient, const char* path);
+ReadFileResult Win32ReadEntireFile(sstl::Arena* transient, const char* path);
 
-#define WIN32FILE_H
 #endif

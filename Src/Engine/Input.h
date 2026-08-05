@@ -1,6 +1,7 @@
-#if !defined(INPUT_H)
+#if !defined(AFTERGLOW_INPUT_H)
+#define AFTERGLOW_INPUT_H
 
-#include "Core/Types.h"
+#include "Engine/Types.h"
 
 enum Key
 {
@@ -52,5 +53,4 @@ static bool32 Released(ButtonState button)
     return(!button.IsDown && button.WasDown);
 }
 
-#define INPUT_H
 #endif

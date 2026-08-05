@@ -1,10 +1,11 @@
 #if !defined(AFTERGLOW_H)
+#define AFTERGLOW_H
 
-#include "Core/Types.h"
-#include "Core/Arena.h"
+#include "Engine/Types.h"
+#include "SSTL/Memory.h"
 
 #if defined(AG_DEBUG)
-#include "Engine/Console.h"
+    #include "Engine/Console.h"
 #endif
 
 struct RenderCommands;
@@ -15,8 +16,8 @@ struct GameInput;
 struct GameMemory
 {
     bool32 Initialized;
-    Arena Permanent;
-    Arena Transient;
+    sstl::Arena Permanent;
+    sstl::Arena Transient;
 };
 
 struct GameState
@@ -49,5 +50,4 @@ struct GameContext
 void GameInit(GameContext* context);
 void GameUpdateAndRender(GameContext* context);
 
-#define AFTERGLOW_H
 #endif

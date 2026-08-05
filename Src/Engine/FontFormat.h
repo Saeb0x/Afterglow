@@ -1,6 +1,7 @@
-#if !defined(FONT_FORMAT_H)
+#if !defined(AFTERGLOW_FONT_FORMAT_H)
+#define AFTERGLOW_FONT_FORMAT_H
 
-#include "Core/Types.h"
+#include "Engine/Types.h"
 #include "AssetFormat.h"
 
 #define FONT_IDENTIFIER { 'A', 'G', 'F', 'T' }
@@ -26,5 +27,4 @@ struct FontGlyph
 
 // NOTE(saeb): Followed in the file by: AtlasWidth * AtlasHeight raw bytes (single-channel alpha).
 
-#define FONT_FORMAT_H
 #endif

@@ -1,0 +1,3 @@
+[submodule "External/SSTL"]
+	path = External/SSTL
+	url = https://github.com/Saeb0x/SSTL.git

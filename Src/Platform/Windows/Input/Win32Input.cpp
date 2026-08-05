@@ -99,7 +99,7 @@ void Win32ProcessInputMessage(GameInput* input, UINT message, WPARAM wParam, LPA
             uint32 character = (uint32)wParam;
             if(character >= 32 && character < 127) // Printable ASCII; control keys handled via key state
             {
-                if(input->TypedCharacterCount < ArrayCount(input->TypedCharacters))
+                if(input->TypedCharacterCount < sstl::ArrayCount(input->TypedCharacters))
                 {
                     input->TypedCharacters[input->TypedCharacterCount++] = (char)character;
                 }

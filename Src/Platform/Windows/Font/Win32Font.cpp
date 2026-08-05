@@ -4,14 +4,14 @@
 
 #include <string.h>
 
-bool32 FontLoad(D3D11RendererState* renderer, Arena* transient, Font* font, const char* path)
+bool32 FontLoad(D3D11RendererState* renderer, sstl::Arena* transient, Font* font, const char* path)
 {
-    TempMemory temp = BeginTempMemory(transient);
+    sstl::ScratchMemory temp = sstl::BeginScratchMemory(transient);
 
     ReadFileResult file = Win32ReadEntireFile(transient, path);
     if(!file.Data || file.Size < sizeof(FontFileHeader))
     {
-        EndTempMemory(temp);
+        sstl::EndScratchMemory(temp);
         return(false);
     }
 
@@ -20,14 +20,14 @@ bool32 FontLoad(D3D11RendererState* renderer, Arena* transient, Font* font, cons
     char fontIdentifier[4] = FONT_IDENTIFIER;
     if(memcmp(header->Header.Identifier, fontIdentifier, 4) != 0 || header->Header.Version != FONT_VERSION || header->GlyphCount != 256)
     {
-        EndTempMemory(temp);
+        sstl::EndScratchMemory(temp);
         return(false);
     }
 
     uint64 expectedSize = sizeof(FontFileHeader) + (sizeof(FontGlyph) * header->GlyphCount) + ((uint64)header->AtlasWidth * (uint64)header->AtlasHeight);
     if(file.Size != expectedSize)
     {
-        EndTempMemory(temp);
+        sstl::EndScratchMemory(temp);
         return(false);
     }
 
@@ -57,7 +57,7 @@ bool32 FontLoad(D3D11RendererState* renderer, Arena* transient, Font* font, cons
     ID3D11Texture2D* texture = 0;
     HRESULT textureResult = renderer->Device->CreateTexture2D(&textureDesc, &textureData, &texture);
 
-    EndTempMemory(temp);
+    sstl::EndScratchMemory(temp);
 
     if(FAILED(textureResult))
     {

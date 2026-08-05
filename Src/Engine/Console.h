@@ -1,7 +1,8 @@
 #if defined(AG_DEBUG)
-#if !defined(CONSOLE_H)
+#if !defined(AFTERGLOW_CONSOLE_H)
+#define AFTERGLOW_CONSOLE_H
 
-#include "Core/Types.h"
+#include "Engine/Types.h"
 #include "Input.h"
 #include "Text.h"
 #include "Colors.h"
@@ -190,6 +191,5 @@ static void ConsoleUpdateAndRender(Console* console, GameInput* input, RenderCom
     }
 }
 
-#define CONSOLE_H
 #endif
 #endif

@@ -1,12 +1,12 @@
-#if !defined(WIN32FONT_H)
+#if !defined(AFTERGLOW_WIN32FONT_H)
+#define AFTERGLOW_WIN32FONT_H
 
-#include "Core/Types.h"
-#include "Core/Arena.h"
+#include "Engine/Types.h"
+#include "SSTL/Memory.h"
 #include "Engine/Text.h"
 
 struct D3D11RendererState;
 
-bool32 FontLoad(D3D11RendererState* renderer, Arena* transient, Font* font, const char* path);
+bool32 FontLoad(D3D11RendererState* renderer, sstl::Arena* transient, Font* font, const char* path);
 
-#define WIN32FONT_H
 #endif

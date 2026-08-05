@@ -110,7 +110,7 @@ static bool32 D3D11InitDevice(D3D11RendererState* renderer, HWND windowHandle, i
                                              0,
                                              deviceFlags,
                                              featureLevels,
-                                             ArrayCount(featureLevels),
+                                             sstl::ArrayCount(featureLevels),
                                              D3D11_SDK_VERSION,
                                              &renderer->Device,
                                              &supportedFeatureLevel,
@@ -165,7 +165,7 @@ struct D3D11ShaderBytecode
     uint32 Size;
 };
 
-static bool32 D3D11ReadShaderFile(Arena* transient, const char* path, uint32 expectedStage, D3D11ShaderBytecode* outBytecode)
+static bool32 D3D11ReadShaderFile(sstl::Arena* transient, const char* path, uint32 expectedStage, D3D11ShaderBytecode* outBytecode)
 {
     ReadFileResult file = Win32ReadEntireFile(transient, path);
     if(!file.Data || file.Size < sizeof(ShaderFileHeader))
@@ -196,8 +196,8 @@ static void D3D11QuadPassAppendQuad(D3D11RendererState* renderer, uint32 materia
 {
     D3D11QuadPass* quadPass = &renderer->QuadPass;
 
-    Assert(materialHandle != 0);
-    Assert(quadPass->InstanceCount < quadPass->MaxQuads);
+    SSTL_ASSERT(materialHandle != 0);
+    SSTL_ASSERT(quadPass->InstanceCount < quadPass->MaxQuads);
     if(quadPass->InstanceCount >= quadPass->MaxQuads)
     {
         return;
@@ -206,7 +206,7 @@ static void D3D11QuadPassAppendQuad(D3D11RendererState* renderer, uint32 materia
     // NOTE(saeb): Input arrives sorted, so quads sharing material + texture are adjacent and collapse into one batch.
     if(quadPass->BatchCount == 0 || quadPass->Batches[quadPass->BatchCount - 1].Texture != texture || quadPass->Batches[quadPass->BatchCount - 1].MaterialHandle != materialHandle)
     {
-        Assert(quadPass->BatchCount < MAX_QUAD_PASS_BATCHES);
+        SSTL_ASSERT(quadPass->BatchCount < MAX_QUAD_PASS_BATCHES);
         if(quadPass->BatchCount >= MAX_QUAD_PASS_BATCHES)
         {
             return;
@@ -237,10 +237,10 @@ static void D3D11QuadPassAppendQuad(D3D11RendererState* renderer, uint32 materia
     quadPass->InstanceCount++;
 }
 
-static bool32 D3D11InitQuadPass(D3D11RendererState* renderer, Arena* permanent, Arena* transient, uint32 maxQuads)
+static bool32 D3D11InitQuadPass(D3D11RendererState* renderer, sstl::Arena* permanent, sstl::Arena* transient, uint32 maxQuads)
 {
     // NOTE(saeb): The sort key packs the submission index into 16 bits.
-    Assert(maxQuads <= 65536);
+    SSTL_ASSERT(maxQuads <= 65536);
 
     D3D11QuadPass* quadPass = &renderer->QuadPass;
 
@@ -249,10 +249,10 @@ static bool32 D3D11InitQuadPass(D3D11RendererState* renderer, Arena* permanent, 
     quadPass->BatchCount = 0;
     quadPass->TextureRegistryCount = 1;
 
-    quadPass->Instances = PushArray(permanent, QuadInstance, maxQuads);
-    quadPass->Batches = PushArray(permanent, DrawBatch, MAX_QUAD_PASS_BATCHES);
-    quadPass->SortKeys = PushArray(permanent, uint64, maxQuads);
-    quadPass->SortScratch = PushArray(permanent, uint64, maxQuads);
+    quadPass->Instances = sstl::PushArray<QuadInstance>(permanent, maxQuads);
+    quadPass->Batches = sstl::PushArray<DrawBatch>(permanent, MAX_QUAD_PASS_BATCHES);
+    quadPass->SortKeys = sstl::PushArray<uint64>(permanent, maxQuads);
+    quadPass->SortScratch = sstl::PushArray<uint64>(permanent, maxQuads);
 
     // NOTE(saeb): Shared unit quad - every quad is this geometry expanded by its instance rect.
     static const QuadVertex unitQuad[] =
@@ -314,7 +314,7 @@ static bool32 D3D11InitQuadPass(D3D11RendererState* renderer, Arena* permanent, 
         return(false);
     }
 
-    TempMemory shaderMemory = BeginTempMemory(transient);
+    sstl::ScratchMemory shaderMemory = sstl::BeginScratchMemory(transient);
 
     D3D11ShaderBytecode vertexBytecode;
     D3D11ShaderBytecode pixelBytecode;
@@ -322,7 +322,7 @@ static bool32 D3D11InitQuadPass(D3D11RendererState* renderer, Arena* permanent, 
 
     if(!D3D11ReadShaderFile(transient, "Data/QuadVS.aga", SHADER_STAGE_VERTEX, &vertexBytecode) || !D3D11ReadShaderFile(transient, "Data/QuadPS.aga", SHADER_STAGE_PIXEL, &pixelBytecode) || !D3D11ReadShaderFile(transient, "Data/QuadPSAlpha.aga", SHADER_STAGE_PIXEL, &pixelAlphaBytecode))
     {
-        EndTempMemory(shaderMemory);
+        sstl::EndScratchMemory(shaderMemory);
         return(false);
     }
 
@@ -339,9 +339,9 @@ static bool32 D3D11InitQuadPass(D3D11RendererState* renderer, Arena* permanent, 
         { "COLOR", 0, DXGI_FORMAT_R8G8B8A8_UNORM, 1, offsetof(QuadInstance, Color), D3D11_INPUT_PER_INSTANCE_DATA, 1 }
     };
 
-    HRESULT inputLayoutResult = renderer->Device->CreateInputLayout(inputLayout, ArrayCount(inputLayout), vertexBytecode.Data, vertexBytecode.Size, &quadPass->InputLayout);
+    HRESULT inputLayoutResult = renderer->Device->CreateInputLayout(inputLayout, sstl::ArrayCount(inputLayout), vertexBytecode.Data, vertexBytecode.Size, &quadPass->InputLayout);
 
-    EndTempMemory(shaderMemory);
+    sstl::EndScratchMemory(shaderMemory);
 
     if(FAILED(vertexShaderResult) || FAILED(pixelShaderResult) || FAILED(pixelShaderAlphaResult) || FAILED(inputLayoutResult))
     {
@@ -446,7 +446,7 @@ static bool32 D3D11InitQuadPass(D3D11RendererState* renderer, Arena* permanent, 
     return(true);
 }
 
-bool32 D3D11InitRenderer(D3D11RendererState* renderer, HWND windowHandle, int32 width, int32 height, Arena* permanent, Arena* transient, uint32 maxQuads)
+bool32 D3D11InitRenderer(D3D11RendererState* renderer, HWND windowHandle, int32 width, int32 height, sstl::Arena* permanent, sstl::Arena* transient, uint32 maxQuads)
 {
     if(!D3D11InitDevice(renderer, windowHandle, width, height))
     {
@@ -678,7 +678,7 @@ uint32 D3D11RegisterTexture(D3D11RendererState* renderer, ID3D11ShaderResourceVi
 {
     D3D11QuadPass* quadPass = &renderer->QuadPass;
 
-    Assert(quadPass->TextureRegistryCount < MAX_TEXTURE_HANDLES);
+    SSTL_ASSERT(quadPass->TextureRegistryCount < MAX_TEXTURE_HANDLES);
     if(quadPass->TextureRegistryCount >= MAX_TEXTURE_HANDLES)
     {
         return(0);
@@ -692,7 +692,7 @@ uint32 D3D11RegisterTexture(D3D11RendererState* renderer, ID3D11ShaderResourceVi
 
 uint32 D3D11RegisterMaterial(D3D11RendererState* renderer, Material* material)
 {
-    Assert(renderer->MaterialCount < MAX_MATERIALS);
+    SSTL_ASSERT(renderer->MaterialCount < MAX_MATERIALS);
     if(renderer->MaterialCount >= MAX_MATERIALS)
     {
         return(0);

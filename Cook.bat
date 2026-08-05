@@ -1,5 +1,5 @@
 @echo off
-setlocal EnableDelayedExpansion
+setlocal enabledelayedexpansion
 
 set ROOT=%~dp0
 set COOKER=%ROOT%Build\Tools\AgCooker.exe
@@ -19,23 +19,23 @@ if not exist "%OUT%" mkdir "%OUT%"
 echo [Afterglow] Cooking shaders...
 
 "%COOKER%" shader "%SHADERS%\Quad.hlsl" VSMain vs_5_0 "%OUT%\QuadVS.aga"
-if !errorlevel! neq 0 goto error
+if %errorlevel% neq 0 goto error
 
 "%COOKER%" shader "%SHADERS%\Quad.hlsl" PSMain ps_5_0 "%OUT%\QuadPS.aga"
-if !errorlevel! neq 0 goto error
+if %errorlevel% neq 0 goto error
 
 "%COOKER%" shader "%SHADERS%\Quad.hlsl" PSMainAlpha ps_5_0 "%OUT%\QuadPSAlpha.aga"
-if !errorlevel! neq 0 goto error
+if %errorlevel% neq 0 goto error
 
 echo [Afterglow] Cooking fonts...
 
 call :CookFonts
-if !errorlevel! neq 0 goto error
+if %errorlevel% neq 0 goto error
 
 echo [Afterglow] Cooking textures...
 
 call :CookTextures
-if !errorlevel! neq 0 goto error
+if %errorlevel% neq 0 goto error
 
 echo [Afterglow] Cooking succeeded.
 goto end
@@ -50,7 +50,7 @@ if not exist "%FONTS%\LMDebug_0.png" (
     exit /b 0
 )
 "%COOKER%" font "%FONTS%\LMDebug.fnt" "%FONTS%\LMDebug_0.png" "%OUT%\UIFont.aga"
-exit /b !errorlevel!
+exit /b %errorlevel%
 
 :CookTextures
 if not exist "%TEXTURES%\S.png" (
@@ -58,7 +58,7 @@ if not exist "%TEXTURES%\S.png" (
     exit /b 0
 )
 "%COOKER%" texture "%TEXTURES%\S.png" "%OUT%\S.aga"
-exit /b !errorlevel!
+exit /b %errorlevel%
 
 :error
 echo.

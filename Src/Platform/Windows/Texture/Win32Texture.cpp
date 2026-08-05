@@ -5,14 +5,14 @@
 
 #include <string.h>
 
-bool32 TextureLoad(D3D11RendererState* renderer, Arena* transient, Texture* texture, const char* path)
+bool32 TextureLoad(D3D11RendererState* renderer, sstl::Arena* transient, Texture* texture, const char* path)
 {
-    TempMemory temp = BeginTempMemory(transient);
+    sstl::ScratchMemory temp = sstl::BeginScratchMemory(transient);
 
     ReadFileResult file = Win32ReadEntireFile(transient, path);
     if(!file.Data || file.Size < sizeof(TextureFileHeader))
     {
-        EndTempMemory(temp);
+        sstl::EndScratchMemory(temp);
         return(false);
     }
 
@@ -21,14 +21,14 @@ bool32 TextureLoad(D3D11RendererState* renderer, Arena* transient, Texture* text
     char textureIdentifier[4] = TEXTURE_IDENTIFIER;
     if(memcmp(header->Header.Identifier, textureIdentifier, 4) != 0 || header->Header.Version != TEXTURE_VERSION)
     {
-        EndTempMemory(temp);
+        sstl::EndScratchMemory(temp);
         return(false);
     }
 
     uint64 expectedSize = sizeof(TextureFileHeader) + ((uint64)header->Width * (uint64)header->Height * 4);
     if(file.Size != expectedSize)
     {
-        EndTempMemory(temp);
+        sstl::EndScratchMemory(temp);
         return(false);
     }
 
@@ -51,7 +51,7 @@ bool32 TextureLoad(D3D11RendererState* renderer, Arena* transient, Texture* text
     ID3D11Texture2D* gpuTexture = 0;
     HRESULT textureResult = renderer->Device->CreateTexture2D(&textureDesc, &textureData, &gpuTexture);
 
-    EndTempMemory(temp);
+    sstl::EndScratchMemory(temp);
 
     if(FAILED(textureResult))
     {

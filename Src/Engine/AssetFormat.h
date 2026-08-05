@@ -1,6 +1,7 @@
-#if !defined(ASSET_FORMAT_H)
+#if !defined(AFTERGLOW_ASSET_FORMAT_H)
+#define AFTERGLOW_ASSET_FORMAT_H
 
-#include "Core/Types.h"
+#include "Engine/Types.h"
 
 struct AssetHeader
 {
@@ -8,5 +9,4 @@ struct AssetHeader
     uint32 Version;
 };
 
-#define ASSET_FORMAT_H
 #endif

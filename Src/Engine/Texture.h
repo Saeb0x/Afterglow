@@ -1,6 +1,7 @@
-#if !defined(TEXTURE_H)
+#if !defined(AFTERGLOW_TEXTURE_H)
+#define AFTERGLOW_TEXTURE_H
 
-#include "Core/Types.h"
+#include "Engine/Types.h"
 #include "RenderCommands.h"
 #include "AssetState.h"
 
@@ -17,5 +18,4 @@ static void PushSprite(RenderCommands* commands, Texture* texture, real32 x, rea
     PushTexturedQuad(commands, x, y, (real32)texture->Width, (real32)texture->Height, 0.0f, 0.0f, 1.0f, 1.0f, texture->TextureHandle, color);
 }
 
-#define TEXTURE_H
 #endif

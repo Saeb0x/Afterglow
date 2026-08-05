@@ -1,7 +1,8 @@
-#if !defined(ASSET_MANAGER_H)
+#if !defined(AFTERGLOW_ASSET_MANAGER_H)
+#define AFTERGLOW_ASSET_MANAGER_H
 
-#include "Core/Types.h"
-#include "Core/Arena.h"
+#include "Engine/Types.h"
+#include "SSTL/Memory.h"
 #include "Engine/Text.h"
 #include "Engine/Texture.h"
 
@@ -11,8 +12,7 @@ struct AssetManager
 };
 
 void AssetManagerInit(AssetManager* assetManager, void* platformData);
-bool32 AssetManagerLoadFont(AssetManager* assetManager, Arena* transient, Font* font, const char* path);
-bool32 AssetManagerLoadTexture(AssetManager* assetManager, Arena* transient, Texture* texture, const char* path);
+bool32 AssetManagerLoadFont(AssetManager* assetManager, sstl::Arena* transient, Font* font, const char* path);
+bool32 AssetManagerLoadTexture(AssetManager* assetManager, sstl::Arena* transient, Texture* texture, const char* path);
 
-#define ASSET_MANAGER_H
 #endif

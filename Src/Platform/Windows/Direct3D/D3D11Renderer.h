@@ -1,7 +1,8 @@
-#if !defined(D3D11RENDERER_H)
+#if !defined(AFTERGLOW_D3D11RENDERER_H)
+#define AFTERGLOW_D3D11RENDERER_H
 
-#include "Core/Types.h"
-#include "Core/Arena.h"
+#include "Engine/Types.h"
+#include "SSTL/Memory.h"
 
 #include <windows.h>
 
@@ -98,7 +99,7 @@ struct D3D11RendererState
     uint32 MaterialCount;
 };
 
-bool32 D3D11InitRenderer(D3D11RendererState* renderer, HWND windowHandle, int32 width, int32 height, Arena* permanent, Arena* transient, uint32 maxQuads);
+bool32 D3D11InitRenderer(D3D11RendererState* renderer, HWND windowHandle, int32 width, int32 height, sstl::Arena* permanent, sstl::Arena* transient, uint32 maxQuads);
 void D3D11ResizeRenderer(D3D11RendererState* renderer, int32 width, int32 height);
 void D3D11ShutdownRenderer(D3D11RendererState* renderer);
 
@@ -112,5 +113,4 @@ void D3D11EndQuadPass(D3D11RendererState* renderer);
 uint32 D3D11RegisterTexture(D3D11RendererState* renderer, ID3D11ShaderResourceView* texture, uint32 materialHandle);
 uint32 D3D11RegisterMaterial(D3D11RendererState* renderer, Material* material);
 
-#define D3D11RENDERER_H
 #endif

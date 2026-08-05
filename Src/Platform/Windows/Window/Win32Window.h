@@ -1,6 +1,7 @@
-#if !defined(WIN32WINDOW_H)
+#if !defined(AFTERGLOW_WIN32WINDOW_H)
+#define AFTERGLOW_WIN32WINDOW_H
 
-#include "Core/Types.h"
+#include "Engine/Types.h"
 
 #include <windows.h>
 
@@ -22,5 +23,4 @@ bool32 Win32WindowIsMinimized();
 void Win32ShowWindow(HWND windowHandle);
 void Win32GetWindowDimensions(HWND windowHandle, WindowDimensions* outDims);
 
-#define WIN32WINDOW_H
 #endif

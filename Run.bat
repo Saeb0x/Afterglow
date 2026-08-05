@@ -1,20 +1,25 @@
 @echo off
 setlocal
 
-set MODE=debug
-if /i "%1"=="release" set MODE=release
+set BUILD=debug
+if /i "%1"=="release" set BUILD=release
 
-if /i "%MODE%"=="debug" (
-    set EXE=%~dp0Build\Debug\Afterglow.exe
+set BUILD_DIR=%~dp0Build\Debug
+if /i "%BUILD%"=="release" set BUILD_DIR=%~dp0Build\Release
+
+if exist "%BUILD_DIR%" (
+    pushd "%BUILD_DIR%"
+
+    if not exist "Afterglow.exe" (
+        echo [Afterglow] Afterglow.exe not found. Run Build.bat %BUILD% first.
+        popd
+        exit /b 1
+    )
+
+    start "" "Afterglow.exe"
+    popd
 ) else (
-    set EXE=%~dp0Build\Release\Afterglow.exe
+    echo [Afterglow] Afterglow.exe not found. Run Build.bat %BUILD% first.
 )
-
-if not exist "%EXE%" (
-    echo [Afterglow] "%EXE%" not found. Run Build.bat %MODE% first.
-    exit /b 1
-)
-
-"%EXE%"
 
 endlocal

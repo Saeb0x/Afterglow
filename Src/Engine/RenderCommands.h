@@ -1,6 +1,7 @@
-#if !defined(RENDER_COMMANDS_H)
+#if !defined(AFTERGLOW_RENDER_COMMANDS_H)
+#define AFTERGLOW_RENDER_COMMANDS_H
 
-#include "Core/Types.h"
+#include "Engine/Types.h"
 
 struct RenderCommandQuad
 {
@@ -23,7 +24,7 @@ struct RenderCommands
 
 static void PushTexturedQuad(RenderCommands* commands, real32 x, real32 y, real32 width, real32 height, real32 u0, real32 v0, real32 u1, real32 v1, uint32 textureHandle, uint32 color)
 {
-    Assert(commands->QuadCount < commands->MaxQuads);
+    SSTL_ASSERT(commands->QuadCount < commands->MaxQuads);
     if(commands->QuadCount >= commands->MaxQuads)
     {
         return;
@@ -49,5 +50,4 @@ static void PushQuad(RenderCommands* commands, real32 x, real32 y, real32 width,
     PushTexturedQuad(commands, x, y, width, height, 0.0f, 0.0f, 1.0f, 1.0f, 0, color);
 }
 
-#define RENDER_COMMANDS_H
 #endif

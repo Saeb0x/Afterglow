@@ -2,7 +2,7 @@
 
 #include <windows.h>
 
-ReadFileResult Win32ReadEntireFile(Arena* transient, const char* path)
+ReadFileResult Win32ReadEntireFile(sstl::Arena* transient, const char* path)
 {
     ReadFileResult result = {};
 
@@ -15,7 +15,7 @@ ReadFileResult Win32ReadEntireFile(Arena* transient, const char* path)
     LARGE_INTEGER size;
     if(GetFileSizeEx(file, &size))
     {
-        uint8* buffer = (uint8*)PushSize(transient, size.QuadPart, 4);
+        uint8* buffer = (uint8*)sstl::PushSize(transient, size.QuadPart, 4);
 
         DWORD bytesRead;
         if(ReadFile(file, buffer, (DWORD)size.QuadPart, &bytesRead, 0) && bytesRead == size.QuadPart)

@@ -10,7 +10,7 @@
 static void CommandPerf(Console* console, const char* args, void* data)
 {
     GameContext* context = (GameContext*)data;
-    GameState* state = (GameState*)context->Memory->Permanent.BaseAddress;
+    GameState* state = (GameState*)context->Memory->Permanent.Base;
 
     state->ShowPerf = !state->ShowPerf;
     ConsolePrint(console, state->ShowPerf ? "perf: on" : "perf: off");
@@ -42,7 +42,7 @@ static void DrawPerfOverlay(GameContext* context, Font* font)
 
 void GameInit(GameContext* context)
 {
-    GameState* state = PushStruct(&context->Memory->Permanent, GameState);
+    GameState* state = sstl::PushStruct<GameState>(&context->Memory->Permanent);
 
     AssetManagerLoadFont(context->Loader, &context->Memory->Transient, &context->Assets->UIFont, "Data/UIFont.aga");
 
@@ -56,7 +56,7 @@ void GameInit(GameContext* context)
 
 void GameUpdateAndRender(GameContext* context)
 {
-    GameState* state = (GameState*)context->Memory->Permanent.BaseAddress;
+    GameState* state = (GameState*)context->Memory->Permanent.Base;
 
 #if defined(AG_DEBUG)
     if(state->ShowPerf)

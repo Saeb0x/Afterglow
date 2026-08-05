@@ -1,6 +1,7 @@
-#if !defined(TEXT_H)
+#if !defined(AFTERGLOW_TEXT_H)
+#define AFTERGLOW_TEXT_H
 
-#include "Core/Types.h"
+#include "Engine/Types.h"
 #include "FontFormat.h"
 #include "RenderCommands.h"
 #include "AssetState.h"
@@ -48,5 +49,4 @@ static void PushText(RenderCommands* commands, Font* font, real32 x, real32 y, c
     }
 }
 
-#define TEXT_H
 #endif
