@@ -100,9 +100,6 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, LPSTR, int)
                         D3D11SubmitRenderCommands(&renderer, &renderCommands);
                         D3D11EndQuadPass(&renderer);
                         D3D11Present(&renderer);
-#if defined(AG_DEBUG)
-                        context.DrawCallCount = renderer.QuadPass.BatchCount;
-#endif
                     }
 
                     LARGE_INTEGER endCounter = Win32GetPerformanceCounterTicks();
