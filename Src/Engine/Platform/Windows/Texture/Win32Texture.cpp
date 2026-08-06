@@ -1,6 +1,6 @@
 #include "Win32Texture.h"
-#include "Platform/Windows/Direct3D/D3D11Renderer.h"
-#include "Platform/Windows/IO/Win32File.h"
+#include "Engine/Platform/Windows/Direct3D/D3D11Renderer.h"
+#include "Engine/Platform/Windows/IO/Win32File.h"
 #include "Engine/TextureFormat.h"
 
 #include <string.h>

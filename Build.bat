@@ -18,11 +18,11 @@ pushd "%BUILD_DIR%"
 
 if /i "%BUILD%"=="debug" (
     echo [Afterglow] Compiling and linking game [debug]...
-    cl /nologo /std:c++17 /permissive- /DAG_DEBUG /DWINVER=0x0A00 /D_WIN32_WINNT=0x0A00 /MTd /Zi /I "%~dp0Src" /I "%~dp0External\SSTL\Include" "%~dp0Src\Platform\Windows\Win32Main.cpp" /Fd"Afterglow.pdb" /Fe"Afterglow.exe" /link /nologo /DEBUG kernel32.lib user32.lib d3d11.lib dxgi.lib
+    cl /nologo /std:c++17 /permissive- /DAG_DEBUG /DWINVER=0x0A00 /D_WIN32_WINNT=0x0A00 /MTd /Zi /I "%~dp0Src" /I "%~dp0External\SSTL\Include" "%~dp0Src\Engine\Platform\Windows\Win32Main.cpp" /Fd"Afterglow.pdb" /Fe"Afterglow.exe" /link /nologo /DEBUG kernel32.lib user32.lib d3d11.lib dxgi.lib
     if !errorlevel! neq 0 goto error
 ) else (
     echo [Afterglow] Compiling and linking game [release]...
-    cl /nologo /std:c++17 /permissive- /DAG_RELEASE /DWINVER=0x0A00 /D_WIN32_WINNT=0x0A00 /MT /O2 /I "%~dp0Src" /I "%~dp0External\SSTL\Include" "%~dp0Src\Platform\Windows\Win32Main.cpp" /Fe"Afterglow.exe" /link /nologo kernel32.lib user32.lib d3d11.lib dxgi.lib
+    cl /nologo /std:c++17 /permissive- /DAG_RELEASE /DWINVER=0x0A00 /D_WIN32_WINNT=0x0A00 /MT /O2 /I "%~dp0Src" /I "%~dp0External\SSTL\Include" "%~dp0Src\Engine\Platform\Windows\Win32Main.cpp" /Fe"Afterglow.exe" /link /nologo kernel32.lib user32.lib d3d11.lib dxgi.lib
     if !errorlevel! neq 0 goto error
 )
 
