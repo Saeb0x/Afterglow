@@ -1,27 +1,37 @@
 #include "Win32Window.h"
 #include "Engine/Platform/Windows/Input/Win32Input.h"
 
-struct Win32WindowState
+struct PlatformSurface
 {
+    HWND Handle;
     bool32 ShouldQuit;
-    bool32 Minimized;
+    bool32 Suspended;
     bool32 ResizePending;
-    WindowDimensions PendingResizeDimensions;
+    SurfaceDimensions PendingResizeDimensions;
 };
-static Win32WindowState Window;
+static PlatformSurface Surface;
 
-void Win32ShowWindow(HWND windowHandle)
+HWND Win32GetWindowHandle(PlatformSurface* surface)
 {
-    ShowWindow(windowHandle, SW_SHOW);
+    return(surface->Handle);
 }
 
-void Win32GetWindowDimensions(HWND windowHandle, WindowDimensions* outDims)
+static void Win32UpdateSurfaceDimensions(HWND windowHandle, SurfaceDimensions* outDims)
 {
     RECT windowClientRect;
     GetClientRect(windowHandle, &windowClientRect);
-
     outDims->Width = windowClientRect.right - windowClientRect.left;
     outDims->Height = windowClientRect.bottom - windowClientRect.top;
+}
+
+void PlatformShowSurface(PlatformSurface* surface)
+{
+    ShowWindow(surface->Handle, SW_SHOW);
+}
+
+void PlatformGetSurfaceDimensions(PlatformSurface* surface, SurfaceDimensions* outDims)
+{
+    Win32UpdateSurfaceDimensions(surface->Handle, outDims);
 }
 
 static LRESULT CALLBACK Win32WindowCallback(HWND windowHandle,
@@ -46,12 +56,12 @@ static LRESULT CALLBACK Win32WindowCallback(HWND windowHandle,
 
         case WM_SIZE:
         {
-            Window.Minimized = (wParam == SIZE_MINIMIZED);
+            Surface.Suspended = (wParam == SIZE_MINIMIZED);
 
-            if(!Window.Minimized)
+            if(!Surface.Suspended)
             {
-                Window.ResizePending = true;
-                Win32GetWindowDimensions(windowHandle, &Window.PendingResizeDimensions);
+                Surface.ResizePending = true;
+                Win32UpdateSurfaceDimensions(windowHandle, &Surface.PendingResizeDimensions);
             }
         } break;
 
@@ -71,8 +81,10 @@ static LRESULT CALLBACK Win32WindowCallback(HWND windowHandle,
     return(result);
 }
 
-bool32 Win32CreateWindow(HINSTANCE instance, const char* title, int32 width, int32 height, HWND* outWindowHandle)
+bool32 PlatformCreateSurface(const char* title, int32 width, int32 height, PlatformSurface** outSurface)
 {
+    HINSTANCE instance = GetModuleHandle(0);
+
     WNDCLASSEX windowClass = {};
     windowClass.cbSize = sizeof(WNDCLASSEX);
     windowClass.style = CS_OWNDC | CS_HREDRAW | CS_VREDRAW;
@@ -85,7 +97,7 @@ bool32 Win32CreateWindow(HINSTANCE instance, const char* title, int32 width, int
     {
         return(false);
     }
-    
+
     HWND windowHandle = CreateWindowEx(0,
                                        windowClass.lpszClassName,
                                        title,
@@ -101,19 +113,20 @@ bool32 Win32CreateWindow(HINSTANCE instance, const char* title, int32 width, int
     {
         return(false);
     }
-    
-    *outWindowHandle = windowHandle;
+
+    Surface.Handle = windowHandle;
+    *outSurface = &Surface;
+
     return(true);
 }
-
-void Win32ProcessPendingMessages(GameInput* input)
+void PlatformPumpEvents(GameInput* input)
 {
     MSG message;
     while(PeekMessage(&message, 0, 0, 0, PM_REMOVE))
     {
         if(message.message == WM_QUIT)
         {
-            Window.ShouldQuit = true;
+            Surface.ShouldQuit = true;
             continue;
         }
 
@@ -124,24 +137,24 @@ void Win32ProcessPendingMessages(GameInput* input)
     }
 }
 
-bool32 Win32WindowShouldQuit()
+bool32 PlatformShouldQuit()
 {
-    return(Window.ShouldQuit);
+    return(Surface.ShouldQuit);
 }
 
-bool32 Win32WindowConsumeResize(WindowDimensions* outDims)
+bool32 PlatformConsumeResize(SurfaceDimensions* outDims)
 {
-    if(Window.ResizePending)
+    if(Surface.ResizePending)
     {
-        *outDims = Window.PendingResizeDimensions;
-        Window.ResizePending = false;
+        *outDims = Surface.PendingResizeDimensions;
+        Surface.ResizePending = false;
         return(true);
     }
-    
+
     return(false);
 }
 
-bool32 Win32WindowIsMinimized()
+bool32 PlatformIsSuspended()
 {
-    return(Window.Minimized);
+    return(Surface.Suspended);
 }

@@ -1,27 +1,24 @@
 #include "Win32Time.h"
 
-LARGE_INTEGER Win32GetPerformanceCounterFrequency()
-{
-    LARGE_INTEGER performanceCounterFrequency;
-    QueryPerformanceFrequency(&performanceCounterFrequency);
+#include <windows.h>
 
-    return(performanceCounterFrequency);
+uint64 PlatformGetClockFrequency()
+{
+    LARGE_INTEGER frequency;
+    QueryPerformanceFrequency(&frequency);
+
+    return((uint64)frequency.QuadPart);
 }
 
-LARGE_INTEGER Win32GetPerformanceCounterTicks()
+uint64 PlatformGetClockTicks()
 {
-    LARGE_INTEGER performanceCounterTicks;
-    QueryPerformanceCounter(&performanceCounterTicks);
+    LARGE_INTEGER ticks;
+    QueryPerformanceCounter(&ticks);
 
-    return(performanceCounterTicks);
+    return((uint64)ticks.QuadPart);
 }
 
-real32 Win32GetSecondsElapsed(LARGE_INTEGER frequency, LARGE_INTEGER start, LARGE_INTEGER end)
+real32 PlatformGetSecondsElapsed(uint64 frequency, uint64 start, uint64 end)
 {
-    return((real32)(end.QuadPart - start.QuadPart) / (real32)frequency.QuadPart);
-}
-
-real32 Win32GetFramesPerSecond(real32 secondsElapsed)
-{
-    return(1.0f / secondsElapsed);
+    return((real32)(end - start) / (real32)frequency);
 }

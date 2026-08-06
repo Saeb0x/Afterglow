@@ -34,14 +34,14 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, LPSTR, int)
 
     if(engineMemory.Base)
     {
-        HWND windowHandle;
-        if(Win32CreateWindow(instance, WindowTitle, 1280, 720, &windowHandle))
+        PlatformSurface* surface;
+        if(PlatformCreateSurface(WindowTitle, 1280, 720, &surface))
         {
-            WindowDimensions dims;
-            Win32GetWindowDimensions(windowHandle, &dims);
+            SurfaceDimensions dims;
+            PlatformGetSurfaceDimensions(surface, &dims);
 
             D3D11RendererState renderer = {};
-            if(D3D11InitRenderer(&renderer, windowHandle, dims.Width, dims.Height, &engineMemory, &gameMemory.Transient, 16384))
+            if(D3D11InitRenderer(&renderer, Win32GetWindowHandle(surface), dims.Width, dims.Height, &engineMemory, &gameMemory.Transient, 16384))
             {
                 RenderCommands renderCommands = {};
                 renderCommands.MaxQuads = 16384;
@@ -60,31 +60,31 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, LPSTR, int)
                 context.Loader = &assetManager;
                 context.Input = &input;
 
-                LARGE_INTEGER perfCounterFrequency = Win32GetPerformanceCounterFrequency();
-                LARGE_INTEGER lastCounter = Win32GetPerformanceCounterTicks();
+                uint64 clockFrequency = PlatformGetClockFrequency();
+                uint64 lastCounter = PlatformGetClockTicks();
 
                 GameInit(&context);
-                
-                Win32ShowWindow(windowHandle);
+
+                PlatformShowSurface(surface);
                 bool32 running = true;
                 while(running)
                 {
                     Win32BeginInputFrame(&input);
-                    Win32ProcessPendingMessages(&input);
+                    PlatformPumpEvents(&input);
 
-                    if(Win32WindowShouldQuit())
+                    if(PlatformShouldQuit())
                     {
                         running = false;
                         break;
                     }
 
-                    if(Win32WindowConsumeResize(&dims))
+                    if(PlatformConsumeResize(&dims))
                     {
                         D3D11ResizeRenderer(&renderer, dims.Width, dims.Height);
                     }
 
                     gameMemory.Transient.Used = 0;
-                    if(!Win32WindowIsMinimized())
+                    if(!PlatformIsSuspended())
                     {
                         D3D11BeginFrame(&renderer);
                         D3D11BeginQuadPass(&renderer, dims.Width, dims.Height);
@@ -102,8 +102,8 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, LPSTR, int)
                         D3D11Present(&renderer);
                     }
 
-                    LARGE_INTEGER endCounter = Win32GetPerformanceCounterTicks();
-                    context.DeltaTime = Win32GetSecondsElapsed(perfCounterFrequency, lastCounter, endCounter);
+                    uint64 endCounter = PlatformGetClockTicks();
+                    context.DeltaTime = PlatformGetSecondsElapsed(clockFrequency, lastCounter, endCounter);
 
                     real32 maxDeltaTime = 0.1f;
                     if(context.DeltaTime > maxDeltaTime)
