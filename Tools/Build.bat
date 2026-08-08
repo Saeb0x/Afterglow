@@ -12,9 +12,8 @@ if not exist "%BUILD_DIR%" mkdir "%BUILD_DIR%"
 pushd "%BUILD_DIR%"
 
 echo [Afterglow Tools] Compiling and linking cooker [debug]...
-cl /nologo /Zi /I "%~dp0Cooker" /I "%~dp0..\Src" "%~dp0Cooker\Src\AgCooker.cpp" /Fd"AgCooker.pdb" /Fe"AgCooker.exe" /link d3dcompiler.lib
-if %errorlevel% neq 0 goto
-
+cl /nologo /std:c++17 /permissive- /MTd /Zi /I "%~dp0Cooker" /I "%~dp0..\Src" /I "%~dp0..\External\SSTL\Include" "%~dp0Cooker\Src\AgCooker.cpp" /Fd"AgCooker.pdb" /Fe"AgCooker.exe" /link /nologo /DEBUG d3dcompiler.lib
+if %errorlevel% neq 0 goto error
 echo.
 echo [Afterglow Tools] Build succeeded.
 popd

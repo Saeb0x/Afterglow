@@ -2,7 +2,7 @@
 #define AFTERGLOW_TEXT_H
 
 #include "Engine/Types.h"
-#include "FontFormat.h"
+#include "AssetFormats/FontFormat.h"
 #include "RenderCommands.h"
 #include "AssetState.h"
 
