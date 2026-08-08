@@ -3,7 +3,7 @@
 
 #include "Engine/Types.h"
 #include "SSTL/Memory.h"
-#include "Engine/Text.h"
+#include "Engine/Assets/Text.h"
 
 struct D3D11RendererState;
 

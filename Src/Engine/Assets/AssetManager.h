@@ -2,9 +2,10 @@
 #define AFTERGLOW_ASSET_MANAGER_H
 
 #include "Engine/Types.h"
+#include "Text.h"
+#include "Texture.h"
+
 #include "SSTL/Memory.h"
-#include "Engine/Text.h"
-#include "Engine/Texture.h"
 
 struct AssetManager
 {

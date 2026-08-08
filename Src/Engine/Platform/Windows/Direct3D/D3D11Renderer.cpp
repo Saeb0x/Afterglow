@@ -1,6 +1,6 @@
 #include "D3D11Renderer.h"
 #include "Engine/RenderCommands.h"
-#include "Engine/AssetFormats/ShaderFormat.h"
+#include "Engine/Assets/AssetFormats/ShaderFormat.h"
 #include "Engine/Platform/Windows/IO/Win32File.h"
 
 #include <string.h>

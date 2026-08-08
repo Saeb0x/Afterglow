@@ -2,7 +2,7 @@
 #include "Engine/Platform.h"
 #include "Engine/Input.h"
 #include "Engine/RenderCommands.h"
-#include "Engine/AssetManager.h"
+#include "Engine/Assets/AssetManager.h"
 #include "GameAssets.h"
 
 #include <stdio.h>
