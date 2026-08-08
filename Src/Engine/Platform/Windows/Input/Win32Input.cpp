@@ -108,7 +108,7 @@ void Win32ProcessInputMessage(GameInput* input, UINT message, WPARAM wParam, LPA
 
         case WM_MOUSEMOVE:
         {
-            input->Mouse.X = (int32)(int16)LOWORD(lParam); // Cast through int16 for negative coords
+            input->Mouse.X = (int32)(int16)LOWORD(lParam);
             input->Mouse.Y = (int32)(int16)HIWORD(lParam);
         } break;
 
@@ -116,17 +116,17 @@ void Win32ProcessInputMessage(GameInput* input, UINT message, WPARAM wParam, LPA
         {
             input->Mouse.Left.IsDown = true;
         } break;
-        
+
         case WM_LBUTTONUP:
         {
             input->Mouse.Left.IsDown = false;
         } break;
-        
+
         case WM_RBUTTONDOWN:
         {
             input->Mouse.Right.IsDown = true;
         } break;
-        
+
         case WM_RBUTTONUP:
         {
             input->Mouse.Right.IsDown = false;

@@ -2,19 +2,12 @@
 #define AFTERGLOW_GAME_H
 
 #include "Engine/Types.h"
-#include "SSTL/Memory.h"
 
+struct GameMemory;
+struct GameInput;
 struct RenderCommands;
 struct AssetManager;
 struct GameAssets;
-struct GameInput;
-
-struct GameMemory
-{
-    bool32 Initialized;
-    sstl::Arena Permanent;
-    sstl::Arena Transient;
-};
 
 struct GameState
 {
@@ -23,10 +16,9 @@ struct GameState
 struct GameContext
 {
     GameMemory* Memory;
+    GameInput* Input;
     RenderCommands* Render;
     AssetManager* Loader;
-    GameInput* Input;
-
     GameAssets* Assets;
 
     int32 ScreenWidth;

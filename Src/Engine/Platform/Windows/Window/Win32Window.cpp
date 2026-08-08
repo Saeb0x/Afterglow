@@ -1,22 +1,23 @@
 #include "Win32Window.h"
 #include "Engine/Platform/Windows/Input/Win32Input.h"
 
-struct PlatformSurface
+#include "SSTL/Memory.h"
+
+static bool8 PlatformInitialized = false;
+
+struct PlatformData
 {
-    HWND Handle;
-    bool32 ShouldQuit;
-    bool32 Suspended;
-    bool32 ResizePending;
-    SurfaceDimensions PendingResizeDimensions;
+    HWND WindowHandle;
+    bool32 WindowShouldQuit;
+    bool32 WindowMinimized;
+    bool32 WindowResizePending;
+    WindowDimensions WindowPendingResizeDimensions;
+
+    GameMemory Memory;
 };
-static PlatformSurface Surface;
+static PlatformData Data;
 
-HWND Win32GetWindowHandle(PlatformSurface* surface)
-{
-    return(surface->Handle);
-}
-
-static void Win32UpdateSurfaceDimensions(HWND windowHandle, SurfaceDimensions* outDims)
+static void Win32UpdateWindowDimensions(HWND windowHandle, WindowDimensions* outDims)
 {
     RECT windowClientRect;
     GetClientRect(windowHandle, &windowClientRect);
@@ -24,20 +25,7 @@ static void Win32UpdateSurfaceDimensions(HWND windowHandle, SurfaceDimensions* o
     outDims->Height = windowClientRect.bottom - windowClientRect.top;
 }
 
-void PlatformShowSurface(PlatformSurface* surface)
-{
-    ShowWindow(surface->Handle, SW_SHOW);
-}
-
-void PlatformGetSurfaceDimensions(PlatformSurface* surface, SurfaceDimensions* outDims)
-{
-    Win32UpdateSurfaceDimensions(surface->Handle, outDims);
-}
-
-static LRESULT CALLBACK Win32WindowCallback(HWND windowHandle,
-                                            UINT message,
-                                            WPARAM wParam,
-                                            LPARAM lParam)
+static LRESULT CALLBACK Win32WindowCallback(HWND windowHandle, UINT message, WPARAM wParam, LPARAM lParam)
 {
     LRESULT result = 0;
 
@@ -56,12 +44,12 @@ static LRESULT CALLBACK Win32WindowCallback(HWND windowHandle,
 
         case WM_SIZE:
         {
-            Surface.Suspended = (wParam == SIZE_MINIMIZED);
+            Data.WindowMinimized = (wParam == SIZE_MINIMIZED);
 
-            if(!Surface.Suspended)
+            if(!Data.WindowMinimized)
             {
-                Surface.ResizePending = true;
-                Win32UpdateSurfaceDimensions(windowHandle, &Surface.PendingResizeDimensions);
+                Data.WindowResizePending = true;
+                Win32UpdateWindowDimensions(windowHandle, &Data.WindowPendingResizeDimensions);
             }
         } break;
 
@@ -81,44 +69,66 @@ static LRESULT CALLBACK Win32WindowCallback(HWND windowHandle,
     return(result);
 }
 
-bool32 PlatformCreateSurface(const char* title, int32 width, int32 height, PlatformSurface** outSurface)
+bool8 PlatformInit(const char* title, int32 width, int32 height, GameMemory** outMemory)
 {
-    HINSTANCE instance = GetModuleHandle(0);
+    uint64 engineArenaSize = 16 * sstl::Megabytes;
+    uint64 permanentArenaSize = 64 * sstl::Megabytes;
+    uint64 transientArenaSize = 1 * sstl::Gigabytes;
+    uint64 totalSize = engineArenaSize + permanentArenaSize + transientArenaSize;
 
-    WNDCLASSEX windowClass = {};
-    windowClass.cbSize = sizeof(WNDCLASSEX);
-    windowClass.style = CS_OWNDC | CS_HREDRAW | CS_VREDRAW;
-    windowClass.lpfnWndProc = Win32WindowCallback;
-    windowClass.hInstance = instance;
-    windowClass.hCursor = LoadCursor(0, IDC_ARROW);
-    windowClass.lpszClassName = "AfterglowWindowClass";
+    void* memoryBlock = (void*)VirtualAlloc(0, totalSize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
 
-    if(!RegisterClassEx(&windowClass))
+    sstl::InitializeArena(&Data.Memory.Engine, memoryBlock, engineArenaSize);
+    sstl::InitializeArena(&Data.Memory.Permanent, (uint8*)memoryBlock + engineArenaSize, permanentArenaSize);
+    sstl::InitializeArena(&Data.Memory.Transient, (uint8*)memoryBlock + engineArenaSize + permanentArenaSize, transientArenaSize);
+
+    if(Data.Memory.Engine.Base)
     {
-        return(false);
+        Data.Memory.Initialized = true;
+
+        HINSTANCE instance = GetModuleHandle(0);
+
+        WNDCLASSEX windowClass = {};
+        windowClass.cbSize = sizeof(WNDCLASSEX);
+        windowClass.style = CS_OWNDC | CS_HREDRAW | CS_VREDRAW;
+        windowClass.lpfnWndProc = Win32WindowCallback;
+        windowClass.hInstance = instance;
+        windowClass.hCursor = LoadCursor(0, IDC_ARROW);
+        windowClass.lpszClassName = "AfterglowWindowClass";
+
+        if(!RegisterClassEx(&windowClass))
+        {
+            VirtualFree(Data.Memory.Engine.Base, 0, MEM_RELEASE);
+            return(false);
+        }
+
+        HWND windowHandle = CreateWindowEx(0,
+                                           windowClass.lpszClassName,
+                                           title,
+                                           WS_OVERLAPPEDWINDOW,
+                                           CW_USEDEFAULT, CW_USEDEFAULT,
+                                           width, height,
+                                           0,
+                                           0,
+                                           instance,
+                                           0);
+
+        if(!windowHandle)
+        {
+            VirtualFree(Data.Memory.Engine.Base, 0, MEM_RELEASE);
+            return(false);
+        }
+
+        Data.WindowHandle = windowHandle;
+        *outMemory = &Data.Memory;
+
+        PlatformInitialized = true;
+        return(true);
     }
 
-    HWND windowHandle = CreateWindowEx(0,
-                                       windowClass.lpszClassName,
-                                       title,
-                                       WS_OVERLAPPEDWINDOW,
-                                       CW_USEDEFAULT, CW_USEDEFAULT,
-                                       width, height,
-                                       0,
-                                       0,
-                                       instance,
-                                       0);
-
-    if(!windowHandle)
-    {
-        return(false);
-    }
-
-    Surface.Handle = windowHandle;
-    *outSurface = &Surface;
-
-    return(true);
+    return(false);
 }
+
 void PlatformPumpEvents(GameInput* input)
 {
     MSG message;
@@ -126,7 +136,7 @@ void PlatformPumpEvents(GameInput* input)
     {
         if(message.message == WM_QUIT)
         {
-            Surface.ShouldQuit = true;
+            Data.WindowShouldQuit = true;
             continue;
         }
 
@@ -137,24 +147,66 @@ void PlatformPumpEvents(GameInput* input)
     }
 }
 
-bool32 PlatformShouldQuit()
+void PlatformShutdown()
 {
-    return(Surface.ShouldQuit);
+    PlatformInitialized = false;
+
+    if(Data.WindowHandle)
+    {
+        DestroyWindow(Data.WindowHandle);
+        Data.WindowHandle = nullptr;
+    }
+
+    if(Data.Memory.Engine.Base)
+    {
+        VirtualFree(Data.Memory.Engine.Base, 0, MEM_RELEASE);
+    }
 }
 
-bool32 PlatformConsumeResize(SurfaceDimensions* outDims)
+void Win32ShowWindow()
 {
-    if(Surface.ResizePending)
+    if(PlatformInitialized)
     {
-        *outDims = Surface.PendingResizeDimensions;
-        Surface.ResizePending = false;
+        ShowWindow(Data.WindowHandle, SW_SHOW);
+    }
+}
+
+bool8 Win32WindowConsumeResize(WindowDimensions* outDims)
+{
+    if(PlatformInitialized && Data.WindowResizePending)
+    {
+        *outDims = Data.WindowPendingResizeDimensions;
+        Data.WindowResizePending = false;
         return(true);
     }
 
     return(false);
 }
 
-bool32 PlatformIsSuspended()
+bool8 Win32WindowShouldQuit()
 {
-    return(Surface.Suspended);
+    return(PlatformInitialized && Data.WindowShouldQuit);
+}
+
+HWND Win32GetWindowHandle()
+{
+    if(PlatformInitialized)
+    {
+        return(Data.WindowHandle);
+    }
+
+    return(nullptr);
+}
+
+void Win32GetWindowDimensions(WindowDimensions* outDims)
+{
+    if(PlatformInitialized)
+    {
+        Win32UpdateWindowDimensions(Data.WindowHandle, outDims);
+    }
+}
+
+bool8 Win32WindowIsMinimized()
+{
+    return(PlatformInitialized && Data.WindowMinimized);
 }

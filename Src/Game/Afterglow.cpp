@@ -1,8 +1,9 @@
 #include "Afterglow.h"
+#include "Engine/Platform.h"
+#include "Engine/Input.h"
 #include "Engine/RenderCommands.h"
 #include "Engine/AssetManager.h"
 #include "GameAssets.h"
-#include "Engine/Input.h"
 
 #include <stdio.h>
 

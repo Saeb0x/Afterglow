@@ -19,117 +19,100 @@ static const char* WindowTitle =
 
 int WINAPI WinMain(HINSTANCE instance, HINSTANCE, LPSTR, int)
 {
-    uint64 engineArenaSize = 16 * sstl::Megabytes;
-    uint64 permanentArenaSize = 64 * sstl::Megabytes;
-    uint64 transientArenaSize = 1 * sstl::Gigabytes;
-    uint64 totalSize = engineArenaSize + permanentArenaSize + transientArenaSize;
+    GameMemory* memory;
+    GameContext context = {};
 
-    void* memoryBlock = (void*)VirtualAlloc(0, totalSize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
-
-    sstl::Arena engineMemory = {};
-    GameMemory gameMemory = {};
-    sstl::InitializeArena(&engineMemory, memoryBlock, engineArenaSize);
-    sstl::InitializeArena(&gameMemory.Permanent, (uint8*)memoryBlock + engineArenaSize, permanentArenaSize);
-    sstl::InitializeArena(&gameMemory.Transient, (uint8*)memoryBlock + engineArenaSize + permanentArenaSize, transientArenaSize);
-
-    if(engineMemory.Base)
+    if(PlatformInit(WindowTitle, 1280, 720, &memory))
     {
-        PlatformSurface* surface;
-        if(PlatformCreateSurface(WindowTitle, 1280, 720, &surface))
+        context.Memory = memory;
+
+        WindowDimensions dims;
+        Win32GetWindowDimensions(&dims);
+
+        D3D11RendererState renderer = {};
+        if(D3D11InitRenderer(&renderer, Win32GetWindowHandle(), dims.Width, dims.Height, &memory->Engine, &memory->Transient, 16384))
         {
-            SurfaceDimensions dims;
-            PlatformGetSurfaceDimensions(surface, &dims);
+            RenderCommands renderCommands = {};
+            renderCommands.MaxQuads = 16384;
+            renderCommands.Quads = sstl::PushArray<RenderCommandQuad>(&memory->Engine, renderCommands.MaxQuads);
 
-            D3D11RendererState renderer = {};
-            if(D3D11InitRenderer(&renderer, Win32GetWindowHandle(surface), dims.Width, dims.Height, &engineMemory, &gameMemory.Transient, 16384))
+            GameAssets gameAssets = {};
+            AssetManager assetManager = {};
+            AssetManagerInit(&assetManager, &renderer);
+
+            GameInput input = {};
+
+            context.Render = &renderCommands;
+            context.Assets = &gameAssets;
+            context.Loader = &assetManager;
+            context.Input = &input;
+
+            uint64 clockFrequency = PlatformGetClockFrequency();
+            uint64 lastCounter = PlatformGetClockTicks();
+
+            GameInit(&context);
+
+            Win32ShowWindow();
+            bool8 running = true;
+            while(running)
             {
-                RenderCommands renderCommands = {};
-                renderCommands.MaxQuads = 16384;
-                renderCommands.Quads = sstl::PushArray<RenderCommandQuad>(&engineMemory, renderCommands.MaxQuads);
+                Win32BeginInputFrame(&input);
+                PlatformPumpEvents(&input);
 
-                GameAssets gameAssets = {};
-                AssetManager assetManager = {};
-                AssetManagerInit(&assetManager, &renderer);
-
-                GameInput input = {};
-
-                GameContext context = {};
-                context.Memory = &gameMemory;
-                context.Render = &renderCommands;
-                context.Assets = &gameAssets;
-                context.Loader = &assetManager;
-                context.Input = &input;
-
-                uint64 clockFrequency = PlatformGetClockFrequency();
-                uint64 lastCounter = PlatformGetClockTicks();
-
-                GameInit(&context);
-
-                PlatformShowSurface(surface);
-                bool32 running = true;
-                while(running)
+                if(Win32WindowShouldQuit())
                 {
-                    Win32BeginInputFrame(&input);
-                    PlatformPumpEvents(&input);
-
-                    if(PlatformShouldQuit())
-                    {
-                        running = false;
-                        break;
-                    }
-
-                    if(PlatformConsumeResize(&dims))
-                    {
-                        D3D11ResizeRenderer(&renderer, dims.Width, dims.Height);
-                    }
-
-                    gameMemory.Transient.Used = 0;
-                    if(!PlatformIsSuspended())
-                    {
-                        D3D11BeginFrame(&renderer);
-                        D3D11BeginQuadPass(&renderer, dims.Width, dims.Height);
-                        renderCommands.QuadCount = 0;
-                        renderCommands.CurrentLayer = 0;
-                        renderCommands.CurrentMaterial = 0;
-
-                        context.ScreenWidth = dims.Width;
-                        context.ScreenHeight = dims.Height;
-
-                        GameUpdateAndRender(&context);
-
-                        D3D11SubmitRenderCommands(&renderer, &renderCommands);
-                        D3D11EndQuadPass(&renderer);
-                        D3D11Present(&renderer);
-                    }
-
-                    uint64 endCounter = PlatformGetClockTicks();
-                    context.DeltaTime = PlatformGetSecondsElapsed(clockFrequency, lastCounter, endCounter);
-
-                    real32 maxDeltaTime = 0.1f;
-                    if(context.DeltaTime > maxDeltaTime)
-                    {
-                        context.DeltaTime = maxDeltaTime;
-                    }
-
-                    lastCounter = endCounter;
+                    running = false;
+                    break;
                 }
 
-                D3D11ShutdownRenderer(&renderer);
-                VirtualFree(engineMemory.Base, 0, MEM_RELEASE);
+                if(Win32WindowConsumeResize(&dims))
+                {
+                    D3D11ResizeRenderer(&renderer, dims.Width, dims.Height);
+                }
+
+                memory->Transient.Used = 0;
+                if(!Win32WindowIsMinimized())
+                {
+                    D3D11BeginFrame(&renderer);
+                    D3D11BeginQuadPass(&renderer, dims.Width, dims.Height);
+                    renderCommands.QuadCount = 0;
+                    renderCommands.CurrentLayer = 0;
+                    renderCommands.CurrentMaterial = 0;
+
+                    context.ScreenWidth = dims.Width;
+                    context.ScreenHeight = dims.Height;
+
+                    GameUpdateAndRender(&context);
+
+                    D3D11SubmitRenderCommands(&renderer, &renderCommands);
+                    D3D11EndQuadPass(&renderer);
+                    D3D11Present(&renderer);
+                }
+
+                uint64 endCounter = PlatformGetClockTicks();
+                context.DeltaTime = PlatformGetSecondsElapsed(clockFrequency, lastCounter, endCounter);
+
+                real32 maxDeltaTime = 0.1f;
+                if(context.DeltaTime > maxDeltaTime)
+                {
+                    context.DeltaTime = maxDeltaTime;
+                }
+
+                lastCounter = endCounter;
             }
-            else
-            {
-                EMB("Renderer initialization failed!");
-            }
+
+            D3D11ShutdownRenderer(&renderer);
+            PlatformShutdown();
         }
         else
         {
-            EMB("Window creation failed!");
+            PlatformShutdown();
+            EMB("Renderer initialization failed!");
         }
     }
     else
     {
-        EMB("Game memory allocation failed!");
+        EMB("Platform initialization failed!");
     }
 
     return(0);

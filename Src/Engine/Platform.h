@@ -3,23 +3,21 @@
 
 #include "Engine/Types.h"
 
-struct GameInput;
-struct PlatformSurface;
+#include "SSTL/Memory.h"
 
-struct SurfaceDimensions
+struct GameInput;
+
+struct GameMemory
 {
-    int32 Width;
-    int32 Height;
+    bool32 Initialized;
+    sstl::Arena Engine;
+    sstl::Arena Permanent;
+    sstl::Arena Transient;
 };
 
-bool32 PlatformCreateSurface(const char* title, int32 width, int32 height, PlatformSurface** outSurface);
-void PlatformShowSurface(PlatformSurface* surface);
-void PlatformGetSurfaceDimensions(PlatformSurface* surface, SurfaceDimensions* outDims);
-
+bool8 PlatformInit(const char* title, int32 width, int32 height, GameMemory** outMemory);
 void PlatformPumpEvents(GameInput* input);
-bool32 PlatformShouldQuit();
-bool32 PlatformConsumeResize(SurfaceDimensions* outDims);
-bool32 PlatformIsSuspended();
+void PlatformShutdown();
 
 uint64 PlatformGetClockFrequency();
 uint64 PlatformGetClockTicks();

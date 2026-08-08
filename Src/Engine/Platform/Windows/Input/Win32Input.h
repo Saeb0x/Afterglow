@@ -2,6 +2,7 @@
 #define AFTERGLOW_WIN32INPUT_H
 
 #include "Engine/Input.h"
+
 #include <windows.h>
 
 void Win32BeginInputFrame(GameInput* input);
