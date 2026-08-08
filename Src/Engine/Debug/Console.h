@@ -3,9 +3,9 @@
 #define AFTERGLOW_CONSOLE_H
 
 #include "Engine/Types.h"
-#include "Input.h"
-#include "Text.h"
-#include "Colors.h"
+#include "Engine/Input.h"
+#include "Engine/Assets/Text.h"
+#include "Engine/Utils/Colors.h"
 
 #include <string.h>
 

@@ -1,6 +1,6 @@
-#include "Engine/Assets/AssetFormats/FontFormat.h"
-#include "Engine/Assets/AssetFormats/TextureFormat.h"
-#include "Engine/Assets/AssetFormats/ShaderFormat.h"
+#include "Engine/Assets/Formats/FontFormat.h"
+#include "Engine/Assets/Formats/TextureFormat.h"
+#include "Engine/Assets/Formats/ShaderFormat.h"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "Deps/stb_image.h"

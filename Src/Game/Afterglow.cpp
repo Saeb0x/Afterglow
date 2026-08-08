@@ -1,11 +1,9 @@
 #include "Afterglow.h"
 #include "Engine/Platform.h"
 #include "Engine/Input.h"
-#include "Engine/RenderCommands.h"
+#include "Engine/Render/RenderCommands.h"
 #include "Engine/Assets/AssetManager.h"
 #include "GameAssets.h"
-
-#include <stdio.h>
 
 void GameInit(GameContext* context)
 {

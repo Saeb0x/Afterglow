@@ -2,8 +2,8 @@
 #define AFTERGLOW_TEXT_H
 
 #include "Engine/Types.h"
-#include "AssetFormats/FontFormat.h"
-#include "Engine/RenderCommands.h"
+#include "Formats/FontFormat.h"
+#include "Engine/Render/RenderCommands.h"
 #include "AssetState.h"
 
 struct Font

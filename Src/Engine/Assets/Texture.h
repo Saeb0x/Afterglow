@@ -2,7 +2,7 @@
 #define AFTERGLOW_TEXTURE_H
 
 #include "Engine/Types.h"
-#include "Engine/RenderCommands.h"
+#include "Engine/Render/RenderCommands.h"
 #include "AssetState.h"
 
 struct Texture
