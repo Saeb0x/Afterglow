@@ -6,59 +6,59 @@ static Key Win32TranslateKey(WPARAM vkCode)
     {
         case VK_RETURN:
         {
-            return(Key::KEY_ENTER);
+            return(Key::Enter);
         }
 
         case VK_BACK:
         {
-            return(Key::KEY_BACKSPACE);
+            return(Key::Backspace);
         }
 
         case VK_ESCAPE:
         {
-            return(Key::KEY_ESCAPE);
+            return(Key::Escape);
         }
 
         case VK_OEM_3:
         {
-            return(Key::KEY_TILDE); // US ANSI keyboard
+            return(Key::Tilde); // US ANSI keyboard
         }
 
         case VK_TAB:
         {
-            return(Key::KEY_TAB);
+            return(Key::Tab);
         }
 
         case VK_UP:
         {
-            return(Key::KEY_UP);
+            return(Key::Up);
         }
 
         case VK_DOWN:
         {
-            return(Key::KEY_DOWN);
+            return(Key::Down);
         }
 
         case VK_LEFT:
         {
-            return(Key::KEY_LEFT);
+            return(Key::Left);
         }
 
         case VK_RIGHT:
         {
-            return(Key::KEY_RIGHT);
+            return(Key::Right);
         }
 
         default:
         {
-            return(Key::KEY_UNKNOWN);
+            return(Key::Unknown);
         }
     }
 }
 
 void Win32BeginInputFrame(GameInput* input)
 {
-    for(usize keyIndex = 0; keyIndex < static_cast<usize>(Key::KEY_COUNT); ++keyIndex)
+    for(usize keyIndex = 0; keyIndex < static_cast<usize>(Key::Count); ++keyIndex)
     {
         input->Keyboard.Keys[keyIndex].WasDown = input->Keyboard.Keys[keyIndex].IsDown;
     }
@@ -78,7 +78,7 @@ void Win32ProcessInputMessage(GameInput* input, UINT message, WPARAM wParam, LPA
         case WM_SYSKEYDOWN:
         {
             Key key = Win32TranslateKey(wParam);
-            if(key != Key::KEY_UNKNOWN)
+            if(key != Key::Unknown)
             {
                 input->Keyboard.Keys[static_cast<usize>(key)].IsDown = true;
             }
@@ -88,7 +88,7 @@ void Win32ProcessInputMessage(GameInput* input, UINT message, WPARAM wParam, LPA
         case WM_SYSKEYUP:
         {
             Key key = Win32TranslateKey(wParam);
-            if(key != Key::KEY_UNKNOWN)
+            if(key != Key::Unknown)
             {
                 input->Keyboard.Keys[static_cast<usize>(key)].IsDown = false;
             }
@@ -145,7 +145,7 @@ void Win32ProcessInputMessage(GameInput* input, UINT message, WPARAM wParam, LPA
         case WM_KILLFOCUS:
         {
             // NOTE(saeb): Lost focus mid-press; the KEY_UP goes to another window, so clear everything to avoid stuck keys.
-            for(usize keyIndex = 0; keyIndex < static_cast<usize>(Key::KEY_COUNT); ++keyIndex)
+            for(usize keyIndex = 0; keyIndex < static_cast<usize>(Key::Count); ++keyIndex)
             {
                 input->Keyboard.Keys[keyIndex].IsDown = false;
             }

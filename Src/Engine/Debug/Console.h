@@ -125,7 +125,7 @@ inline void ConsoleExecute(Console* console)
 
 inline void ConsoleUpdateAndRender(Console* console, GameInput* input, RenderCommands* render, Font* font, int32 screenWidth, int32 screenHeight)
 {
-    if(Pressed(input->Keyboard.Keys[static_cast<usize>(Key::KEY_TILDE)]))
+    if(KeyPressed(input, Key::Tilde))
     {
         console->Opened = !console->Opened;
         return;
@@ -145,17 +145,17 @@ inline void ConsoleUpdateAndRender(Console* console, GameInput* input, RenderCom
         }
     }
 
-    if(Pressed(input->Keyboard.Keys[static_cast<usize>(Key::KEY_BACKSPACE)]) && console->InputLength > 0)
+    if(KeyPressed(input, Key::Backspace) && console->InputLength > 0)
     {
         console->Input[--console->InputLength] = 0;
     }
 
-    if(Pressed(input->Keyboard.Keys[static_cast<usize>(Key::KEY_ENTER)]))
+    if(KeyPressed(input, Key::Enter))
     {
         ConsoleExecute(console);
     }
 
-    if(Pressed(input->Keyboard.Keys[static_cast<usize>(Key::KEY_ESCAPE)]))
+    if(KeyPressed(input, Key::Escape))
     {
         console->Opened = false;
     }

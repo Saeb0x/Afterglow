@@ -5,12 +5,12 @@
 
 enum class Key : uint8
 {
-    KEY_UNKNOWN,
+    Unknown,
 
-    KEY_ENTER, KEY_BACKSPACE, KEY_ESCAPE, KEY_TILDE, KEY_TAB,
-    KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT,
+    Enter, Backspace, Escape, Tilde, Tab,
+    Up, Down, Left, Right,
 
-    KEY_COUNT
+    Count
 };
 
 struct ButtonState
@@ -19,9 +19,24 @@ struct ButtonState
     bool32 WasDown; // Held last frame; snapshotted at frame start
 };
 
+inline bool32 IsDown(ButtonState button)
+{
+    return(button.IsDown);
+}
+
+inline bool32 Pressed(ButtonState button)
+{
+    return(button.IsDown && !button.WasDown);
+}
+
+inline bool32 Released(ButtonState button)
+{
+    return(!button.IsDown && button.WasDown);
+}
+
 struct Keyboard
 {
-    ButtonState Keys[static_cast<usize>(Key::KEY_COUNT)];
+    ButtonState Keys[static_cast<usize>(Key::Count)];
 };
 
 struct Mouse
@@ -42,19 +57,24 @@ struct GameInput
     uint32 TypedCharacterCount;
 };
 
-inline bool32 IsDown(ButtonState button)
+inline ButtonState GetKeyButtonState(GameInput* input, Key key)
 {
-    return(button.IsDown);
+    return(input->Keyboard.Keys[static_cast<usize>(key)]);
 }
 
-inline bool32 Pressed(ButtonState button)
+inline bool32 KeyDown(GameInput* input, Key key)
 {
-    return(button.IsDown && !button.WasDown);
+    return(IsDown(GetKeyButtonState(input, key)));
 }
 
-inline bool32 Released(ButtonState button)
+inline bool32 KeyPressed(GameInput* input, Key key)
 {
-    return(!button.IsDown && button.WasDown);
+    return(Pressed(GetKeyButtonState(input, key)));
+}
+
+inline bool32 KeyReleased(GameInput* input, Key key)
+{
+    return(Released(GetKeyButtonState(input, key)));
 }
 
 #endif
