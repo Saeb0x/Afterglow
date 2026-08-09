@@ -3,7 +3,7 @@
 
 #include "Engine/Types.h"
 
-static uint32 PackColor(uint8 r, uint8 g, uint8 b, uint8 a)
+inline uint32 PackColor(uint8 r, uint8 g, uint8 b, uint8 a)
 {
     return ((uint32)a << 24) | ((uint32)b << 16) | ((uint32)g << 8) | (uint32)r;
 }

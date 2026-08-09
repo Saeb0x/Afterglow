@@ -24,4 +24,7 @@ using sstl::bool32;
 using sstl::byte;
 using sstl::handle;
 
+using sstl::usize;
+using sstl::isize;
+
 #endif

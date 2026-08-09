@@ -70,7 +70,7 @@ bool32 TextureLoad(D3D11RendererState* renderer, sstl::Arena* transient, Texture
     texture->Width = header->Width;
     texture->Height = header->Height;
     texture->TextureHandle = D3D11RegisterTexture(renderer, srv, renderer->QuadPass.StandardMaterial);
-    texture->State = LOADED;
+    texture->State = AssetState::LOADED;
 
     return(true);
 }

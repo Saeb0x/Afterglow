@@ -74,7 +74,7 @@ bool32 FontLoad(D3D11RendererState* renderer, sstl::Arena* transient, Font* font
     }
 
     font->TextureHandle = D3D11RegisterTexture(renderer, atlasSRV, renderer->QuadPass.GlyphMaterial);
-    font->State = LOADED;
+    font->State = AssetState::LOADED;
 
     return(true);
 }

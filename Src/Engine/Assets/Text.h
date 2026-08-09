@@ -14,7 +14,7 @@ struct Font
     FontGlyph Glyphs[256];
 };
 
-static real32 TextWidth(Font* font, const char* text, real32 scale)
+inline real32 TextWidth(Font* font, const char* text, real32 scale)
 {
     real32 width = 0.0f;
 
@@ -27,7 +27,7 @@ static real32 TextWidth(Font* font, const char* text, real32 scale)
     return(width);
 }
 
-static void PushText(RenderCommands* commands, Font* font, real32 x, real32 y, const char* text, uint32 color, real32 scale)
+inline void PushText(RenderCommands* commands, Font* font, real32 x, real32 y, const char* text, uint32 color, real32 scale)
 {
     real32 cursorX = x;
 

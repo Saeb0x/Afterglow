@@ -39,7 +39,7 @@ struct Console
     void* Data;
 };
 
-static void ConsoleRegisterCommand(Console* console, const char* name, ConsoleCommandFunc handler)
+inline void ConsoleRegisterCommand(Console* console, const char* name, ConsoleCommandFunc handler)
 {
     if(console->CommandCount < CONSOLE_MAX_COMMANDS)
     {
@@ -49,13 +49,13 @@ static void ConsoleRegisterCommand(Console* console, const char* name, ConsoleCo
     }
 }
 
-static void CommandClear(Console* console, const char* args, void* data)
+inline void CommandClear(Console* console, const char* args, void* data)
 {
     memset(console->Lines, 0, sizeof(console->Lines));
     console->LineCount = 0;
 }
 
-static void ConsoleInit(Console* console, void* data)
+inline void ConsoleInit(Console* console, void* data)
 {
     console->Opened = false;
     console->LineCount = 0;
@@ -67,7 +67,7 @@ static void ConsoleInit(Console* console, void* data)
     ConsoleRegisterCommand(console, "clear", CommandClear);
 }
 
-static void ConsolePrint(Console* console, const char* text)
+inline void ConsolePrint(Console* console, const char* text)
 {
     char* line = console->Lines[console->LineCount % CONSOLE_MAX_LINES];
 
@@ -82,7 +82,7 @@ static void ConsolePrint(Console* console, const char* text)
     ++console->LineCount;
 }
 
-static void ConsoleExecute(Console* console)
+inline void ConsoleExecute(Console* console)
 {
     if(console->InputLength == 0)
     {
@@ -123,9 +123,9 @@ static void ConsoleExecute(Console* console)
     console->Input[0] = 0;
 }
 
-static void ConsoleUpdateAndRender(Console* console, GameInput* input, RenderCommands* render, Font* font, int32 screenWidth, int32 screenHeight)
+inline void ConsoleUpdateAndRender(Console* console, GameInput* input, RenderCommands* render, Font* font, int32 screenWidth, int32 screenHeight)
 {
-    if(Pressed(input->Keys[KEY_TILDE]))
+    if(Pressed(input->Keyboard.Keys[static_cast<usize>(Key::KEY_TILDE)]))
     {
         console->Opened = !console->Opened;
         return;
@@ -145,17 +145,17 @@ static void ConsoleUpdateAndRender(Console* console, GameInput* input, RenderCom
         }
     }
 
-    if(Pressed(input->Keys[KEY_BACKSPACE]) && console->InputLength > 0)
+    if(Pressed(input->Keyboard.Keys[static_cast<usize>(Key::KEY_BACKSPACE)]) && console->InputLength > 0)
     {
         console->Input[--console->InputLength] = 0;
     }
 
-    if(Pressed(input->Keys[KEY_ENTER]))
+    if(Pressed(input->Keyboard.Keys[static_cast<usize>(Key::KEY_ENTER)]))
     {
         ConsoleExecute(console);
     }
 
-    if(Pressed(input->Keys[KEY_ESCAPE]))
+    if(Pressed(input->Keyboard.Keys[static_cast<usize>(Key::KEY_ESCAPE)]))
     {
         console->Opened = false;
     }

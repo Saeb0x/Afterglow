@@ -3,13 +3,12 @@
 
 #include "Engine/Types.h"
 
-enum Key
+enum class Key : uint8
 {
     KEY_UNKNOWN,
 
-    KEY_ENTER, KEY_ESCAPE, KEY_BACKSPACE, KEY_TAB,
+    KEY_ENTER, KEY_BACKSPACE, KEY_ESCAPE, KEY_TILDE, KEY_TAB,
     KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT,
-    KEY_TILDE,
 
     KEY_COUNT
 };
@@ -20,7 +19,12 @@ struct ButtonState
     bool32 WasDown; // Held last frame; snapshotted at frame start
 };
 
-struct MouseState
+struct Keyboard
+{
+    ButtonState Keys[static_cast<usize>(Key::KEY_COUNT)];
+};
+
+struct Mouse
 {
     int32 X;
     int32 Y;
@@ -31,24 +35,24 @@ struct MouseState
 
 struct GameInput
 {
-    ButtonState Keys[KEY_COUNT];
-    MouseState Mouse;
+    Keyboard Keyboard;
+    Mouse Mouse;
 
     char TypedCharacters[32]; // This frame's WM_CHAR queue
     uint32 TypedCharacterCount;
 };
 
-static bool32 IsDown(ButtonState button)
+inline bool32 IsDown(ButtonState button)
 {
     return(button.IsDown);
 }
 
-static bool32 Pressed(ButtonState button)
+inline bool32 Pressed(ButtonState button)
 {
     return(button.IsDown && !button.WasDown);
 }
 
-static bool32 Released(ButtonState button)
+inline bool32 Released(ButtonState button)
 {
     return(!button.IsDown && button.WasDown);
 }
