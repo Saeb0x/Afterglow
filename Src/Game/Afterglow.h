@@ -7,11 +7,6 @@ struct GameMemory;
 struct GameInput;
 struct RenderCommands;
 struct AssetManager;
-struct GameAssets;
-
-struct GameState
-{
-};
 
 struct GameContext
 {
@@ -19,7 +14,6 @@ struct GameContext
     GameInput* Input;
     RenderCommands* Render;
     AssetManager* Loader;
-    GameAssets* Assets;
 
     int32 ScreenWidth;
     int32 ScreenHeight;

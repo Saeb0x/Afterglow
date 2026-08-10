@@ -1,7 +1,7 @@
 #include "Win32Window.h"
 #include "Engine/Platform/Windows/Input/Win32Input.h"
 
-#include "SSTL/Memory.h"
+#include <SSTL/Memory.h>
 
 static bool8 PlatformInitialized = false;
 
@@ -71,21 +71,17 @@ static LRESULT CALLBACK Win32WindowCallback(HWND windowHandle, UINT message, WPA
 
 bool8 PlatformInit(const char* title, int32 width, int32 height, GameMemory** outMemory)
 {
-    uint64 engineArenaSize = 16 * sstl::Megabytes;
     uint64 permanentArenaSize = 64 * sstl::Megabytes;
     uint64 transientArenaSize = 1 * sstl::Gigabytes;
-    uint64 totalSize = engineArenaSize + permanentArenaSize + transientArenaSize;
+    uint64 totalSize = permanentArenaSize + transientArenaSize;
 
     void* memoryBlock = (void*)VirtualAlloc(0, totalSize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
 
-    sstl::InitializeArena(&Data.Memory.Engine, memoryBlock, engineArenaSize);
-    sstl::InitializeArena(&Data.Memory.Permanent, (uint8*)memoryBlock + engineArenaSize, permanentArenaSize);
-    sstl::InitializeArena(&Data.Memory.Transient, (uint8*)memoryBlock + engineArenaSize + permanentArenaSize, transientArenaSize);
+    sstl::InitializeArena(&Data.Memory.Permanent, (uint8*)memoryBlock, permanentArenaSize);
+    sstl::InitializeArena(&Data.Memory.Transient, (uint8*)memoryBlock + permanentArenaSize, transientArenaSize);
 
-    if(Data.Memory.Engine.Base)
+    if(Data.Memory.Permanent.Base)
     {
-        Data.Memory.Initialized = true;
-
         HINSTANCE instance = GetModuleHandle(0);
 
         WNDCLASSEX windowClass = {};
@@ -98,7 +94,7 @@ bool8 PlatformInit(const char* title, int32 width, int32 height, GameMemory** ou
 
         if(!RegisterClassEx(&windowClass))
         {
-            VirtualFree(Data.Memory.Engine.Base, 0, MEM_RELEASE);
+            VirtualFree(Data.Memory.Permanent.Base, 0, MEM_RELEASE);
             return(false);
         }
 
@@ -115,7 +111,7 @@ bool8 PlatformInit(const char* title, int32 width, int32 height, GameMemory** ou
 
         if(!windowHandle)
         {
-            VirtualFree(Data.Memory.Engine.Base, 0, MEM_RELEASE);
+            VirtualFree(Data.Memory.Permanent.Base, 0, MEM_RELEASE);
             return(false);
         }
 
@@ -157,9 +153,9 @@ void PlatformShutdown()
         Data.WindowHandle = nullptr;
     }
 
-    if(Data.Memory.Engine.Base)
+    if(Data.Memory.Permanent.Base)
     {
-        VirtualFree(Data.Memory.Engine.Base, 0, MEM_RELEASE);
+        VirtualFree(Data.Memory.Permanent.Base, 0, MEM_RELEASE);
     }
 }
 

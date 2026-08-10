@@ -2,8 +2,9 @@
 #define AFTERGLOW_WIN32FONT_H
 
 #include "Engine/Types.h"
-#include "SSTL/Memory.h"
 #include "Engine/Assets/Text.h"
+
+#include <SSTL/Memory.h>
 
 struct D3D11RendererState;
 

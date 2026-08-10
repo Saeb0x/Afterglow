@@ -6,8 +6,8 @@
 #include "IO/Win32File.cpp"
 #include "Font/Win32Font.cpp"
 #include "Texture/Win32Texture.cpp"
-#include "Time/Win32Time.cpp"
 #include "Assets/Win32AssetManager.cpp"
+#include "Time/Win32Time.cpp"
 #include "Input/Win32Input.cpp"
 
 static const char* WindowTitle =
@@ -30,20 +30,18 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, LPSTR, int)
         Win32GetWindowDimensions(&dims);
 
         D3D11RendererState renderer = {};
-        if(D3D11InitRenderer(&renderer, Win32GetWindowHandle(), dims.Width, dims.Height, &memory->Engine, &memory->Transient, 16384))
+        if(D3D11InitRenderer(&renderer, Win32GetWindowHandle(), dims.Width, dims.Height, &memory->Permanent, &memory->Transient, 16384))
         {
             RenderCommands renderCommands = {};
             renderCommands.MaxQuads = 16384;
-            renderCommands.Quads = sstl::PushArray<RenderCommandQuad>(&memory->Engine, renderCommands.MaxQuads);
+            renderCommands.Quads = sstl::PushArray<RenderCommandQuad>(&memory->Permanent, renderCommands.MaxQuads);
 
-            GameAssets gameAssets = {};
             AssetManager assetManager = {};
             AssetManagerInit(&assetManager, &renderer);
 
             GameInput input = {};
 
             context.Render = &renderCommands;
-            context.Assets = &gameAssets;
             context.Loader = &assetManager;
             context.Input = &input;
 

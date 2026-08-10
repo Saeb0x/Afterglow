@@ -3,14 +3,12 @@
 
 #include "Engine/Types.h"
 
-#include "SSTL/Memory.h"
+#include <SSTL/Memory.h>
 
 struct GameInput;
 
 struct GameMemory
 {
-    bool32 Initialized;
-    sstl::Arena Engine;
     sstl::Arena Permanent;
     sstl::Arena Transient;
 };

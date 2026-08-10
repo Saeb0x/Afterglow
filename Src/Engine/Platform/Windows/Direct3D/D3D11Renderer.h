@@ -2,7 +2,8 @@
 #define AFTERGLOW_D3D11RENDERER_H
 
 #include "Engine/Types.h"
-#include "SSTL/Memory.h"
+
+#include <SSTL/Memory.h>
 
 #include <windows.h>
 

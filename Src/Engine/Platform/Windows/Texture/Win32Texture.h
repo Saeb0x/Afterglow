@@ -2,8 +2,9 @@
 #define AFTERGLOW_WIN32TEXTURE_H
 
 #include "Engine/Types.h"
-#include "SSTL/Memory.h"
 #include "Engine/Assets/Texture.h"
+
+#include <SSTL/Memory.h>
 
 struct D3D11RendererState;
 

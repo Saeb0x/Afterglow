@@ -2,7 +2,8 @@
 #define AFTERGLOW_WIN32FILE_H
 
 #include "Engine/Types.h"
-#include "SSTL/Memory.h"
+
+#include <SSTL/Memory.h>
 
 struct ReadFileResult
 {
