@@ -136,7 +136,7 @@ void PlatformPumpEvents(GameInput* input)
             continue;
         }
 
-        Win32ProcessInputMessage(input, message.message, message.wParam, message.lParam);
+        Win32ProcessInput(input, message.message, message.wParam, message.lParam);
 
         TranslateMessage(&message);
         DispatchMessage(&message);

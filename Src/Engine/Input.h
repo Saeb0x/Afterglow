@@ -13,23 +13,34 @@ enum class Key : uint8
     Count
 };
 
+enum class MouseButton : uint8
+{
+    Unknown,
+
+    Right,
+    Wheel,
+    Left,
+
+    Count
+};
+
 struct ButtonState
 {
     bool32 IsDown; // Currently held; persists across frames
     bool32 WasDown; // Held last frame; snapshotted at frame start
 };
 
-inline bool32 IsDown(ButtonState button)
+inline bool8 IsDown(ButtonState button)
 {
     return(button.IsDown);
 }
 
-inline bool32 Pressed(ButtonState button)
+inline bool8 Pressed(ButtonState button)
 {
     return(button.IsDown && !button.WasDown);
 }
 
-inline bool32 Released(ButtonState button)
+inline bool8 Released(ButtonState button)
 {
     return(!button.IsDown && button.WasDown);
 }
@@ -43,9 +54,7 @@ struct Mouse
 {
     int32 X;
     int32 Y;
-    ButtonState Right;
-    ButtonState Middle;
-    ButtonState Left;
+    ButtonState Buttons[static_cast<usize>(MouseButton::Count)];
 };
 
 struct GameInput
@@ -57,24 +66,44 @@ struct GameInput
     uint32 TypedCharacterCount;
 };
 
-inline ButtonState GetKeyButtonState(GameInput* input, Key key)
+inline ButtonState GetButtonState(GameInput* input, Key key)
 {
     return(input->Keyboard.Keys[static_cast<usize>(key)]);
 }
 
-inline bool32 KeyDown(GameInput* input, Key key)
+inline ButtonState GetButtonState(GameInput* input, MouseButton mouseButton)
 {
-    return(IsDown(GetKeyButtonState(input, key)));
+    return(input->Mouse.Buttons[static_cast<usize>(mouseButton)]);
+}
+        
+inline bool8 KeyDown(GameInput* input, Key key)
+{
+    return(IsDown(GetButtonState(input, key)));
 }
 
-inline bool32 KeyPressed(GameInput* input, Key key)
+inline bool8 KeyPressed(GameInput* input, Key key)
 {
-    return(Pressed(GetKeyButtonState(input, key)));
+    return(Pressed(GetButtonState(input, key)));
 }
 
-inline bool32 KeyReleased(GameInput* input, Key key)
+inline bool8 KeyReleased(GameInput* input, Key key)
 {
-    return(Released(GetKeyButtonState(input, key)));
+    return(Released(GetButtonState(input, key)));
+}
+ 
+inline bool8 MouseButtonDown(GameInput* input, MouseButton mouseButton)
+{
+    return(IsDown(GetButtonState(input, mouseButton)));
+}
+
+inline bool8 MouseButtonPressed(GameInput* input, MouseButton mouseButton)
+{
+    return(Pressed(GetButtonState(input, mouseButton)));
+}
+
+inline bool8 MouseButtonReleased(GameInput* input, MouseButton mouseButton)
+{
+    return(Released(GetButtonState(input, mouseButton)));
 }
 
 #endif

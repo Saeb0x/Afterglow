@@ -54,7 +54,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, LPSTR, int)
             bool8 running = true;
             while(running)
             {
-                Win32BeginInputFrame(&input);
+                Win32BeginInput(&input);
                 PlatformPumpEvents(&input);
 
                 if(Win32WindowShouldQuit())

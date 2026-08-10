@@ -56,21 +56,22 @@ static Key Win32TranslateKey(WPARAM vkCode)
     }
 }
 
-void Win32BeginInputFrame(GameInput* input)
+void Win32BeginInput(GameInput* input)
 {
     for(usize keyIndex = 0; keyIndex < static_cast<usize>(Key::Count); ++keyIndex)
     {
         input->Keyboard.Keys[keyIndex].WasDown = input->Keyboard.Keys[keyIndex].IsDown;
     }
 
-    input->Mouse.Left.WasDown = input->Mouse.Left.IsDown;
-    input->Mouse.Right.WasDown = input->Mouse.Right.IsDown;
-    input->Mouse.Middle.WasDown = input->Mouse.Middle.IsDown;
+    for(usize mouseButtonIndex = 0; mouseButtonIndex < static_cast<usize>(MouseButton::Count); ++mouseButtonIndex)
+    {
+        input->Mouse.Buttons[mouseButtonIndex].WasDown = input->Mouse.Buttons[mouseButtonIndex].IsDown;
+    }
 
     input->TypedCharacterCount = 0;
 }
 
-void Win32ProcessInputMessage(GameInput* input, UINT message, WPARAM wParam, LPARAM lParam)
+void Win32ProcessInput(GameInput* input, UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch(message)
     {
@@ -114,32 +115,32 @@ void Win32ProcessInputMessage(GameInput* input, UINT message, WPARAM wParam, LPA
 
         case WM_LBUTTONDOWN:
         {
-            input->Mouse.Left.IsDown = true;
+            input->Mouse.Buttons[static_cast<usize>(MouseButton::Left)].IsDown = true;
         } break;
 
         case WM_LBUTTONUP:
         {
-            input->Mouse.Left.IsDown = false;
+            input->Mouse.Buttons[static_cast<usize>(MouseButton::Left)].IsDown = false;
         } break;
 
         case WM_RBUTTONDOWN:
         {
-            input->Mouse.Right.IsDown = true;
+            input->Mouse.Buttons[static_cast<usize>(MouseButton::Right)].IsDown = true;
         } break;
 
         case WM_RBUTTONUP:
         {
-            input->Mouse.Right.IsDown = false;
+            input->Mouse.Buttons[static_cast<usize>(MouseButton::Right)].IsDown = false;
         } break;
 
         case WM_MBUTTONDOWN:
         {
-            input->Mouse.Middle.IsDown = true;
+            input->Mouse.Buttons[static_cast<usize>(MouseButton::Wheel)].IsDown = true;
         } break;
 
         case WM_MBUTTONUP:
         {
-            input->Mouse.Middle.IsDown = false;
+            input->Mouse.Buttons[static_cast<usize>(MouseButton::Wheel)].IsDown = false;
         } break;
 
         case WM_KILLFOCUS:
@@ -150,9 +151,11 @@ void Win32ProcessInputMessage(GameInput* input, UINT message, WPARAM wParam, LPA
                 input->Keyboard.Keys[keyIndex].IsDown = false;
             }
 
-            input->Mouse.Left.IsDown = false;
-            input->Mouse.Right.IsDown = false;
-            input->Mouse.Middle.IsDown = false;
+            for(usize mouseButtonIndex = 0; mouseButtonIndex < static_cast<usize>(MouseButton::Count); ++mouseButtonIndex)
+            {
+                input->Mouse.Buttons[mouseButtonIndex].IsDown = false;
+            }
+
         } break;
     }
 }

@@ -5,7 +5,7 @@
 
 #include <windows.h>
 
-void Win32BeginInputFrame(GameInput* input);
-void Win32ProcessInputMessage(GameInput* input, UINT message, WPARAM wParam, LPARAM lParam);
+void Win32BeginInput(GameInput* input);
+void Win32ProcessInput(GameInput* input, UINT message, WPARAM wParam, LPARAM lParam);
 
 #endif
