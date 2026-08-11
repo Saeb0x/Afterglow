@@ -3,6 +3,8 @@
 #include "Engine/Assets/Formats/ShaderFormat.h"
 #include "Engine/Platform/Windows/IO/Win32File.h"
 
+#include <SSTL\Utility.h>
+
 #include <string.h>
 
 #include <directxmath.h>

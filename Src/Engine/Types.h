@@ -2,8 +2,6 @@
 #define AFTERGLOW_TYPES_H
 
 #include <SSTL/Types.h>
-#include <SSTL/Utility.h>
-#include <SSTL/Assert.h>
 
 using sstl::int8;
 using sstl::int16;
