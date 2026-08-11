@@ -3,6 +3,8 @@
 
 #include "Engine/Types.h"
 
+#include <SSTL/Assert.h>
+
 struct RenderCommandQuad
 {
     real32 X, Y, Width, Height;

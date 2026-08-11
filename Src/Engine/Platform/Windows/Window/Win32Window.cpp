@@ -1,21 +1,12 @@
 #include "Win32Window.h"
 #include "Engine/Platform/Windows/Input/Win32Input.h"
 
-#include <SSTL/Memory.h>
+#include <windows.h>
 
-static bool8 PlatformInitialized = false;
+static Window WindowData;
 
-struct PlatformData
-{
-    HWND WindowHandle;
-    bool32 WindowShouldQuit;
-    bool32 WindowMinimized;
-    bool32 WindowResizePending;
-    WindowDimensions WindowPendingResizeDimensions;
-
-    GameMemory Memory;
-};
-static PlatformData Data;
+static HMODULE Instance = GetModuleHandle(0);
+static const char* WindowClassName = "AfterglowWindowClass";
 
 static void Win32UpdateWindowDimensions(HWND windowHandle, WindowDimensions* outDims)
 {
@@ -25,7 +16,7 @@ static void Win32UpdateWindowDimensions(HWND windowHandle, WindowDimensions* out
     outDims->Height = windowClientRect.bottom - windowClientRect.top;
 }
 
-static LRESULT CALLBACK Win32WindowCallback(HWND windowHandle, UINT message, WPARAM wParam, LPARAM lParam)
+static LRESULT CALLBACK Win32WindowProcedure(HWND windowHandle, UINT message, WPARAM wParam, LPARAM lParam)
 {
     LRESULT result = 0;
 
@@ -33,7 +24,7 @@ static LRESULT CALLBACK Win32WindowCallback(HWND windowHandle, UINT message, WPA
     {
         case WM_CLOSE:
         {
-            // TODO(saeb): User chose to close - show confirmation UI?
+            WindowData.NativeHandler = nullptr;
             DestroyWindow(windowHandle);
         } break;
 
@@ -44,12 +35,11 @@ static LRESULT CALLBACK Win32WindowCallback(HWND windowHandle, UINT message, WPA
 
         case WM_SIZE:
         {
-            Data.WindowMinimized = (wParam == SIZE_MINIMIZED);
+            WindowData.Minimized = (wParam == SIZE_MINIMIZED);
 
-            if(!Data.WindowMinimized)
+            if(!WindowData.Minimized)
             {
-                Data.WindowResizePending = true;
-                Win32UpdateWindowDimensions(windowHandle, &Data.WindowPendingResizeDimensions);
+                Win32UpdateWindowDimensions(windowHandle, &WindowData.Dimensions);
             }
         } break;
 
@@ -69,140 +59,96 @@ static LRESULT CALLBACK Win32WindowCallback(HWND windowHandle, UINT message, WPA
     return(result);
 }
 
-bool8 PlatformInit(const char* title, int32 width, int32 height, GameMemory** outMemory)
+Window* WindowCreate(const char* title, uint32 width, uint32 height)
 {
-    uint64 permanentArenaSize = 64 * sstl::Megabytes;
-    uint64 transientArenaSize = 1 * sstl::Gigabytes;
-    uint64 totalSize = permanentArenaSize + transientArenaSize;
+    WNDCLASSEX windowClass = {};
+    windowClass.cbSize = sizeof(WNDCLASSEX);
+    windowClass.style = CS_OWNDC | CS_HREDRAW | CS_VREDRAW;
+    windowClass.lpfnWndProc = Win32WindowProcedure;
+    windowClass.hInstance = Instance;
+    windowClass.hCursor = LoadCursor(0, IDC_ARROW);
+    windowClass.lpszClassName = WindowClassName;
 
-    void* memoryBlock = (void*)VirtualAlloc(0, totalSize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
-
-    sstl::InitializeArena(&Data.Memory.Permanent, (uint8*)memoryBlock, permanentArenaSize);
-    sstl::InitializeArena(&Data.Memory.Transient, (uint8*)memoryBlock + permanentArenaSize, transientArenaSize);
-
-    if(Data.Memory.Permanent.Base)
+    if(!RegisterClassEx(&windowClass))
     {
-        HINSTANCE instance = GetModuleHandle(0);
-
-        WNDCLASSEX windowClass = {};
-        windowClass.cbSize = sizeof(WNDCLASSEX);
-        windowClass.style = CS_OWNDC | CS_HREDRAW | CS_VREDRAW;
-        windowClass.lpfnWndProc = Win32WindowCallback;
-        windowClass.hInstance = instance;
-        windowClass.hCursor = LoadCursor(0, IDC_ARROW);
-        windowClass.lpszClassName = "AfterglowWindowClass";
-
-        if(!RegisterClassEx(&windowClass))
-        {
-            VirtualFree(Data.Memory.Permanent.Base, 0, MEM_RELEASE);
-            return(false);
-        }
-
-        HWND windowHandle = CreateWindowEx(0,
-                                           windowClass.lpszClassName,
-                                           title,
-                                           WS_OVERLAPPEDWINDOW,
-                                           CW_USEDEFAULT, CW_USEDEFAULT,
-                                           width, height,
-                                           0,
-                                           0,
-                                           instance,
-                                           0);
-
-        if(!windowHandle)
-        {
-            VirtualFree(Data.Memory.Permanent.Base, 0, MEM_RELEASE);
-            return(false);
-        }
-
-        Data.WindowHandle = windowHandle;
-        *outMemory = &Data.Memory;
-
-        PlatformInitialized = true;
-        return(true);
+        return(nullptr);
     }
 
-    return(false);
+    HWND windowHandle = CreateWindowEx(0,
+                                       WindowClassName,
+                                       title,
+                                       WS_OVERLAPPEDWINDOW,
+                                       CW_USEDEFAULT, CW_USEDEFAULT,
+                                       width, height,
+                                       0,
+                                       0,
+                                       Instance,
+                                       0);
+
+    if(!windowHandle)
+    {
+        UnregisterClass(WindowClassName, Instance);
+        return(nullptr);
+    }
+
+    WindowData.NativeHandler = (void*)windowHandle;
+    WindowData.Title = title;
+    WindowData.Dimensions.Width = width;
+    WindowData.Dimensions.Height = height;
+    WindowData.Minimized = false;
+    WindowData.ShouldClose = false;
+
+    return(&WindowData);
 }
 
-void PlatformPumpEvents(GameInput* input)
+void WindowShow(Window* window)
+{
+    if(window->NativeHandler)
+    {
+        ShowWindow((HWND)window->NativeHandler, SW_SHOW);
+    }
+}
+
+void WindowShutdown(Window* window)
+{
+    if(!window->NativeHandler)
+    {
+        UnregisterClass(WindowClassName, Instance);
+    }
+}
+
+void WindowPumpEvents(Window* window, GameInput* input)
 {
     MSG message;
     while(PeekMessage(&message, 0, 0, 0, PM_REMOVE))
     {
         if(message.message == WM_QUIT)
         {
-            Data.WindowShouldQuit = true;
-            continue;
+            WindowData.ShouldClose = true;
+            break;
         }
 
-        Win32ProcessInput(input, message.message, message.wParam, message.lParam);
+        Win32InputProcess(input, message.message, message.wParam, message.lParam);
 
         TranslateMessage(&message);
         DispatchMessage(&message);
     }
 }
 
-void PlatformShutdown()
+bool8 WindowShouldClose(Window* window)
 {
-    PlatformInitialized = false;
+    return(window && window->ShouldClose);
+}
 
-    if(Data.WindowHandle)
+void WindowGetDimensions(Window* window, WindowDimensions* outDims)
+{
+    if(window->NativeHandler)
     {
-        DestroyWindow(Data.WindowHandle);
-        Data.WindowHandle = nullptr;
-    }
-
-    if(Data.Memory.Permanent.Base)
-    {
-        VirtualFree(Data.Memory.Permanent.Base, 0, MEM_RELEASE);
+        Win32UpdateWindowDimensions((HWND)window->NativeHandler, outDims);
     }
 }
 
-void Win32ShowWindow()
+bool8 WindowGetMinimized(Window* window)
 {
-    if(PlatformInitialized)
-    {
-        ShowWindow(Data.WindowHandle, SW_SHOW);
-    }
-}
-
-bool8 Win32WindowConsumeResize(WindowDimensions* outDims)
-{
-    if(PlatformInitialized && Data.WindowResizePending)
-    {
-        *outDims = Data.WindowPendingResizeDimensions;
-        Data.WindowResizePending = false;
-        return(true);
-    }
-
-    return(false);
-}
-
-bool8 Win32WindowShouldQuit()
-{
-    return(PlatformInitialized && Data.WindowShouldQuit);
-}
-
-HWND Win32GetWindowHandle()
-{
-    if(PlatformInitialized)
-    {
-        return(Data.WindowHandle);
-    }
-
-    return(nullptr);
-}
-
-void Win32GetWindowDimensions(WindowDimensions* outDims)
-{
-    if(PlatformInitialized)
-    {
-        Win32UpdateWindowDimensions(Data.WindowHandle, outDims);
-    }
-}
-
-bool8 Win32WindowIsMinimized()
-{
-    return(PlatformInitialized && Data.WindowMinimized);
+    return(window && window->Minimized);
 }

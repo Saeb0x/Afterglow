@@ -2,7 +2,7 @@
 
 #include <windows.h>
 
-uint64 PlatformGetClockFrequency()
+uint64 GetClockFrequency()
 {
     LARGE_INTEGER frequency;
     QueryPerformanceFrequency(&frequency);
@@ -10,7 +10,7 @@ uint64 PlatformGetClockFrequency()
     return((uint64)frequency.QuadPart);
 }
 
-uint64 PlatformGetClockTicks()
+uint64 GetClockTicks()
 {
     LARGE_INTEGER ticks;
     QueryPerformanceCounter(&ticks);
@@ -18,7 +18,7 @@ uint64 PlatformGetClockTicks()
     return((uint64)ticks.QuadPart);
 }
 
-real32 PlatformGetSecondsElapsed(uint64 frequency, uint64 start, uint64 end)
+real32 GetSecondsElapsed(uint64 frequency, uint64 start, uint64 end)
 {
     return((real32)(end - start) / (real32)frequency);
 }

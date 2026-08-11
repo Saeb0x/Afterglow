@@ -63,7 +63,9 @@ exit /b %errorlevel%
 :error
 echo.
 echo [Afterglow] Cooking failed.
+endlocal
 exit /b 1
 
 :end
 endlocal
+exit /b 0

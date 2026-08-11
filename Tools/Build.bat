@@ -4,6 +4,7 @@ setlocal enabledelayedexpansion
 call vcvarsall.bat x64 >nul 2>&1
 if %errorlevel% neq 0 (
     echo [Afterglow Tools] Failed to call vcvarsall.bat. Ensure Microsoft C/C++ build tools are installed and vcvarsall.bat is accessible from the current environment.
+    endlocal
     exit /b 1
 )
 
@@ -23,7 +24,9 @@ goto end
 echo.
 echo [Afterglow Tools] Build failed.
 popd
+endlocal
 exit /b 1
 
 :end
 endlocal
+exit /b 0

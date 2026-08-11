@@ -75,7 +75,7 @@ inline ButtonState GetButtonState(GameInput* input, MouseButton mouseButton)
 {
     return(input->Mouse.Buttons[static_cast<usize>(mouseButton)]);
 }
-        
+
 inline bool8 KeyDown(GameInput* input, Key key)
 {
     return(IsDown(GetButtonState(input, key)));
@@ -90,7 +90,7 @@ inline bool8 KeyReleased(GameInput* input, Key key)
 {
     return(Released(GetButtonState(input, key)));
 }
- 
+
 inline bool8 MouseButtonDown(GameInput* input, MouseButton mouseButton)
 {
     return(IsDown(GetButtonState(input, mouseButton)));
@@ -104,6 +104,21 @@ inline bool8 MouseButtonPressed(GameInput* input, MouseButton mouseButton)
 inline bool8 MouseButtonReleased(GameInput* input, MouseButton mouseButton)
 {
     return(Released(GetButtonState(input, mouseButton)));
+}
+
+inline void InputBegin(GameInput* input)
+{
+    for(usize keyIndex = 0; keyIndex < static_cast<usize>(Key::Count); ++keyIndex)
+    {
+        input->Keyboard.Keys[keyIndex].WasDown = input->Keyboard.Keys[keyIndex].IsDown;
+    }
+
+    for(usize mouseButtonIndex = 0; mouseButtonIndex < static_cast<usize>(MouseButton::Count); ++mouseButtonIndex)
+    {
+        input->Mouse.Buttons[mouseButtonIndex].WasDown = input->Mouse.Buttons[mouseButtonIndex].IsDown;
+    }
+
+    input->TypedCharacterCount = 0;
 }
 
 #endif

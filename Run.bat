@@ -13,6 +13,7 @@ if exist "%BUILD_DIR%" (
     if not exist "Afterglow.exe" (
         echo [Afterglow] Afterglow.exe not found. Run Build.bat %BUILD% first.
         popd
+        endlocal
         exit /b 1
     )
 
@@ -20,6 +21,9 @@ if exist "%BUILD_DIR%" (
     popd
 ) else (
     echo [Afterglow] Afterglow.exe not found. Run Build.bat %BUILD% first.
+    endlocal
+    exit /b 1
 )
 
 endlocal
+exit /b 0

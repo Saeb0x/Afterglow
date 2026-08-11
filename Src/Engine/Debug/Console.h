@@ -1,4 +1,6 @@
-#if defined(AG_DEBUG)
+#include <SSTL/Config.h>
+
+#if SSTL_DEBUG
 #if !defined(AFTERGLOW_CONSOLE_H)
 #define AFTERGLOW_CONSOLE_H
 

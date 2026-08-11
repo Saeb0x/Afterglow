@@ -1,6 +1,8 @@
 #include "Win32Input.h"
 
-static Key Win32TranslateKey(WPARAM vkCode)
+#include <SSTL/Utility.h>
+
+static Key Win32KeyTranslate(WPARAM vkCode)
 {
     switch(vkCode)
     {
@@ -56,29 +58,14 @@ static Key Win32TranslateKey(WPARAM vkCode)
     }
 }
 
-void Win32BeginInput(GameInput* input)
-{
-    for(usize keyIndex = 0; keyIndex < static_cast<usize>(Key::Count); ++keyIndex)
-    {
-        input->Keyboard.Keys[keyIndex].WasDown = input->Keyboard.Keys[keyIndex].IsDown;
-    }
-
-    for(usize mouseButtonIndex = 0; mouseButtonIndex < static_cast<usize>(MouseButton::Count); ++mouseButtonIndex)
-    {
-        input->Mouse.Buttons[mouseButtonIndex].WasDown = input->Mouse.Buttons[mouseButtonIndex].IsDown;
-    }
-
-    input->TypedCharacterCount = 0;
-}
-
-void Win32ProcessInput(GameInput* input, UINT message, WPARAM wParam, LPARAM lParam)
+void Win32InputProcess(GameInput* input, UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch(message)
     {
         case WM_KEYDOWN:
         case WM_SYSKEYDOWN:
         {
-            Key key = Win32TranslateKey(wParam);
+            Key key = Win32KeyTranslate(wParam);
             if(key != Key::Unknown)
             {
                 input->Keyboard.Keys[static_cast<usize>(key)].IsDown = true;
@@ -88,7 +75,7 @@ void Win32ProcessInput(GameInput* input, UINT message, WPARAM wParam, LPARAM lPa
         case WM_KEYUP:
         case WM_SYSKEYUP:
         {
-            Key key = Win32TranslateKey(wParam);
+            Key key = Win32KeyTranslate(wParam);
             if(key != Key::Unknown)
             {
                 input->Keyboard.Keys[static_cast<usize>(key)].IsDown = false;
@@ -155,7 +142,6 @@ void Win32ProcessInput(GameInput* input, UINT message, WPARAM wParam, LPARAM lPa
             {
                 input->Mouse.Buttons[mouseButtonIndex].IsDown = false;
             }
-
         } break;
     }
 }

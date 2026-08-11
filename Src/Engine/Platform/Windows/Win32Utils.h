@@ -3,7 +3,9 @@
 
 #include "Engine/Types.h"
 
-#if defined(AG_DEBUG)
+#include <SSTL/Assert.h>
+
+#if SSTL_DEBUG
     #define EMB(error) \
         do { \
             MessageBox(0, error, "Afterglow Error", MB_OK | MB_ICONERROR); \

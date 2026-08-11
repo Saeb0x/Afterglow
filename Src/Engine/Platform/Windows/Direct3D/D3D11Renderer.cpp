@@ -81,7 +81,7 @@ static bool32 D3D11InitDevice(D3D11RendererState* renderer, HWND windowHandle, i
 {
     UINT factoryFlags = 0;
 
-#if defined(AG_DEBUG)
+#if SSTL_DEBUG
     factoryFlags |= DXGI_CREATE_FACTORY_DEBUG;
 #endif
     
@@ -103,7 +103,7 @@ static bool32 D3D11InitDevice(D3D11RendererState* renderer, HWND windowHandle, i
 
     UINT deviceFlags = 0;
 
-#if defined(AG_DEBUG)
+#if SSTL_DEBUG
     deviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
 #endif
 
@@ -499,7 +499,7 @@ void D3D11ResizeRenderer(D3D11RendererState* renderer, int32 width, int32 height
 
 void D3D11ShutdownRenderer(D3D11RendererState* renderer)
 {
-#if defined(AG_DEBUG)
+#if SSTL_DEBUG
     if(renderer->Device)
     {
         ID3D11Debug* debug;
