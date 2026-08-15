@@ -36,7 +36,7 @@ static LRESULT CALLBACK Win32WindowProcedure(HWND windowHandle, UINT message, WP
     return(0);
 }
 
-bool8 WindowCreate(cstring16 title, uint32 width, uint32 height)
+bool8 WindowCreate(cstring16 title, uint32 width, uint32 height, uint32 flags)
 {
     WNDCLASSEXW windowClass = {};
     windowClass.cbSize = sizeof(WNDCLASSEXW);
@@ -51,12 +51,27 @@ bool8 WindowCreate(cstring16 title, uint32 width, uint32 height)
         return(false);
     }
 
+    DWORD windowStyle = WS_OVERLAPPEDWINDOW | WS_VISIBLE;
+    int windowWidth = (int)width;
+    int windowHeight = (int)height;
+    int windowX = CW_USEDEFAULT;
+    int windowY= CW_USEDEFAULT;
+
+    if(flags & WindowFlags_Fullscreen)
+    {
+        windowStyle = WS_POPUP | WS_VISIBLE;
+        windowWidth = GetSystemMetrics(SM_CXSCREEN);
+        windowHeight = GetSystemMetrics(SM_CYSCREEN);
+        windowX = 0;
+        windowY = 0;
+    }
+
     HWND windowHandle = CreateWindowExW(0,
                                         L"AfterglowWin32WindowClass",
                                         reinterpret_cast<LPCWSTR>(title),
-                                        WS_OVERLAPPEDWINDOW | WS_VISIBLE,
-                                        CW_USEDEFAULT, CW_USEDEFAULT,
-                                        (int)width, (int)height,
+                                        windowStyle,
+                                        windowX, windowY,
+                                        windowWidth, windowHeight,
                                         nullptr,
                                         nullptr,
                                         GetModuleHandleW(nullptr),
@@ -70,8 +85,8 @@ bool8 WindowCreate(cstring16 title, uint32 width, uint32 height)
 
     WindowData.Handle = windowHandle;
     WindowData.Title = title;
-    WindowData.Width = width;
-    WindowData.Height = height;
+    WindowData.Width = (uint32)windowWidth;
+    WindowData.Height = (uint32)windowHeight;
 
     return(true);
 }
