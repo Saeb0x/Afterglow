@@ -5,24 +5,18 @@
 
 #if SSTL_PLATFORM_WINDOWS
 
+#define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
-static GameInput input = {};
-
-int WINAPI WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, int showCommand)
+int APIENTRY WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, int showCommand)
 {
-    Window* window = WindowCreate("Afterglow", 1280, 720);
-
-    if(window)
+    if(WindowCreate(u"Afterglow Game", 1280, 720))
     {
-        WindowShow(window);
-        while(!WindowShouldClose(window))
+        while(WindowPumpEvents())
         {
-            InputBegin(&input);
-            WindowPumpEvents(window, &input);
         }
 
-        WindowShutdown(window);
+        WindowShutdown();
     }
 
     return(0);
@@ -30,4 +24,5 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine
 
 #else
     #error Afterglow only supports Windows for now!
+
 #endif

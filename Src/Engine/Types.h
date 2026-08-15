@@ -19,6 +19,13 @@ using sstl::real64;
 using sstl::bool8;
 using sstl::bool32;
 
+using sstl::char8;
+using sstl::char16;
+using sstl::char32;
+using sstl::cstring8;
+using sstl::cstring16;
+using sstl::cstring32;
+
 using sstl::byte;
 using sstl::handle;
 

@@ -1,10 +1,10 @@
 #if !defined(AFTERGLOW_WIN32INPUT_H)
 #define AFTERGLOW_WIN32INPUT_H
 
-#include "Engine/Input.h"
-
+#define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
-void Win32InputProcess(GameInput* input, UINT message, WPARAM wParam, LPARAM lParam);
+void Win32InputBegin();
+void Win32InputProcess(UINT message, WPARAM wParam, LPARAM lParam);
 
 #endif

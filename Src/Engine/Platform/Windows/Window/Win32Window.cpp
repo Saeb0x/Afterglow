@@ -1,30 +1,24 @@
-#include "Win32Window.h"
+#include "Engine/Window.h"
 #include "Engine/Platform/Windows/Input/Win32Input.h"
 
+#define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
-static Window WindowData;
-
-static HMODULE Instance = GetModuleHandle(0);
-static const char* WindowClassName = "AfterglowWindowClass";
-
-static void Win32UpdateWindowDimensions(HWND windowHandle, WindowDimensions* outDims)
+struct Window
 {
-    RECT windowClientRect;
-    GetClientRect(windowHandle, &windowClientRect);
-    outDims->Width = windowClientRect.right - windowClientRect.left;
-    outDims->Height = windowClientRect.bottom - windowClientRect.top;
-}
+    HWND Handle;
+
+    cstring16 Title;
+    uint32 Width, Height;
+};
+static Window WindowData = {};
 
 static LRESULT CALLBACK Win32WindowProcedure(HWND windowHandle, UINT message, WPARAM wParam, LPARAM lParam)
 {
-    LRESULT result = 0;
-
     switch(message)
     {
         case WM_CLOSE:
         {
-            WindowData.NativeHandler = nullptr;
             DestroyWindow(windowHandle);
         } break;
 
@@ -33,122 +27,77 @@ static LRESULT CALLBACK Win32WindowProcedure(HWND windowHandle, UINT message, WP
             PostQuitMessage(0);
         } break;
 
-        case WM_SIZE:
-        {
-            WindowData.Minimized = (wParam == SIZE_MINIMIZED);
-
-            if(!WindowData.Minimized)
-            {
-                Win32UpdateWindowDimensions(windowHandle, &WindowData.Dimensions);
-            }
-        } break;
-
-        case WM_PAINT:
-        {
-            PAINTSTRUCT paint;
-            BeginPaint(windowHandle, &paint);
-            EndPaint(windowHandle, &paint);
-        } break;
-
         default:
         {
-            result = DefWindowProc(windowHandle, message, wParam, lParam);
-        } break;
+            return(DefWindowProcW(windowHandle, message, wParam, lParam));
+        }
     }
 
-    return(result);
+    return(0);
 }
 
-Window* WindowCreate(const char* title, uint32 width, uint32 height)
+bool8 WindowCreate(cstring16 title, uint32 width, uint32 height)
 {
-    WNDCLASSEX windowClass = {};
-    windowClass.cbSize = sizeof(WNDCLASSEX);
+    WNDCLASSEXW windowClass = {};
+    windowClass.cbSize = sizeof(WNDCLASSEXW);
     windowClass.style = CS_OWNDC | CS_HREDRAW | CS_VREDRAW;
     windowClass.lpfnWndProc = Win32WindowProcedure;
-    windowClass.hInstance = Instance;
-    windowClass.hCursor = LoadCursor(0, IDC_ARROW);
-    windowClass.lpszClassName = WindowClassName;
+    windowClass.hInstance = GetModuleHandleW(nullptr);
+    windowClass.hCursor = LoadCursorW(nullptr, MAKEINTRESOURCEW(IDC_ARROW));
+    windowClass.lpszClassName = L"AfterglowWin32WindowClass";
 
-    if(!RegisterClassEx(&windowClass))
+    if(!RegisterClassExW(&windowClass))
     {
-        return(nullptr);
+        return(false);
     }
 
-    HWND windowHandle = CreateWindowEx(0,
-                                       WindowClassName,
-                                       title,
-                                       WS_OVERLAPPEDWINDOW,
-                                       CW_USEDEFAULT, CW_USEDEFAULT,
-                                       width, height,
-                                       0,
-                                       0,
-                                       Instance,
-                                       0);
+    HWND windowHandle = CreateWindowExW(0,
+                                        L"AfterglowWin32WindowClass",
+                                        reinterpret_cast<LPCWSTR>(title),
+                                        WS_OVERLAPPEDWINDOW | WS_VISIBLE,
+                                        CW_USEDEFAULT, CW_USEDEFAULT,
+                                        (int)width, (int)height,
+                                        nullptr,
+                                        nullptr,
+                                        GetModuleHandleW(nullptr),
+                                        nullptr);
 
     if(!windowHandle)
     {
-        UnregisterClass(WindowClassName, Instance);
-        return(nullptr);
+        UnregisterClassW(L"AfterglowWin32WindowClass", GetModuleHandleW(nullptr));
+        return(false);
     }
 
-    WindowData.NativeHandler = (void*)windowHandle;
+    WindowData.Handle = windowHandle;
     WindowData.Title = title;
-    WindowData.Dimensions.Width = width;
-    WindowData.Dimensions.Height = height;
-    WindowData.Minimized = false;
-    WindowData.ShouldClose = false;
+    WindowData.Width = width;
+    WindowData.Height = height;
 
-    return(&WindowData);
+    return(true);
 }
 
-void WindowShow(Window* window)
+bool8 WindowPumpEvents()
 {
-    if(window->NativeHandler)
-    {
-        ShowWindow((HWND)window->NativeHandler, SW_SHOW);
-    }
-}
+    Win32InputBegin();
 
-void WindowShutdown(Window* window)
-{
-    if(!window->NativeHandler)
-    {
-        UnregisterClass(WindowClassName, Instance);
-    }
-}
-
-void WindowPumpEvents(Window* window, GameInput* input)
-{
     MSG message;
-    while(PeekMessage(&message, 0, 0, 0, PM_REMOVE))
+    while(PeekMessageW(&message, nullptr, 0, 0, PM_REMOVE))
     {
         if(message.message == WM_QUIT)
         {
-            WindowData.ShouldClose = true;
-            break;
+            return(false);
         }
 
-        Win32InputProcess(input, message.message, message.wParam, message.lParam);
+        Win32InputProcess(message.message, message.wParam, message.lParam);
 
         TranslateMessage(&message);
-        DispatchMessage(&message);
+        DispatchMessageW(&message);
     }
+
+    return(true);
 }
 
-bool8 WindowShouldClose(Window* window)
+void WindowShutdown()
 {
-    return(window && window->ShouldClose);
-}
-
-void WindowGetDimensions(Window* window, WindowDimensions* outDims)
-{
-    if(window->NativeHandler)
-    {
-        Win32UpdateWindowDimensions((HWND)window->NativeHandler, outDims);
-    }
-}
-
-bool8 WindowGetMinimized(Window* window)
-{
-    return(window && window->Minimized);
+    UnregisterClassW(L"AfterglowWin32WindowClass", GetModuleHandleW(nullptr));
 }
