@@ -3,11 +3,18 @@
 
 #include "Engine/Types.h"
 
+enum InputFlags : uint32
+{
+    InputFlags_None = 0,
+    InputFlags_Mouse = 1 << 0,
+    InputFlags_Keyboard = 1 << 1
+};
+
 enum class InputKey : uint8
 {
     Unknown,
 
-    Backspace, Enter, Escape, Tilde, Tab,
+    Backspace, Enter, Space, Escape, Tilde, Tab,
     Right, Up, Down, Left,
 
     Count
@@ -23,6 +30,8 @@ enum class InputMouseButton : uint8
 
     Count
 };
+
+void InputSetFlags(uint32 inputFlags);
 
 bool8 InputKeyDown(InputKey key);
 bool8 InputKeyPressed(InputKey key);

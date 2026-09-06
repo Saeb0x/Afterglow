@@ -1,3 +1,4 @@
+#include "Win32Window.h"
 #include "Engine/Window.h"
 #include "Engine/Platform/Windows/Input/Win32Input.h"
 
@@ -7,9 +8,9 @@
 struct Window
 {
     HWND Handle;
-
     cstring16 Title;
     uint32 Width, Height;
+    uint32 Flags;
 };
 static Window WindowData = {};
 
@@ -36,7 +37,7 @@ static LRESULT CALLBACK Win32WindowProcedure(HWND windowHandle, UINT message, WP
     return(0);
 }
 
-bool8 WindowCreate(cstring16 title, uint32 width, uint32 height, uint32 flags)
+bool8 Win32WindowCreate(cstring16 title, uint32 width, uint32 height)
 {
     WNDCLASSEXW windowClass = {};
     windowClass.cbSize = sizeof(WNDCLASSEXW);
@@ -44,6 +45,7 @@ bool8 WindowCreate(cstring16 title, uint32 width, uint32 height, uint32 flags)
     windowClass.lpfnWndProc = Win32WindowProcedure;
     windowClass.hInstance = GetModuleHandleW(nullptr);
     windowClass.hCursor = LoadCursorW(nullptr, MAKEINTRESOURCEW(IDC_ARROW));
+    windowClass.hbrBackground = CreateSolidBrush(RGB(0, 0, 0));
     windowClass.lpszClassName = L"AfterglowWin32WindowClass";
 
     if(!RegisterClassExW(&windowClass))
@@ -57,7 +59,7 @@ bool8 WindowCreate(cstring16 title, uint32 width, uint32 height, uint32 flags)
     int windowX = CW_USEDEFAULT;
     int windowY= CW_USEDEFAULT;
 
-    if(flags & WindowFlags_Fullscreen)
+    if(WindowData.Flags & WindowFlags_Fullscreen)
     {
         windowStyle = WS_POPUP | WS_VISIBLE;
         windowWidth = GetSystemMetrics(SM_CXSCREEN);
@@ -91,7 +93,7 @@ bool8 WindowCreate(cstring16 title, uint32 width, uint32 height, uint32 flags)
     return(true);
 }
 
-bool8 WindowPumpEvents()
+bool8 Win32WindowPumpEvents()
 {
     Win32InputBegin();
 
@@ -112,7 +114,12 @@ bool8 WindowPumpEvents()
     return(true);
 }
 
-void WindowShutdown()
+void Win32WindowShutdown()
 {
     UnregisterClassW(L"AfterglowWin32WindowClass", GetModuleHandleW(nullptr));
+}
+
+void WindowSetFlags(uint32 windowFlags)
+{
+    WindowData.Flags = windowFlags;
 }

@@ -5,7 +5,7 @@ set BUILD=debug
 if /i "%1"=="release" set BUILD=release
 
 set BUILD_DIR=%~dp0Build\Debug
-if /i "%BUILD%"=="release" set BUILD_DIR=%~dp0Build\Release
+if "%BUILD%"=="release" set BUILD_DIR=%~dp0Build\Release
 
 if exist "%BUILD_DIR%" (
     pushd "%BUILD_DIR%"

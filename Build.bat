@@ -12,30 +12,30 @@ set BUILD=debug
 if /i "%1"=="release" set BUILD=release
 
 set BUILD_DIR=%~dp0Build\Debug
-if /i "%BUILD%"=="release" set BUILD_DIR=%~dp0Build\Release
+if "%BUILD%"=="release" set BUILD_DIR=%~dp0Build\Release
 
 if not exist "%BUILD_DIR%" mkdir "%BUILD_DIR%"
 pushd "%BUILD_DIR%"
 
-if /i "%BUILD%"=="debug" (
+if "%BUILD%"=="debug" (
     echo [Afterglow] Compiling and linking game [debug]...
     cl /nologo /std:c++17 /permissive- /MTd /Od /Zi ^
     /I "%~dp0Src" /I "%~dp0External\SSTL\Include" ^
-    "%~dp0Src\Game\Main.cpp" ^
+    "%~dp0Src\Engine\Platform\Windows\Win32Main.cpp" ^
     "%~dp0Src\Engine\Platform\Windows\Window\Win32Window.cpp" ^
     "%~dp0Src\Engine\Platform\Windows\Input\Win32Input.cpp" ^
     /Fd"AfterglowGame.pdb" /Fe"AfterglowGame.exe" ^
-    /link /nologo /DEBUG kernel32.lib user32.lib
+    /link /nologo /DEBUG kernel32.lib user32.lib gdi32.lib
     if !errorlevel! neq 0 goto error
 ) else (
     echo [Afterglow] Compiling and linking game [release]...
     cl /nologo /std:c++17 /permissive- /MT /O2 ^
     /I "%~dp0Src" /I "%~dp0External\SSTL\Include" ^
-    "%~dp0Src\Game\Main.cpp" ^
+    "%~dp0Src\Engine\Platform\Windows\Win32Main.cpp" ^
     "%~dp0Src\Engine\Platform\Windows\Window\Win32Window.cpp" ^
     "%~dp0Src\Engine\Platform\Windows\Input\Win32Input.cpp" ^
     /Fe"AfterglowGame.exe" ^
-    /link /nologo kernel32.lib user32.lib
+    /link /nologo kernel32.lib user32.lib gdi32.lib
     if !errorlevel! neq 0 goto error
 )
 
