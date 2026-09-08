@@ -275,7 +275,7 @@ void InputSetFlags(uint32 inputFlags)
 
 bool8 InputKeyDown(InputKey key)
 {
-    if(InputData.Flags && InputFlags_Keyboard)
+    if(InputData.Flags & InputFlags_Keyboard)
     {
         return(InputIsDown(InputGetButtonState(key)));
     }
@@ -287,7 +287,7 @@ bool8 InputKeyDown(InputKey key)
 
 bool8 InputKeyPressed(InputKey key)
 {
-    if(InputData.Flags && InputFlags_Keyboard)
+    if(InputData.Flags & InputFlags_Keyboard)
     {
         return(InputPressed(InputGetButtonState(key)));
     }
@@ -299,7 +299,7 @@ bool8 InputKeyPressed(InputKey key)
 
 bool8 InputKeyReleased(InputKey key)
 {
-    if(InputData.Flags && InputFlags_Keyboard)
+    if(InputData.Flags & InputFlags_Keyboard)
     {
         return(InputReleased(InputGetButtonState(key)));
     }
@@ -311,7 +311,7 @@ bool8 InputKeyReleased(InputKey key)
 
 bool8 InputMouseButtonDown(InputMouseButton mouseButton)
 {
-    if(InputData.Flags && InputFlags_Mouse)
+    if(InputData.Flags & InputFlags_Mouse)
     {
         return(InputIsDown(InputGetButtonState(mouseButton)));
     }
@@ -323,7 +323,7 @@ bool8 InputMouseButtonDown(InputMouseButton mouseButton)
 
 bool8 InputMouseButtonPressed(InputMouseButton mouseButton)
 {
-    if(InputData.Flags && InputFlags_Mouse)
+    if(InputData.Flags & InputFlags_Mouse)
     {
         return(InputPressed(InputGetButtonState(mouseButton)));
     }
@@ -335,7 +335,7 @@ bool8 InputMouseButtonPressed(InputMouseButton mouseButton)
 
 bool8 InputMouseButtonReleased(InputMouseButton mouseButton)
 {
-    if(InputData.Flags && InputFlags_Mouse)
+    if(InputData.Flags & InputFlags_Mouse)
     {
         return(InputReleased(InputGetButtonState(mouseButton)));
     }
@@ -347,7 +347,7 @@ bool8 InputMouseButtonReleased(InputMouseButton mouseButton)
 
 void InputMouseXY(int32* x, int32* y)
 {
-    if(InputData.Flags && InputFlags_Mouse)
+    if(InputData.Flags & InputFlags_Mouse)
     {
         *x = InputData.Mouse.X;
         *y = InputData.Mouse.Y;
