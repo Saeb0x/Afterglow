@@ -4,7 +4,7 @@
 #include "Engine/Window.h"
 #include "Engine/Input.h"
 
-inline bool8 GameInit()
+inline bool GameInit()
 {
     WindowSetFlags(WindowFlags_None);
     InputSetFlags(InputFlags_Mouse | InputFlags_Keyboard);

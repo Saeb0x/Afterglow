@@ -1,7 +1,7 @@
 #if !defined(AFTERGLOW_WINDOW_H)
 #define AFTERGLOW_WINDOW_H
 
-#include "Engine/Types.h"
+#include <SSTL/Core/Types.h>
 
 enum WindowFlags : uint32
 {

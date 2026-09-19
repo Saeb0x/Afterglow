@@ -1,25 +1,23 @@
 #include "Win32Input.h"
 #include "Engine/Input.h"
 
-#include <SSTL/Utility.h>
-
 struct InputButtonState
 {
-    bool32 IsDown; // Currently held; persists across frames
-    bool32 WasDown; // Held last frame; snapshotted at frame start
+    bool IsDown; // Currently held; persists across frames
+    bool WasDown; // Held last frame; snapshotted at frame start
 };
 
-static bool8 InputIsDown(InputButtonState button)
+static bool InputIsDown(InputButtonState button)
 {
     return(button.IsDown);
 }
 
-static bool8 InputPressed(InputButtonState button)
+static bool InputPressed(InputButtonState button)
 {
     return(button.IsDown && !button.WasDown);
 }
 
-static bool8 InputReleased(InputButtonState button)
+static bool InputReleased(InputButtonState button)
 {
     return(!button.IsDown && button.WasDown);
 }
@@ -40,9 +38,6 @@ struct Input
 {
     InputKeyboard Keyboard;
     InputMouse Mouse;
-
-    char8 TypedCharacters[32]; // This frame's WM_CHAR queue
-    uint32 TypedCharacterCount;
 
     uint32 Flags;
 };
@@ -127,8 +122,6 @@ void Win32InputBegin()
         {
             InputData.Keyboard.Keys[keyIndex].WasDown = InputData.Keyboard.Keys[keyIndex].IsDown;
         }
-
-        InputData.TypedCharacterCount = 0;
     }
 
     if(InputData.Flags & InputFlags_Mouse)
@@ -165,23 +158,6 @@ void Win32InputProcess(UINT message, WPARAM wParam, LPARAM lParam)
                 else
                 {
                     InputData.Keyboard.Keys[static_cast<usize>(key)].IsDown = true;
-                }
-            }
-        } break;
-
-        case WM_CHAR:
-        {
-            if(!(InputData.Flags & InputFlags_Keyboard))
-            {
-                break;
-            }
-
-            uint32 character = (uint32)wParam;
-            if(character >= 32 && character < 127) // Printable ASCII
-            {
-                if(InputData.TypedCharacterCount < sstl::ArrayCount(InputData.TypedCharacters))
-                {
-                    InputData.TypedCharacters[InputData.TypedCharacterCount++] = (char)character;
                 }
             }
         } break;
@@ -254,7 +230,6 @@ void Win32InputProcess(UINT message, WPARAM wParam, LPARAM lParam)
                 {
                     InputData.Keyboard.Keys[keyIndex].IsDown = false;
                 }
-
             }
 
             if(InputData.Flags & InputFlags_Mouse)
@@ -273,7 +248,7 @@ void InputSetFlags(uint32 inputFlags)
     InputData.Flags = inputFlags;
 }
 
-bool8 InputKeyDown(InputKey key)
+bool InputKeyDown(InputKey key)
 {
     if(InputData.Flags & InputFlags_Keyboard)
     {
@@ -285,7 +260,7 @@ bool8 InputKeyDown(InputKey key)
     }
 }
 
-bool8 InputKeyPressed(InputKey key)
+bool InputKeyPressed(InputKey key)
 {
     if(InputData.Flags & InputFlags_Keyboard)
     {
@@ -297,7 +272,7 @@ bool8 InputKeyPressed(InputKey key)
     }
 }
 
-bool8 InputKeyReleased(InputKey key)
+bool InputKeyReleased(InputKey key)
 {
     if(InputData.Flags & InputFlags_Keyboard)
     {
@@ -309,7 +284,7 @@ bool8 InputKeyReleased(InputKey key)
     }
 }
 
-bool8 InputMouseButtonDown(InputMouseButton mouseButton)
+bool InputMouseButtonDown(InputMouseButton mouseButton)
 {
     if(InputData.Flags & InputFlags_Mouse)
     {
@@ -321,7 +296,7 @@ bool8 InputMouseButtonDown(InputMouseButton mouseButton)
     }
 }
 
-bool8 InputMouseButtonPressed(InputMouseButton mouseButton)
+bool InputMouseButtonPressed(InputMouseButton mouseButton)
 {
     if(InputData.Flags & InputFlags_Mouse)
     {
@@ -333,7 +308,7 @@ bool8 InputMouseButtonPressed(InputMouseButton mouseButton)
     }
 }
 
-bool8 InputMouseButtonReleased(InputMouseButton mouseButton)
+bool InputMouseButtonReleased(InputMouseButton mouseButton)
 {
     if(InputData.Flags & InputFlags_Mouse)
     {

@@ -1,10 +1,11 @@
 #if !defined(AFTERGLOW_WIN32WINDOW_H)
 #define AFTERGLOW_WIN32WINDOW_H
 
-#include "Engine/Types.h"
+#include <SSTL/Core/Types.h>
+#include <SSTL/Core/String.h>
 
-bool8 Win32WindowCreate(cstring16 title, uint32 width, uint32 height);
-bool8 Win32WindowPumpEvents();
+bool Win32WindowCreate(StackAllocator* allocator, StringView16 title, uint32 width, uint32 height);
+bool Win32WindowPumpEvents();
 void Win32WindowShutdown();
 
 #endif

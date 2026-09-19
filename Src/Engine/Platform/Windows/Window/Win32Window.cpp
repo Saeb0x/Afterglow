@@ -2,13 +2,15 @@
 #include "Engine/Window.h"
 #include "Engine/Platform/Windows/Input/Win32Input.h"
 
+#if !defined(WIN32_LEAN_AND_MEAN)
 #define WIN32_LEAN_AND_MEAN
+#endif
 #include <windows.h>
 
 struct Window
 {
     HWND Handle;
-    cstring16 Title;
+    String16 Title;
     uint32 Width, Height;
     uint32 Flags;
 };
@@ -37,7 +39,7 @@ static LRESULT CALLBACK Win32WindowProcedure(HWND windowHandle, UINT message, WP
     return(0);
 }
 
-bool8 Win32WindowCreate(cstring16 title, uint32 width, uint32 height)
+bool Win32WindowCreate(StackAllocator* allocator, StringView16 title, uint32 width, uint32 height)
 {
     WNDCLASSEXW windowClass = {};
     windowClass.cbSize = sizeof(WNDCLASSEXW);
@@ -53,11 +55,11 @@ bool8 Win32WindowCreate(cstring16 title, uint32 width, uint32 height)
         return(false);
     }
 
-    DWORD windowStyle = WS_OVERLAPPEDWINDOW | WS_VISIBLE;
-    int windowWidth = (int)width;
-    int windowHeight = (int)height;
-    int windowX = CW_USEDEFAULT;
-    int windowY= CW_USEDEFAULT;
+    uint32 windowStyle = WS_OVERLAPPEDWINDOW | WS_VISIBLE;
+    uint32 windowWidth = width;
+    uint32 windowHeight = height;
+    uint32 windowX = CW_USEDEFAULT;
+    uint32 windowY= CW_USEDEFAULT;
 
     if(WindowData.Flags & WindowFlags_Fullscreen)
     {
@@ -70,10 +72,10 @@ bool8 Win32WindowCreate(cstring16 title, uint32 width, uint32 height)
 
     HWND windowHandle = CreateWindowExW(0,
                                         L"AfterglowWin32WindowClass",
-                                        reinterpret_cast<LPCWSTR>(title),
-                                        windowStyle,
-                                        windowX, windowY,
-                                        windowWidth, windowHeight,
+                                        (LPCWSTR)(title.Data),
+                                        (DWORD)windowStyle,
+                                        (int)windowX, (int)windowY,
+                                        (int)windowWidth, (int)windowHeight,
                                         nullptr,
                                         nullptr,
                                         GetModuleHandleW(nullptr),
@@ -86,14 +88,14 @@ bool8 Win32WindowCreate(cstring16 title, uint32 width, uint32 height)
     }
 
     WindowData.Handle = windowHandle;
-    WindowData.Title = title;
+    WindowData.Title = String16FromView(allocator, title);
     WindowData.Width = (uint32)windowWidth;
     WindowData.Height = (uint32)windowHeight;
 
     return(true);
 }
 
-bool8 Win32WindowPumpEvents()
+bool Win32WindowPumpEvents()
 {
     Win32InputBegin();
 

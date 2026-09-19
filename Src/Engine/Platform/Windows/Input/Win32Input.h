@@ -1,7 +1,9 @@
 #if !defined(AFTERGLOW_WIN32INPUT_H)
 #define AFTERGLOW_WIN32INPUT_H
 
+#if !defined(WIN32_LEAN_AND_MEAN)
 #define WIN32_LEAN_AND_MEAN
+#endif
 #include <windows.h>
 
 void Win32InputBegin();

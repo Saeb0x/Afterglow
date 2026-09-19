@@ -19,11 +19,10 @@ if exist "!BUILD_DIR!" (
 
     start "" "Afterglow.exe"
     popd
+    endlocal
+    exit /b 0
 ) else (
     echo [Afterglow] Afterglow.exe not found. Run Build.bat !BUILD! first.
     endlocal
     exit /b 1
 )
-
-endlocal
-exit /b 0

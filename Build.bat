@@ -19,36 +19,29 @@ pushd "!BUILD_DIR!"
 
 if "!BUILD!"=="debug" (
     echo [Afterglow] Compiling and linking game [debug]...
-    cl /nologo /std:c++17 /permissive- /MTd /Od /Zi ^
+    cl /nologo /std:c++20 /permissive- /utf-8 /MTd /Od /Zi ^
     /I "%~dp0Src" /I "%~dp0External\SSTL\Include" ^
     "%~dp0Src\Engine\Platform\Windows\Win32Main.cpp" ^
     "%~dp0Src\Engine\Platform\Windows\Window\Win32Window.cpp" ^
     "%~dp0Src\Engine\Platform\Windows\Input\Win32Input.cpp" ^
     /Fd"Afterglow.pdb" /Fe"Afterglow.exe" ^
-    /link /nologo /DEBUG kernel32.lib user32.lib gdi32.lib
+    /link /nologo /DEBUG Kernel32.lib User32.lib Gdi32.lib
     if !errorlevel! neq 0 goto error
 ) else (
     echo [Afterglow] Compiling and linking game [release]...
-    cl /nologo /std:c++17 /permissive- /MT /O2 ^
+    cl /nologo /std:c++20 /permissive- /utf-8 /MT /O2 ^
     /I "%~dp0Src" /I "%~dp0External\SSTL\Include" ^
     "%~dp0Src\Engine\Platform\Windows\Win32Main.cpp" ^
     "%~dp0Src\Engine\Platform\Windows\Window\Win32Window.cpp" ^
     "%~dp0Src\Engine\Platform\Windows\Input\Win32Input.cpp" ^
     /Fe"Afterglow.exe" ^
-    /link /nologo kernel32.lib user32.lib gdi32.lib
+    /link /nologo Kernel32.lib User32.lib Gdi32.lib
     if !errorlevel! neq 0 goto error
 )
 
 echo.
 echo [Afterglow] Build succeeded.
 popd
-
-call "%~dp0Cook.bat"
-if !errorlevel! neq 0 (
-    endlocal
-    exit /b 1
-)
-
 endlocal
 exit /b 0
 
