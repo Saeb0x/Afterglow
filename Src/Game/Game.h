@@ -12,7 +12,7 @@ inline bool GameInit()
     return(true);
 }
 
-inline void GameUpdate(real64 deltaTime = 0.0)
+inline void GameUpdate(real64 deltaTime)
 {
 }
 

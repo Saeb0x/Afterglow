@@ -1,5 +1,5 @@
 #include "Engine/Platform/Windows/Win32Window.h"
-
+#include "Engine/Platform/Windows/Win32Time.h"
 #include "Game/Game.h"
 
 #include <SSTL/Core/Utility.h>
@@ -17,14 +17,16 @@ int APIENTRY WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLi
 
     if(GameInit() && Win32WindowCreate(&PlatformMemory, SV8ToSV16(&PlatformMemory, SV8(u8"AfterglowGame")), 1280, 720))
     {
+        Win32TimeInit();
+
         while(Win32WindowPumpEvents())
         {
-            GameUpdate();
+            GameUpdate(Win32TimeTick());
         }
 
         GameShutdown();
-
         Win32WindowShutdown();
+
         ShutdownStackAllocator(&PlatformMemory);
     }
 

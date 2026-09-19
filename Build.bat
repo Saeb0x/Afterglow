@@ -24,6 +24,7 @@ if "!BUILD!"=="debug" (
     "%~dp0Src\Engine\Platform\Windows\Win32Main.cpp" ^
     "%~dp0Src\Engine\Platform\Windows\Win32Window.cpp" ^
     "%~dp0Src\Engine\Platform\Windows\Win32Input.cpp" ^
+    "%~dp0Src\Engine\Platform\Windows\Win32Time.cpp" ^
     /Fd"Afterglow.pdb" /Fe"Afterglow.exe" ^
     /link /nologo /DEBUG Kernel32.lib User32.lib Gdi32.lib
     if !errorlevel! neq 0 goto error
@@ -34,6 +35,7 @@ if "!BUILD!"=="debug" (
     "%~dp0Src\Engine\Platform\Windows\Win32Main.cpp" ^
     "%~dp0Src\Engine\Platform\Windows\Win32Window.cpp" ^
     "%~dp0Src\Engine\Platform\Windows\Win32Input.cpp" ^
+    "%~dp0Src\Engine\Platform\Windows\Win32Time.cpp" ^
     /Fe"Afterglow.exe" ^
     /link /nologo Kernel32.lib User32.lib Gdi32.lib
     if !errorlevel! neq 0 goto error
