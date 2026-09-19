@@ -1,8 +1,8 @@
 #if !defined(AFTERGLOW_GAME_H)
 #define AFTERGLOW_GAME_H
 
-#include "Engine/Window.h"
-#include "Engine/Input.h"
+#include "Engine/Platform/Window.h"
+#include "Engine/Platform/Input.h"
 
 inline bool GameInit()
 {

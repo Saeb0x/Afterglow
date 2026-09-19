@@ -1,6 +1,6 @@
 #include "Win32Window.h"
-#include "Engine/Window.h"
-#include "Engine/Platform/Windows/Input/Win32Input.h"
+#include "Engine/Platform/Window.h"
+#include "Engine/Platform/Windows/Win32Input.h"
 
 #if !defined(WIN32_LEAN_AND_MEAN)
 #define WIN32_LEAN_AND_MEAN

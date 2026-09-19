@@ -22,8 +22,8 @@ if "!BUILD!"=="debug" (
     cl /nologo /std:c++20 /permissive- /utf-8 /MTd /Od /Zi ^
     /I "%~dp0Src" /I "%~dp0External\SSTL\Include" ^
     "%~dp0Src\Engine\Platform\Windows\Win32Main.cpp" ^
-    "%~dp0Src\Engine\Platform\Windows\Window\Win32Window.cpp" ^
-    "%~dp0Src\Engine\Platform\Windows\Input\Win32Input.cpp" ^
+    "%~dp0Src\Engine\Platform\Windows\Win32Window.cpp" ^
+    "%~dp0Src\Engine\Platform\Windows\Win32Input.cpp" ^
     /Fd"Afterglow.pdb" /Fe"Afterglow.exe" ^
     /link /nologo /DEBUG Kernel32.lib User32.lib Gdi32.lib
     if !errorlevel! neq 0 goto error
@@ -32,8 +32,8 @@ if "!BUILD!"=="debug" (
     cl /nologo /std:c++20 /permissive- /utf-8 /MT /O2 ^
     /I "%~dp0Src" /I "%~dp0External\SSTL\Include" ^
     "%~dp0Src\Engine\Platform\Windows\Win32Main.cpp" ^
-    "%~dp0Src\Engine\Platform\Windows\Window\Win32Window.cpp" ^
-    "%~dp0Src\Engine\Platform\Windows\Input\Win32Input.cpp" ^
+    "%~dp0Src\Engine\Platform\Windows\Win32Window.cpp" ^
+    "%~dp0Src\Engine\Platform\Windows\Win32Input.cpp" ^
     /Fe"Afterglow.exe" ^
     /link /nologo Kernel32.lib User32.lib Gdi32.lib
     if !errorlevel! neq 0 goto error
