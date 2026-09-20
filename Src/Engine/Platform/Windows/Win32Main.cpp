@@ -9,25 +9,29 @@
 #endif
 #include <windows.h>
 
-static StackAllocator PlatformMemory;
+static StackAllocator EngineMemory;
 
 int APIENTRY WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, int showCommand)
 {
-    InitStackAllocator(&PlatformMemory, SSTL_MIB(1024));
+    InitStackAllocator(&EngineMemory, SSTL_MIB(64));
 
-    if(GameInit() && Win32WindowCreate(&PlatformMemory, SV8ToSV16(&PlatformMemory, SV8(u8"AfterglowGame")), 1280, 720))
+    if(GameInit() && Win32WindowCreate(&EngineMemory, SV8(u8"Afterglow Game"), 1280, 720))
     {
         Win32TimeInit();
 
         while(Win32WindowPumpEvents())
         {
+            Frame frameScratch = GetFrame(&EngineMemory, Heap::Upper);
+
             GameUpdate(Win32TimeTick());
+
+            ReleaseFrame(&EngineMemory, frameScratch);
         }
 
         GameShutdown();
         Win32WindowShutdown();
 
-        ShutdownStackAllocator(&PlatformMemory);
+        ShutdownStackAllocator(&EngineMemory);
     }
 
     return(0);

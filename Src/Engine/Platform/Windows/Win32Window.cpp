@@ -10,7 +10,7 @@
 struct Window
 {
     HWND Handle;
-    String16 Title;
+    String8 Title;
     uint32 Width, Height;
     uint32 Flags;
 };
@@ -39,7 +39,7 @@ static LRESULT CALLBACK Win32WindowProcedure(HWND windowHandle, UINT message, WP
     return(0);
 }
 
-bool Win32WindowCreate(StackAllocator* allocator, StringView16 title, uint32 width, uint32 height)
+bool Win32WindowCreate(StackAllocator* allocator, StringView8 title, uint32 width, uint32 height)
 {
     WNDCLASSEXW windowClass = {};
     windowClass.cbSize = sizeof(WNDCLASSEXW);
@@ -70,9 +70,10 @@ bool Win32WindowCreate(StackAllocator* allocator, StringView16 title, uint32 wid
         windowY = 0;
     }
 
+    Frame frameScratch = GetFrame(allocator, Heap::Upper);
     HWND windowHandle = CreateWindowExW(0,
                                         L"AfterglowWin32WindowClass",
-                                        (LPCWSTR)(title.Data),
+                                        (LPCWSTR)((SV8ToSV16(allocator, title)).Data),
                                         (DWORD)windowStyle,
                                         (int)windowX, (int)windowY,
                                         (int)windowWidth, (int)windowHeight,
@@ -80,6 +81,7 @@ bool Win32WindowCreate(StackAllocator* allocator, StringView16 title, uint32 wid
                                         nullptr,
                                         GetModuleHandleW(nullptr),
                                         nullptr);
+    ReleaseFrame(allocator, frameScratch);
 
     if(!windowHandle)
     {
@@ -88,7 +90,7 @@ bool Win32WindowCreate(StackAllocator* allocator, StringView16 title, uint32 wid
     }
 
     WindowData.Handle = windowHandle;
-    WindowData.Title = String16FromView(allocator, title);
+    WindowData.Title = String8FromView(allocator, title);
     WindowData.Width = (uint32)windowWidth;
     WindowData.Height = (uint32)windowHeight;
 
