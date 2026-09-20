@@ -136,7 +136,7 @@ bool Win32WindowPumpEvents()
             return(false);
         }
 
-        Win32InputProcess(message.message, message.wParam, message.lParam);
+        Win32InputProcess(message.hwnd, message.message, message.wParam, message.lParam);
 
         TranslateMessage(&message);
         DispatchMessageW(&message);

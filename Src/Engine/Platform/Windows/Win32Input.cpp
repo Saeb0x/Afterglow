@@ -133,7 +133,7 @@ void Win32InputBegin()
     }
 }
 
-void Win32InputProcess(UINT message, WPARAM wParam, LPARAM lParam)
+void Win32InputProcess(HWND windowHandle, UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch(message)
     {
@@ -210,6 +210,7 @@ void Win32InputProcess(UINT message, WPARAM wParam, LPARAM lParam)
             if(InputData.Flags & InputFlags_Mouse)
             {
                 InputData.Mouse.Buttons[static_cast<usize>(InputMouseButton::Left)].IsDown = false;
+                ReleaseCapture();
             }
         } break;
 
@@ -218,6 +219,7 @@ void Win32InputProcess(UINT message, WPARAM wParam, LPARAM lParam)
             if(InputData.Flags & InputFlags_Mouse)
             {
                 InputData.Mouse.Buttons[static_cast<usize>(InputMouseButton::Left)].IsDown = true;
+                SetCapture(windowHandle);
             }
         } break;
 

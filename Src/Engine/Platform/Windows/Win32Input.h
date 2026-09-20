@@ -7,6 +7,6 @@
 #include <windows.h>
 
 void Win32InputBegin();
-void Win32InputProcess(UINT message, WPARAM wParam, LPARAM lParam);
+void Win32InputProcess(HWND windowHandle, UINT message, WPARAM wParam, LPARAM lParam);
 
 #endif
