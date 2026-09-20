@@ -12,6 +12,7 @@ struct Window
     HWND Handle;
     String8 Title;
     uint32 Width, Height;
+    bool Minimized;
     uint32 Flags;
 };
 static Window WindowData = {};
@@ -28,6 +29,19 @@ static LRESULT CALLBACK Win32WindowProcedure(HWND windowHandle, UINT message, WP
         case WM_DESTROY:
         {
             PostQuitMessage(0);
+        } break;
+
+        case WM_SIZE:
+        {
+            if(wParam == SIZE_MINIMIZED)
+            {
+                WindowData.Minimized = true;
+                break;
+            }
+
+            WindowData.Width = LOWORD(lParam);
+            WindowData.Height = HIWORD(lParam);
+            WindowData.Minimized = false;
         } break;
 
         default:
@@ -69,6 +83,14 @@ bool Win32WindowCreate(StackAllocator* allocator, StringView8 title, uint32 widt
         windowX = 0;
         windowY = 0;
     }
+    else
+    {
+        RECT windowClientArea = { 0, 0, (LONG)width, (LONG)height };
+        AdjustWindowRectExForDpi(&windowClientArea, (DWORD)windowStyle, FALSE, 0, GetDpiForSystem());
+
+        windowWidth = (uint32)(windowClientArea.right - windowClientArea.left);
+        windowHeight = (uint32)(windowClientArea.bottom - windowClientArea.top);
+    }
 
     Frame frameScratch = GetFrame(allocator, Heap::Upper);
     HWND windowHandle = CreateWindowExW(0,
@@ -91,8 +113,13 @@ bool Win32WindowCreate(StackAllocator* allocator, StringView8 title, uint32 widt
 
     WindowData.Handle = windowHandle;
     WindowData.Title = String8FromView(allocator, title);
-    WindowData.Width = (uint32)windowWidth;
-    WindowData.Height = (uint32)windowHeight;
+
+    RECT windowClientArea = {};
+    GetClientRect(windowHandle, &windowClientArea);
+    WindowData.Width = (uint32)(windowClientArea.right - windowClientArea.left);
+    WindowData.Height = (uint32)(windowClientArea.bottom - windowClientArea.top);
+
+    WindowData.Minimized = false;
 
     return(true);
 }
@@ -126,4 +153,15 @@ void Win32WindowShutdown()
 void WindowSetFlags(uint32 windowFlags)
 {
     WindowData.Flags = windowFlags;
+}
+
+void WindowGetDimensions(uint32* width, uint32* height)
+{
+    *width = WindowData.Width;
+    *height = WindowData.Height;
+}
+
+bool WindowGetMinimized()
+{
+    return WindowData.Minimized;
 }

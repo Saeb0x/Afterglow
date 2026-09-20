@@ -40,6 +40,6 @@ bool InputKeyReleased(InputKey key);
 bool InputMouseButtonDown(InputMouseButton mouseButton);
 bool InputMouseButtonPressed(InputMouseButton mouseButton);
 bool InputMouseButtonReleased(InputMouseButton mouseButton);
-void InputMouseXY(int32* x, int32* y);
+void InputGetMouseXY(int32* x, int32* y);
 
 #endif

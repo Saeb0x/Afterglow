@@ -13,6 +13,8 @@ static StackAllocator EngineMemory;
 
 int APIENTRY WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, int showCommand)
 {
+    SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+
     InitStackAllocator(&EngineMemory, SSTL_MIB(64));
 
     if(GameInit() && Win32WindowCreate(&EngineMemory, SV8(u8"Afterglow Game"), 1280, 720))

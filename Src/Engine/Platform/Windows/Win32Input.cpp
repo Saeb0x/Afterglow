@@ -320,7 +320,7 @@ bool InputMouseButtonReleased(InputMouseButton mouseButton)
     }
 }
 
-void InputMouseXY(int32* x, int32* y)
+void InputGetMouseXY(int32* x, int32* y)
 {
     if(InputData.Flags & InputFlags_Mouse)
     {

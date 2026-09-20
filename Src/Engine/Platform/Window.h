@@ -10,5 +10,7 @@ enum WindowFlags : uint32
 };
 
 void WindowSetFlags(uint32 windowFlags);
+void WindowGetDimensions(uint32* width, uint32* height);
+bool WindowGetMinimized();
 
 #endif
