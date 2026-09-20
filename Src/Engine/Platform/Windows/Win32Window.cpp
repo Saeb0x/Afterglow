@@ -2,11 +2,6 @@
 #include "Engine/Platform/Window.h"
 #include "Engine/Platform/Windows/Win32Input.h"
 
-#if !defined(WIN32_LEAN_AND_MEAN)
-#define WIN32_LEAN_AND_MEAN
-#endif
-#include <windows.h>
-
 struct Window
 {
     HWND Handle;
@@ -61,7 +56,6 @@ bool Win32WindowCreate(StackAllocator* allocator, StringView8 title, uint32 widt
     windowClass.lpfnWndProc = Win32WindowProcedure;
     windowClass.hInstance = GetModuleHandleW(nullptr);
     windowClass.hCursor = LoadCursorW(nullptr, MAKEINTRESOURCEW(IDC_ARROW));
-    windowClass.hbrBackground = CreateSolidBrush(RGB(0, 0, 0));
     windowClass.lpszClassName = L"AfterglowWin32WindowClass";
 
     if(!RegisterClassExW(&windowClass))
@@ -69,7 +63,7 @@ bool Win32WindowCreate(StackAllocator* allocator, StringView8 title, uint32 widt
         return(false);
     }
 
-    uint32 windowStyle = WS_OVERLAPPEDWINDOW | WS_VISIBLE;
+    uint32 windowStyle = WS_OVERLAPPEDWINDOW;
     uint32 windowWidth = width;
     uint32 windowHeight = height;
     uint32 windowX = CW_USEDEFAULT;
@@ -77,7 +71,7 @@ bool Win32WindowCreate(StackAllocator* allocator, StringView8 title, uint32 widt
 
     if(WindowData.Flags & WindowFlags_Fullscreen)
     {
-        windowStyle = WS_POPUP | WS_VISIBLE;
+        windowStyle = WS_POPUP;
         windowWidth = GetSystemMetrics(SM_CXSCREEN);
         windowHeight = GetSystemMetrics(SM_CYSCREEN);
         windowX = 0;
@@ -148,6 +142,11 @@ bool Win32WindowPumpEvents()
 void Win32WindowShutdown()
 {
     UnregisterClassW(L"AfterglowWin32WindowClass", GetModuleHandleW(nullptr));
+}
+
+HWND Win32WindowGetHandle()
+{
+    return WindowData.Handle;
 }
 
 void WindowSetFlags(uint32 windowFlags)

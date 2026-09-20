@@ -1,5 +1,6 @@
 #include "Engine/Platform/Windows/Win32Window.h"
 #include "Engine/Platform/Windows/Win32Time.h"
+#include "Engine/Platform/Windows/Win32Render.h"
 #include "Game/Game.h"
 
 #include <SSTL/Core/Utility.h>
@@ -19,18 +20,30 @@ int APIENTRY WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLi
 
     if(GameInit(&EngineMemory) && Win32WindowCreate(&EngineMemory, SV8(u8"Afterglow Game"), 1280, 720))
     {
-        Win32TimeInit();
+        uint32 windowWidth, windowHeight;
+        WindowGetDimensions(&windowWidth, &windowHeight);
 
-        while(Win32WindowPumpEvents())
+        if(Win32RenderInit(Win32WindowGetHandle(), windowWidth, windowHeight))
         {
-            Frame frameScratch = GetFrame(&EngineMemory, Heap::Upper);
+            ShowWindow(Win32WindowGetHandle(), SW_SHOW);
 
-            GameUpdate(&EngineMemory, Win32TimeTick());
+            Win32TimeInit();
 
-            ReleaseFrame(&EngineMemory, frameScratch);
+            while(Win32WindowPumpEvents())
+            {
+                Frame frameScratch = GetFrame(&EngineMemory, Heap::Upper);
+
+                Win32RenderClear(Color{ 0.0f, 0.0f, 0.0f, 1.0f });
+                GameUpdate(&EngineMemory, Win32TimeTick());
+                Win32RenderPresent();
+
+                ReleaseFrame(&EngineMemory, frameScratch);
+            }
+
+            GameShutdown(&EngineMemory);
+            Win32RenderShutdown();
         }
 
-        GameShutdown(&EngineMemory);
         Win32WindowShutdown();
 
         ShutdownStackAllocator(&EngineMemory);
