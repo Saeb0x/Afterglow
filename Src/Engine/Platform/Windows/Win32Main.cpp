@@ -17,7 +17,7 @@ int APIENTRY WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLi
 
     InitStackAllocator(&EngineMemory, SSTL_MIB(64));
 
-    if(GameInit() && Win32WindowCreate(&EngineMemory, SV8(u8"Afterglow Game"), 1280, 720))
+    if(GameInit(&EngineMemory) && Win32WindowCreate(&EngineMemory, SV8(u8"Afterglow Game"), 1280, 720))
     {
         Win32TimeInit();
 
@@ -25,12 +25,12 @@ int APIENTRY WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLi
         {
             Frame frameScratch = GetFrame(&EngineMemory, Heap::Upper);
 
-            GameUpdate(Win32TimeTick());
+            GameUpdate(&EngineMemory, Win32TimeTick());
 
             ReleaseFrame(&EngineMemory, frameScratch);
         }
 
-        GameShutdown();
+        GameShutdown(&EngineMemory);
         Win32WindowShutdown();
 
         ShutdownStackAllocator(&EngineMemory);

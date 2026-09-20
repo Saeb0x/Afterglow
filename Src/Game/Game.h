@@ -4,7 +4,9 @@
 #include "Engine/Platform/Window.h"
 #include "Engine/Platform/Input.h"
 
-inline bool GameInit()
+#include <SSTL/Memory/StackAllocator.h>
+
+inline bool GameInit(StackAllocator* allocator)
 {
     WindowSetFlags(WindowFlags_None);
     InputSetFlags(InputFlags_Mouse | InputFlags_Keyboard);
@@ -12,11 +14,11 @@ inline bool GameInit()
     return(true);
 }
 
-inline void GameUpdate(real64 deltaTime)
+inline void GameUpdate(StackAllocator* allocator, real64 deltaTime)
 {
 }
 
-inline void GameShutdown()
+inline void GameShutdown(StackAllocator* allocator)
 {
 }
 
