@@ -1,6 +1,7 @@
-#include "Engine/Platform/Windows/Win32Window.h"
-#include "Engine/Platform/Windows/Win32Time.h"
-#include "Engine/Platform/Windows/Win32Render.h"
+#include "Win32Window.h"
+#include "Win32Time.h"
+#include "Engine/Render/D3D11/D3D11Render.h"
+
 #include "Game/Game.h"
 
 #include <SSTL/Core/Utility.h>
@@ -14,37 +15,46 @@ static StackAllocator EngineMemory;
 
 int APIENTRY WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, int showCommand)
 {
-    SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
-
-    InitStackAllocator(&EngineMemory, SSTL_MIB(64));
-
-    if(GameInit(&EngineMemory) && Win32WindowCreate(&EngineMemory, SV8(u8"Afterglow Game"), 1280, 720))
+    if(InitStackAllocator(&EngineMemory, SSTL_MIB(64)))
     {
-        uint32 windowWidth, windowHeight;
-        WindowGetDimensions(&windowWidth, &windowHeight);
+        GameConfigure();
 
-        if(Win32RenderInit(Win32WindowGetHandle(), windowWidth, windowHeight))
+        if(Win32WindowCreate(&EngineMemory, SV8(u8"Afterglow"), 1280, 720))
         {
-            ShowWindow(Win32WindowGetHandle(), SW_SHOW);
-
-            Win32TimeInit();
-
-            while(Win32WindowPumpEvents())
+            if(D3D11RenderInit())
             {
-                Frame frameScratch = GetFrame(&EngineMemory, Heap::Upper);
+                if(GameInit(&EngineMemory))
+                {
+                    ShowWindow(Win32WindowGetHandle(), SW_SHOW);
 
-                Win32RenderClear(Color{ 0.0f, 0.0f, 0.0f, 1.0f });
-                GameUpdate(&EngineMemory, Win32TimeTick());
-                Win32RenderPresent();
+                    Win32TimeInit();
 
-                ReleaseFrame(&EngineMemory, frameScratch);
+                    while(Win32WindowPumpEvents())
+                    {
+                        // NOTE(saeb): Nothing to show while minimized; sleep until a message (restore, quit) arrives instead of spinning.
+                        if(WindowGetMinimized())
+                        {
+                            WaitMessage();
+                            continue;
+                        }
+
+                        Frame frameScratch = GetFrame(&EngineMemory, Heap::Upper);
+
+                        D3D11RenderClear();
+                        GameUpdate(&EngineMemory, Win32TimeTick());
+                        D3D11RenderPresent();
+
+                        ReleaseFrame(&EngineMemory, frameScratch);
+                    }
+
+                    GameShutdown(&EngineMemory);
+                }
+
+                D3D11RenderShutdown();
             }
 
-            GameShutdown(&EngineMemory);
-            Win32RenderShutdown();
+            Win32WindowShutdown();
         }
-
-        Win32WindowShutdown();
 
         ShutdownStackAllocator(&EngineMemory);
     }

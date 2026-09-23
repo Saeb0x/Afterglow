@@ -25,7 +25,7 @@ if "!BUILD!"=="debug" (
     "%~dp0Src\Engine\Platform\Windows\Win32Window.cpp" ^
     "%~dp0Src\Engine\Platform\Windows\Win32Input.cpp" ^
     "%~dp0Src\Engine\Platform\Windows\Win32Time.cpp" ^
-    "%~dp0Src\Engine\Platform\Windows\Win32Render.cpp" ^
+    "%~dp0Src\Engine\Render\D3D11\D3D11Render.cpp" ^
     /Fd"Afterglow.pdb" /Fe"Afterglow.exe" ^
     /link /nologo /DEBUG Kernel32.lib User32.lib D3D11.lib DXGI.lib d3dcompiler.lib
     if !errorlevel! neq 0 goto error
@@ -37,7 +37,7 @@ if "!BUILD!"=="debug" (
     "%~dp0Src\Engine\Platform\Windows\Win32Window.cpp" ^
     "%~dp0Src\Engine\Platform\Windows\Win32Input.cpp" ^
     "%~dp0Src\Engine\Platform\Windows\Win32Time.cpp" ^
-    "%~dp0Src\Engine\Platform\Windows\Win32Render.cpp" ^
+    "%~dp0Src\Engine\Render\D3D11\D3D11Render.cpp" ^
     /Fe"Afterglow.exe" ^
     /link /nologo Kernel32.lib User32.lib D3D11.lib DXGI.lib d3dcompiler.lib
     if !errorlevel! neq 0 goto error

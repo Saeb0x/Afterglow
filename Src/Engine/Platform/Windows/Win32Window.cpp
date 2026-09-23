@@ -1,6 +1,6 @@
 #include "Win32Window.h"
 #include "Engine/Platform/Window.h"
-#include "Engine/Platform/Windows/Win32Input.h"
+#include "Win32Input.h"
 
 struct Window
 {
@@ -8,22 +8,27 @@ struct Window
     String8 Title;
     uint32 Width, Height;
     bool Minimized;
+    bool CloseRequested;
     uint32 Flags;
 };
-static Window WindowData = {};
+static Window WindowData;
 
 static LRESULT CALLBACK Win32WindowProcedure(HWND windowHandle, UINT message, WPARAM wParam, LPARAM lParam)
 {
+    Win32InputProcess(windowHandle, message, wParam, lParam);
+
     switch(message)
     {
         case WM_CLOSE:
         {
-            DestroyWindow(windowHandle);
+            // NOTE(saeb): Don't destroy here; the renderer still owns resources tied to this window. Flag it and let the main loop shut down in order.
+            WindowData.CloseRequested = true;
         } break;
 
         case WM_DESTROY:
         {
-            PostQuitMessage(0);
+            // NOTE(saeb): Safety net; if the window is destroyed by anything other than Win32WindowShutdown(), still end the loop.
+            WindowData.CloseRequested = true;
         } break;
 
         case WM_SIZE:
@@ -67,7 +72,7 @@ bool Win32WindowCreate(StackAllocator* allocator, StringView8 title, uint32 widt
     uint32 windowWidth = width;
     uint32 windowHeight = height;
     uint32 windowX = CW_USEDEFAULT;
-    uint32 windowY= CW_USEDEFAULT;
+    uint32 windowY = CW_USEDEFAULT;
 
     if(WindowData.Flags & WindowFlags_Fullscreen)
     {
@@ -80,7 +85,7 @@ bool Win32WindowCreate(StackAllocator* allocator, StringView8 title, uint32 widt
     else
     {
         RECT windowClientArea = { 0, 0, (LONG)width, (LONG)height };
-        AdjustWindowRectExForDpi(&windowClientArea, (DWORD)windowStyle, FALSE, 0, GetDpiForSystem());
+        AdjustWindowRectEx(&windowClientArea, (DWORD)windowStyle, FALSE, 0);
 
         windowWidth = (uint32)(windowClientArea.right - windowClientArea.left);
         windowHeight = (uint32)(windowClientArea.bottom - windowClientArea.top);
@@ -125,28 +130,33 @@ bool Win32WindowPumpEvents()
     MSG message;
     while(PeekMessageW(&message, nullptr, 0, 0, PM_REMOVE))
     {
+        // NOTE(saeb): Nothing in the engine posts WM_QUIT, but anything calling PostQuitMessage() should still end the loop.
         if(message.message == WM_QUIT)
         {
             return(false);
         }
 
-        Win32InputProcess(message.hwnd, message.message, message.wParam, message.lParam);
-
         TranslateMessage(&message);
         DispatchMessageW(&message);
     }
 
-    return(true);
+    return(!WindowData.CloseRequested);
 }
 
 void Win32WindowShutdown()
 {
+    if(WindowData.Handle)
+    {
+        DestroyWindow(WindowData.Handle);
+        WindowData.Handle = nullptr;
+    }
+
     UnregisterClassW(L"AfterglowWin32WindowClass", GetModuleHandleW(nullptr));
 }
 
 HWND Win32WindowGetHandle()
 {
-    return WindowData.Handle;
+    return(WindowData.Handle);
 }
 
 void WindowSetFlags(uint32 windowFlags)
@@ -154,7 +164,7 @@ void WindowSetFlags(uint32 windowFlags)
     WindowData.Flags = windowFlags;
 }
 
-void WindowGetDimensions(uint32* width, uint32* height)
+void WindowGetClientAreaDimensions(uint32* width, uint32* height)
 {
     *width = WindowData.Width;
     *height = WindowData.Height;
@@ -162,5 +172,5 @@ void WindowGetDimensions(uint32* width, uint32* height)
 
 bool WindowGetMinimized()
 {
-    return WindowData.Minimized;
+    return(WindowData.Minimized);
 }
