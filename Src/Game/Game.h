@@ -3,14 +3,15 @@
 
 #include "Engine/Platform/Window.h"
 #include "Engine/Platform/Input.h"
-#include "Engine/Render/Render.h"
+#include "Engine/Renderer/Renderer.h"
 
 #include <SSTL/Memory/StackAllocator.h>
 
-// NOTE(saeb): Runs before the window exists; only set flags here, never acquire resources (nothing tears this down).
+// NOTE(saeb): Only set flags here, never acquire resources (nothing tears this down).
 inline void GameConfigure()
 {
     WindowSetFlags(WindowFlags_None);
+    RendererSetFlags(RendererFlags_VSync);
     InputSetFlags(InputFlags_Mouse | InputFlags_Keyboard);
 }
 

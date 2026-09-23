@@ -1,6 +1,6 @@
 #include "Win32Window.h"
 #include "Win32Time.h"
-#include "Engine/Render/D3D11/D3D11Render.h"
+#include "Engine/Renderer/D3D11/D3D11Renderer.h"
 
 #include "Game/Game.h"
 
@@ -21,7 +21,7 @@ int APIENTRY WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLi
 
         if(Win32WindowCreate(&EngineMemory, SV8(u8"Afterglow"), 1280, 720))
         {
-            if(D3D11RenderInit())
+            if(D3D11RendererInit(Win32WindowGetHandle()))
             {
                 if(GameInit(&EngineMemory))
                 {
@@ -40,18 +40,22 @@ int APIENTRY WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLi
 
                         Frame frameScratch = GetFrame(&EngineMemory, Heap::Upper);
 
-                        D3D11RenderClear();
+                        uint32 windowClientAreaWidth, windowClientAreaHeight;
+                        WindowGetClientAreaDimensions(&windowClientAreaWidth, &windowClientAreaHeight);
+
+                        D3D11RendererBeginFrame(windowClientAreaWidth, windowClientAreaHeight);
                         GameUpdate(&EngineMemory, Win32TimeTick());
-                        D3D11RenderPresent();
+                        D3D11RendererEndFrame();
 
                         ReleaseFrame(&EngineMemory, frameScratch);
                     }
 
                     GameShutdown(&EngineMemory);
                 }
-
-                D3D11RenderShutdown();
             }
+
+            // NOTE(saeb): Called even if Init failed; Init can fail halfway, and Shutdown only releases what exists.
+            D3D11RendererShutdown();
 
             Win32WindowShutdown();
         }
