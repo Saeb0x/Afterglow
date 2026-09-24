@@ -27,7 +27,7 @@ if "!BUILD!"=="debug" (
     "%~dp0Src\Engine\Platform\Windows\Win32Time.cpp" ^
     "%~dp0Src\Engine\Renderer\D3D11\D3D11Renderer.cpp" ^
     /Fd"Afterglow.pdb" /Fe"Afterglow.exe" ^
-    /link /nologo /DEBUG Kernel32.lib User32.lib D3D11.lib DXGI.lib d3dcompiler.lib
+    /link /nologo /DEBUG Kernel32.lib User32.lib D3D11.lib DXGI.lib D3DCompiler.lib
     if !errorlevel! neq 0 goto error
 ) else (
     echo [Afterglow] Compiling and linking game [release]...
@@ -39,7 +39,7 @@ if "!BUILD!"=="debug" (
     "%~dp0Src\Engine\Platform\Windows\Win32Time.cpp" ^
     "%~dp0Src\Engine\Renderer\D3D11\D3D11Renderer.cpp" ^
     /Fe"Afterglow.exe" ^
-    /link /nologo Kernel32.lib User32.lib D3D11.lib DXGI.lib d3dcompiler.lib
+    /link /nologo Kernel32.lib User32.lib D3D11.lib DXGI.lib D3DCompiler.lib
     if !errorlevel! neq 0 goto error
 )
 
