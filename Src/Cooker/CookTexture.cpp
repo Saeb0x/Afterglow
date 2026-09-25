@@ -10,7 +10,7 @@
 
 bool CookTexture(CookerContext* context, StringView8 sourcePath, StringView8 outputPath)
 {
-    StackAllocator* memory = &context->Memory;
+    StackAllocator* memory = context->Memory;
 
     FileContents file;
     FileReadResult readResult = FileRead(memory, Heap::Upper, sourcePath, &file);

@@ -35,7 +35,8 @@ if "!BUILD!"=="debug" (
     echo [Afterglow] Compiling and linking cooker [debug]...
     cl /nologo /std:c++20 /permissive- /utf-8 /MTd /Od /Zi ^
     /I "%~dp0Src" /I "%~dp0External\stb" /I "%~dp0External\SSTL\Include" ^
-    "%~dp0Src\Cooker\Main.cpp" ^
+    "%~dp0Src\Cooker\Platform\Windows\Win32CookerMain.cpp" ^
+    "%~dp0Src\Cooker\Cooker.cpp" ^
     "%~dp0Src\Cooker\CookTexture.cpp" ^
     "%~dp0Src\Cooker\CookShader.cpp" ^
     "%~dp0Src\Engine\Platform\Windows\Win32File.cpp" ^
@@ -60,7 +61,8 @@ if "!BUILD!"=="debug" (
     echo [Afterglow] Compiling and linking cooker [release]...
     cl /nologo /std:c++20 /permissive- /utf-8 /MT /O2 ^
     /I "%~dp0Src" /I "%~dp0External\stb" /I "%~dp0External\SSTL\Include" ^
-    "%~dp0Src\Cooker\Main.cpp" ^
+    "%~dp0Src\Cooker\Platform\Windows\Win32CookerMain.cpp" ^
+    "%~dp0Src\Cooker\Cooker.cpp" ^
     "%~dp0Src\Cooker\CookTexture.cpp" ^
     "%~dp0Src\Cooker\CookShader.cpp" ^
     "%~dp0Src\Engine\Platform\Windows\Win32File.cpp" ^

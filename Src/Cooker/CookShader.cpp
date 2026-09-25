@@ -1,3 +1,4 @@
+// NOTE(saeb): The D3D11 shader target: HLSL compiled to DXBC with D3DCompile, which only exists on Windows. This is about what the cooker produces, not where it runs; another graphics backend gets its own shader target next to this one.
 #include "Cooker.h"
 
 #include "Engine/Asset/AssetFormat.h"
@@ -90,7 +91,7 @@ static bool CookShaderWrite(CookerContext* context, StringView8 sourcePath, Stri
     usize payloadSize = cursor;
     usize outputSize = sizeof(AssetHeader) + payloadSize;
 
-    uint8* output = (uint8*)Allocate(&context->Memory, Heap::Lower, outputSize, AG_ASSET_ALIGNMENT);
+    uint8* output = (uint8*)Allocate(context->Memory, Heap::Lower, outputSize, AG_ASSET_ALIGNMENT);
     if(!output)
     {
         CookerError(sourcePath, "out of memory");
@@ -124,7 +125,7 @@ static bool CookShaderWrite(CookerContext* context, StringView8 sourcePath, Stri
         memcpy(payload + pixelOffset, pixel->GetBufferPointer(), pixelSize);
     }
 
-    FileWriteResult writeResult = FileWrite(&context->Memory, outputPath, output, outputSize);
+    FileWriteResult writeResult = FileWrite(context->Memory, outputPath, output, outputSize);
     if(writeResult != FileWriteResult::Ok)
     {
         CookerError(outputPath, "couldn't write file (%s)", CookerDescribeWrite(writeResult));
@@ -137,7 +138,7 @@ static bool CookShaderWrite(CookerContext* context, StringView8 sourcePath, Stri
 bool CookShader(CookerContext* context, StringView8 sourcePath, StringView8 outputPath)
 {
     FileContents source;
-    FileReadResult readResult = FileRead(&context->Memory, Heap::Upper, sourcePath, &source);
+    FileReadResult readResult = FileRead(context->Memory, Heap::Upper, sourcePath, &source);
     if(readResult != FileReadResult::Ok)
     {
         CookerError(sourcePath, "couldn't read file (%s)", CookerDescribeRead(readResult));

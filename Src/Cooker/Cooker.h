@@ -9,9 +9,12 @@
 
 struct CookerContext
 {
-    StackAllocator Memory;
+    StackAllocator* Memory; // Owned by the platform entry point
     bool Debug; // Shaders keep debug info and skip optimization, so RenderDoc / PIX shows the HLSL
 };
+
+// NOTE(saeb): The portable cooker. The platform entry point owns the allocator, converts the command line to UTF-8, makes every path argument absolute, and calls this with the arguments after the program name. Returns the process exit code: 0 when everything cooked or was up to date.
+int CookerRun(StackAllocator* memory, int argumentCount, const StringView8* arguments);
 
 // NOTE(saeb): Prints "path: error: message", MSVC's format, so the path is clickable in Visual Studio and most terminals. A null path prints just the message. The message is a printf format.
 void CookerError(StringView8 path, const char* format, ...);

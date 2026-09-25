@@ -98,6 +98,65 @@ static FileReadResult Win32FileBuildPath(StackAllocator* allocator, StringView8 
     return(FileReadResult::Ok);
 }
 
+static FileReadResult Win32FileReadResultFromError(DWORD error)
+{
+    switch(error)
+    {
+        case ERROR_FILE_NOT_FOUND:
+        case ERROR_PATH_NOT_FOUND:
+        case ERROR_DIRECTORY: // A file where a directory was expected
+        {
+            return(FileReadResult::NotFound);
+        }
+
+        case ERROR_INVALID_NAME:
+        case ERROR_FILENAME_EXCED_RANGE:
+        {
+            return(FileReadResult::InvalidPath);
+        }
+
+        case ERROR_ACCESS_DENIED:
+        case ERROR_SHARING_VIOLATION:
+        {
+            return(FileReadResult::AccessDenied);
+        }
+
+        default:
+        {
+            return(FileReadResult::ReadFailed);
+        }
+    }
+}
+
+// NOTE(saeb): FILETIME is 100-nanosecond ticks since 1601; as one number it compares like any integer.
+static uint64 Win32FileTimeToTicks(FILETIME time)
+{
+    return(((uint64)time.dwHighDateTime << 32) | (uint64)time.dwLowDateTime);
+}
+
+// NOTE(saeb): Same sharing as FileRead, so a file an editor still has open can be read.
+static FileReadResult Win32FileOpenForRead(StackAllocator* allocator, StringView8 path, HANDLE* fileHandle)
+{
+    *fileHandle = INVALID_HANDLE_VALUE;
+
+    Frame pathScratch = GetFrame(allocator, Heap::Upper);
+
+    const char16* fullPath = nullptr;
+    FileReadResult result = Win32FileBuildPath(allocator, path, &fullPath);
+    if(result == FileReadResult::Ok)
+    {
+        *fileHandle = CreateFileW((LPCWSTR)fullPath, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+        if(*fileHandle == INVALID_HANDLE_VALUE)
+        {
+            result = Win32FileReadResultFromError(GetLastError());
+        }
+    }
+
+    ReleaseFrame(allocator, pathScratch);
+
+    return(result);
+}
+
 FileReadResult FileRead(StackAllocator* allocator, Heap heap, StringView8 path, FileContents* contents)
 {
     contents->Data = nullptr;
@@ -127,31 +186,7 @@ FileReadResult FileRead(StackAllocator* allocator, Heap heap, StringView8 path, 
 
     if(fileHandle == INVALID_HANDLE_VALUE)
     {
-        switch(openError)
-        {
-            case ERROR_FILE_NOT_FOUND:
-            case ERROR_PATH_NOT_FOUND:
-            {
-                return(FileReadResult::NotFound);
-            }
-
-            case ERROR_INVALID_NAME:
-            case ERROR_FILENAME_EXCED_RANGE:
-            {
-                return(FileReadResult::InvalidPath);
-            }
-
-            case ERROR_ACCESS_DENIED:
-            case ERROR_SHARING_VIOLATION:
-            {
-                return(FileReadResult::AccessDenied);
-            }
-
-            default:
-            {
-                return(FileReadResult::ReadFailed);
-            }
-        }
+        return(Win32FileReadResultFromError(openError));
     }
 
     LARGE_INTEGER fileSize;
@@ -339,6 +374,196 @@ FileWriteResult FileWrite(StackAllocator* allocator, StringView8 path, const voi
 {
     Frame pathScratch = GetFrame(allocator, Heap::Upper);
     FileWriteResult result = Win32FileWrite(allocator, path, data, size);
+    ReleaseFrame(allocator, pathScratch);
+
+    return(result);
+}
+
+FileReadResult FileGetInfo(StackAllocator* allocator, StringView8 path, FileInfo* info)
+{
+    info->Size = 0;
+    info->LastWriteTime = 0;
+    info->IsDirectory = false;
+
+    Frame pathScratch = GetFrame(allocator, Heap::Upper);
+
+    const char16* fullPath = nullptr;
+    FileReadResult result = Win32FileBuildPath(allocator, path, &fullPath);
+    if(result == FileReadResult::Ok)
+    {
+        WIN32_FILE_ATTRIBUTE_DATA data;
+        if(GetFileAttributesExW((LPCWSTR)fullPath, GetFileExInfoStandard, &data))
+        {
+            info->IsDirectory = (data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
+            info->Size = info->IsDirectory ? 0 : (((uint64)data.nFileSizeHigh << 32) | (uint64)data.nFileSizeLow);
+            info->LastWriteTime = Win32FileTimeToTicks(data.ftLastWriteTime);
+        }
+        else
+        {
+            result = Win32FileReadResultFromError(GetLastError());
+        }
+    }
+
+    ReleaseFrame(allocator, pathScratch);
+
+    return(result);
+}
+
+FileReadResult FileReadRange(StackAllocator* allocator, StringView8 path, uint64 offset, void* destination, usize size)
+{
+    // NOTE(saeb): SetFilePointerEx takes a signed 64-bit position.
+    if((!destination && size > 0) || offset > 0x7FFFFFFFFFFFFFFFull)
+    {
+        return(FileReadResult::ReadFailed);
+    }
+
+    HANDLE fileHandle = INVALID_HANDLE_VALUE;
+    FileReadResult result = Win32FileOpenForRead(allocator, path, &fileHandle);
+    if(result != FileReadResult::Ok)
+    {
+        return(result);
+    }
+
+    LARGE_INTEGER position;
+    position.QuadPart = (LONGLONG)offset;
+    if(!SetFilePointerEx(fileHandle, position, nullptr, FILE_BEGIN))
+    {
+        CloseHandle(fileHandle);
+        return(FileReadResult::ReadFailed);
+    }
+
+    // NOTE(saeb): Same chunked loop as FileRead; reading past the end returns 0 bytes, so a file shorter than offset + size fails here.
+    uint8* bytes = (uint8*)destination;
+    usize totalRead = 0;
+    while(totalRead < size)
+    {
+        usize remaining = size - totalRead;
+        DWORD chunkSize = (remaining > 0x40000000) ? 0x40000000 : (DWORD)remaining;
+        DWORD bytesRead = 0;
+
+        if(!ReadFile(fileHandle, bytes + totalRead, chunkSize, &bytesRead, nullptr) || bytesRead == 0)
+        {
+            CloseHandle(fileHandle);
+            return(FileReadResult::ReadFailed);
+        }
+
+        totalRead += bytesRead;
+    }
+
+    CloseHandle(fileHandle);
+
+    return(FileReadResult::Ok);
+}
+
+// NOTE(saeb): The search pattern ("<path>\*") and the find handle live for the whole listing; everything a callback does happens above them on the Upper heap.
+static FileReadResult Win32FileListDirectory(StackAllocator* allocator, StringView8 path, FileDirectoryCallback* callback, void* userData)
+{
+    const char16* fullPath = nullptr;
+    FileReadResult result = Win32FileBuildPath(allocator, path, &fullPath);
+    if(result != FileReadResult::Ok)
+    {
+        return(result);
+    }
+
+    usize fullPathLength = 0;
+    while(fullPath[fullPathLength] != u'\0')
+    {
+        ++fullPathLength;
+    }
+
+    // NOTE(saeb): "Data" -> "Data\*", and "Data\" -> "Data\*" (no doubled separator).
+    bool endsWithSeparator = fullPathLength > 0 && Win32FileIsSeparator(fullPath[fullPathLength - 1]);
+    usize patternLength = fullPathLength + (endsWithSeparator ? 1 : 2);
+
+    char16* pattern = (char16*)Allocate(allocator, Heap::Upper, (patternLength + 1) * sizeof(char16), alignof(char16));
+    if(!pattern)
+    {
+        return(FileReadResult::OutOfMemory);
+    }
+
+    for(usize index = 0; index < fullPathLength; ++index)
+    {
+        pattern[index] = fullPath[index];
+    }
+
+    if(!endsWithSeparator)
+    {
+        pattern[fullPathLength] = u'\\';
+    }
+
+    pattern[patternLength - 1] = u'*';
+    pattern[patternLength] = u'\0';
+
+    // NOTE(saeb): FindExInfoBasic skips the 8.3 short name, which nothing here uses.
+    WIN32_FIND_DATAW find;
+    HANDLE findHandle = FindFirstFileExW((LPCWSTR)pattern, FindExInfoBasic, &find, FindExSearchNameMatch, nullptr, 0);
+    if(findHandle == INVALID_HANDLE_VALUE)
+    {
+        return(Win32FileReadResultFromError(GetLastError()));
+    }
+
+    // NOTE(saeb): True when the loop ends early (callback said stop, or out of memory) rather than because FindNextFileW ran out.
+    bool stoppedEarly = false;
+
+    do
+    {
+        const char16* name = (const char16*)find.cFileName;
+
+        bool dot = (name[0] == u'.' && name[1] == u'\0');
+        bool dotDot = (name[0] == u'.' && name[1] == u'.' && name[2] == u'\0');
+        if(dot || dotDot)
+        {
+            continue;
+        }
+
+        Frame entryScratch = GetFrame(allocator, Heap::Upper);
+
+        FileDirectoryEntry entry;
+        entry.Name = SV16ToSV8(allocator, SV16(name));
+        if(!entry.Name.Data)
+        {
+            ReleaseFrame(allocator, entryScratch);
+            result = FileReadResult::OutOfMemory;
+            stoppedEarly = true;
+            break;
+        }
+
+        entry.Info.IsDirectory = (find.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
+        entry.Info.Size = entry.Info.IsDirectory ? 0 : (((uint64)find.nFileSizeHigh << 32) | (uint64)find.nFileSizeLow);
+        entry.Info.LastWriteTime = Win32FileTimeToTicks(find.ftLastWriteTime);
+
+        bool keepGoing = callback(&entry, userData);
+
+        ReleaseFrame(allocator, entryScratch);
+
+        if(!keepGoing)
+        {
+            stoppedEarly = true;
+            break;
+        }
+    }
+    while(FindNextFileW(findHandle, &find));
+
+    // NOTE(saeb): Otherwise the loop ended because FindNextFileW failed, and only "no more files" is a normal end; anything else means the listing is incomplete. Read right after the loop, before FindClose can overwrite it.
+    if(!stoppedEarly && GetLastError() != ERROR_NO_MORE_FILES)
+    {
+        result = FileReadResult::ReadFailed;
+    }
+
+    FindClose(findHandle);
+
+    return(result);
+}
+
+FileReadResult FileListDirectory(StackAllocator* allocator, StringView8 path, FileDirectoryCallback* callback, void* userData)
+{
+    if(!callback)
+    {
+        return(FileReadResult::ReadFailed);
+    }
+
+    Frame pathScratch = GetFrame(allocator, Heap::Upper);
+    FileReadResult result = Win32FileListDirectory(allocator, path, callback, userData);
     ReleaseFrame(allocator, pathScratch);
 
     return(result);
