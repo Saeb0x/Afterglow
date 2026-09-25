@@ -4,10 +4,11 @@
 #include <SSTL/Core/Config.h>
 #include <SSTL/Core/Utility.h>
 #include <SSTL/Core/Assert.h>
+#include <SSTL/Core/String.h>
 
 #include <d3d11.h>
+#include <d3d11_1.h>
 #include <dxgi1_6.h>
-#include <d3dcompiler.h>
 
 // NOTE(saeb): 16384 quads * 4 = 65536 vertices, the most a 16-bit index can address.
 #define AG_MAX_QUADS 16384
@@ -48,6 +49,7 @@ struct Renderer
     IDXGIAdapter1* Adapter;
     ID3D11Device* Device;
     ID3D11DeviceContext* Context;
+    ID3DUserDefinedAnnotation* Annotation; // Null if unavailable; markers are then skipped
     IDXGISwapChain1* SwapChain;
     uint32 BackBufferWidth, BackBufferHeight;
     bool TearingSupported;
@@ -56,7 +58,7 @@ struct Renderer
     ID3D11Buffer* IndexBuffer;
     RendererQuad* Quads;
     uint32 QuadCount;
-    QuadBatch* Batches; // Worst case is one batch per quad
+    QuadBatch* Batches;
     ID3D11VertexShader* QuadVertexShader;
     ID3D11InputLayout* QuadInputLayout;
     ID3D11Buffer* QuadConstantBuffer;
@@ -71,78 +73,52 @@ struct Renderer
 };
 static Renderer RendererData;
 
-static const char QuadShaderSource[] = R"(
-cbuffer QuadConstants : register(b0)
+// NOTE(saeb): Shows up in RenderDoc / PIX and in debug-layer messages, including the live-object report at shutdown.
+static void D3D11SetName(ID3D11DeviceChild* object, StringView8 name)
 {
-    float2 ScreenSize;
-    float2 Padding;
-};
-
-Texture2D QuadTexture : register(t0);
-SamplerState QuadSampler : register(s0);
-
-struct VSInput
-{
-    float2 Position : POSITION;
-    float2 UV : TEXCOORD;
-    float4 Color : COLOR;
-};
-
-struct PSInput
-{
-    float4 Position : SV_Position;
-    float2 UV : TEXCOORD;
-    float4 Color : COLOR;
-};
-
-PSInput VSMain(VSInput input)
-{
-    PSInput output;
-
-    // Pixels (top-left origin, y down) -> clip space (center origin, y up).
-    float2 clip = (input.Position / ScreenSize) * float2(2.0, -2.0) + float2(-1.0, 1.0);
-    output.Position = float4(clip, 0.0, 1.0);
-    output.UV = input.UV;
-    output.Color = input.Color;
-
-    return output;
-}
-
-float4 PSMain(PSInput input) : SV_Target
-{
-    return QuadTexture.Sample(QuadSampler, input.UV) * input.Color;
-}
-)";
-
-static ID3DBlob* D3D11CompileShader(const char* source, usize sourceSize, const char* entryPoint, const char* target)
-{
-    UINT compileFlags = D3DCOMPILE_ENABLE_STRICTNESS;
-#if SSTL_DEBUG
-    compileFlags |= D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION; // Readable in RenderDoc / PIX
-#else
-    compileFlags |= D3DCOMPILE_OPTIMIZATION_LEVEL3;
-#endif
-
-    ID3DBlob* bytecode = nullptr;
-    ID3DBlob* errors = nullptr;
-    HRESULT result = D3DCompile(source, sourceSize, nullptr, nullptr, nullptr, entryPoint, target, compileFlags, 0, &bytecode, &errors);
-
-    // NOTE(saeb): Errors and warnings both come back here, with line numbers.
-    if(errors)
+    if(!object || !name.Data || name.Length == 0)
     {
-        OutputDebugStringA((const char*)errors->GetBufferPointer());
-        errors->Release();
+        return;
     }
 
-    if(FAILED(result))
-    {
-        return(nullptr);
-    }
-
-    return(bytecode);
+    object->SetPrivateData(WKPDID_D3DDebugObjectName, (UINT)name.Length, name.Data);
 }
 
-static bool D3D11CreateTexture(uint32 width, uint32 height, const uint8* pixels, ID3D11ShaderResourceView** view)
+static void D3D11BeginEvent(const wchar_t* name)
+{
+    if(RendererData.Annotation)
+    {
+        RendererData.Annotation->BeginEvent(name);
+    }
+}
+
+static void D3D11EndEvent()
+{
+    if(RendererData.Annotation)
+    {
+        RendererData.Annotation->EndEvent();
+    }
+}
+
+// NOTE(saeb): Every D3D11 shader is a DXBC container: "DXBC", a 16-byte checksum, a version, then its total size at byte 24. Checking the magic and size rejects truncated or garbage bytecode quietly; with the debug layer set to break on errors, passing it to D3D would stop the program instead. A flipped bit inside otherwise valid bytecode still reaches D3D's checksum.
+static bool D3D11IsBytecodeValid(const uint8* bytecode, usize size)
+{
+    if(!bytecode || size < 32)
+    {
+        return(false);
+    }
+
+    if(bytecode[0] != 'D' || bytecode[1] != 'X' || bytecode[2] != 'B' || bytecode[3] != 'C')
+    {
+        return(false);
+    }
+
+    uint32 containerSize = (uint32)bytecode[24] | ((uint32)bytecode[25] << 8) | ((uint32)bytecode[26] << 16) | ((uint32)bytecode[27] << 24);
+
+    return(containerSize == size);
+}
+
+static bool D3D11CreateTexture(uint32 width, uint32 height, const uint8* pixels, StringView8 name, ID3D11ShaderResourceView** view)
 {
     // NOTE(saeb): Validate first; with the debug layer set to break on errors, a bad description would stop the program instead of just failing.
     if(!pixels || width == 0 || height == 0 || width > D3D11_REQ_TEXTURE2D_U_OR_V_DIMENSION || height > D3D11_REQ_TEXTURE2D_U_OR_V_DIMENSION)
@@ -171,6 +147,14 @@ static bool D3D11CreateTexture(uint32 width, uint32 height, const uint8* pixels,
     }
 
     HRESULT viewResult = RendererData.Device->CreateShaderResourceView(texture, nullptr, view);
+
+    // NOTE(saeb): Name both; RenderDoc lists textures and views separately.
+    D3D11SetName(texture, name);
+    if(SUCCEEDED(viewResult))
+    {
+        D3D11SetName(*view, name);
+    }
+
     texture->Release(); // The view holds its own reference to the texture
 
     return(SUCCEEDED(viewResult));
@@ -265,7 +249,21 @@ static void D3D11FlushQuads()
             boundTexture = texture;
         }
 
+        // NOTE(saeb): One event per batch, so RenderDoc / PIX show why batches split. GetStatus() is TRUE only while a capture tool is attached, so normal runs never format the label.
+        bool labeled = RendererData.Annotation && RendererData.Annotation->GetStatus();
+        if(labeled)
+        {
+            wchar_t label[128];
+            wsprintfW(label, L"Batch %u: %u quads, texture %u, pipeline %u", batchIndex, current->QuadCount, texture, pipeline);
+            RendererData.Annotation->BeginEvent(label);
+        }
+
         RendererData.Context->DrawIndexed(current->QuadCount * 6, current->FirstQuad * 6, 0);
+
+        if(labeled)
+        {
+            RendererData.Annotation->EndEvent();
+        }
     }
 }
 
@@ -376,6 +374,9 @@ bool D3D11RendererInit(StackAllocator* allocator, HWND windowHandle)
         return(false);
     }
 
+    // NOTE(saeb): Optional; groups calls in RenderDoc / PIX. A failure just means no markers.
+    RendererData.Context->QueryInterface(IID_PPV_ARGS(&RendererData.Annotation));
+
 #if SSTL_DEBUG
     // NOTE(saeb): Stop in the debugger on the exact API call that misuses D3D, instead of finding out from a black screen.
     ID3D11InfoQueue* infoQueue = nullptr;
@@ -397,6 +398,8 @@ bool D3D11RendererInit(StackAllocator* allocator, HWND windowHandle)
     {
         return(false);
     }
+
+    D3D11SetName(RendererData.VertexBuffer, SV8(u8"QuadVertices"));
 
     Frame frameScratch = GetFrame(allocator, Heap::Upper);
 
@@ -440,6 +443,8 @@ bool D3D11RendererInit(StackAllocator* allocator, HWND windowHandle)
         return(false);
     }
 
+    D3D11SetName(RendererData.IndexBuffer, SV8(u8"QuadIndices"));
+
     // NOTE(saeb): AG_MAX_QUADS (16384) * 56 bytes = 896 KiB for the quads and 16384 * 16 bytes = 256 KiB for the batches. Sizing the batch array for the worst case (every quad changes state) means no check for running out of batches.
     RendererData.Quads = (RendererQuad*)Allocate(allocator, Heap::Lower, AG_MAX_QUADS * sizeof(RendererQuad), alignof(RendererQuad));
     RendererData.Batches = (QuadBatch*)Allocate(allocator, Heap::Lower, AG_MAX_QUADS * sizeof(QuadBatch), alignof(QuadBatch));
@@ -448,38 +453,7 @@ bool D3D11RendererInit(StackAllocator* allocator, HWND windowHandle)
         return(false);
     }
 
-    ID3DBlob* vertexShaderBytecode = D3D11CompileShader(QuadShaderSource, sizeof(QuadShaderSource) - 1, "VSMain", "vs_5_0");
-    ID3DBlob* pixelShaderBytecode = D3D11CompileShader(QuadShaderSource, sizeof(QuadShaderSource) - 1, "PSMain", "ps_5_0");
-
-    // NOTE(saeb): The input layout is validated against the vertex shader's input signature, so it needs the VS bytecode.
-    D3D11_INPUT_ELEMENT_DESC inputElements[] =
-        {
-            { "POSITION", 0, DXGI_FORMAT_R32G32_FLOAT, 0, offsetof(QuadVertex, X), D3D11_INPUT_PER_VERTEX_DATA, 0 },
-            { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, offsetof(QuadVertex, U), D3D11_INPUT_PER_VERTEX_DATA, 0 },
-            { "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, offsetof(QuadVertex, R), D3D11_INPUT_PER_VERTEX_DATA, 0 },
-        };
-
-    bool shadersCreated = vertexShaderBytecode && pixelShaderBytecode &&
-        SUCCEEDED(RendererData.Device->CreateVertexShader(vertexShaderBytecode->GetBufferPointer(), vertexShaderBytecode->GetBufferSize(), nullptr, &RendererData.QuadVertexShader)) &&
-        SUCCEEDED(RendererData.Device->CreatePixelShader(pixelShaderBytecode->GetBufferPointer(), pixelShaderBytecode->GetBufferSize(), nullptr, &RendererData.Pipelines[0].PixelShader)) &&
-        SUCCEEDED(RendererData.Device->CreateInputLayout(inputElements, SSTL_ARRAYCOUNT(inputElements), vertexShaderBytecode->GetBufferPointer(), vertexShaderBytecode->GetBufferSize(), &RendererData.QuadInputLayout));
-
-    // NOTE(saeb): The bytecode is only needed for creation.
-    if(vertexShaderBytecode)
-    {
-        vertexShaderBytecode->Release();
-    }
-
-    if(pixelShaderBytecode)
-    {
-        pixelShaderBytecode->Release();
-    }
-
-    if(!shadersCreated)
-    {
-        return(false);
-    }
-
+    // NOTE(saeb): Slot 0 is reserved for the default pipeline, which RendererSetDefaultPipeline fills from the cooked shader; created pipelines start at 1.
     RendererData.PipelineCount = 1;
 
     D3D11_BUFFER_DESC constantBufferDesc = {};
@@ -491,6 +465,8 @@ bool D3D11RendererInit(StackAllocator* allocator, HWND windowHandle)
     {
         return(false);
     }
+
+    D3D11SetName(RendererData.QuadConstantBuffer, SV8(u8"QuadConstants"));
 
     // NOTE(saeb): Premultiplied "over": color = src + dst * (1 - srcAlpha); src.rgb already carries its alpha.
     D3D11_BLEND_DESC blendDesc = {};
@@ -508,6 +484,8 @@ bool D3D11RendererInit(StackAllocator* allocator, HWND windowHandle)
         return(false);
     }
 
+    D3D11SetName(RendererData.BlendState, SV8(u8"PremultipliedBlend"));
+
     D3D11_RASTERIZER_DESC rasterizerDesc = {};
     rasterizerDesc.FillMode = D3D11_FILL_SOLID;
     rasterizerDesc.CullMode = D3D11_CULL_NONE; // A negative width/height flips winding; still draw it
@@ -517,6 +495,8 @@ bool D3D11RendererInit(StackAllocator* allocator, HWND windowHandle)
     {
         return(false);
     }
+
+    D3D11SetName(RendererData.RasterizerState, SV8(u8"CullNoneRasterizer"));
 
     D3D11_SAMPLER_DESC samplerDesc = {};
     samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
@@ -531,9 +511,11 @@ bool D3D11RendererInit(StackAllocator* allocator, HWND windowHandle)
         return(false);
     }
 
+    D3D11SetName(RendererData.SamplerState, SV8(u8"PointClampSampler"));
+
     // NOTE(saeb): Handle 0 is the built-in white texture; plain rects sample it, and textures that fail to create fall back to it.
     uint32 whitePixel = 0xFFFFFFFF;
-    if(!D3D11CreateTexture(1, 1, (const uint8*)&whitePixel, &RendererData.Textures[0]))
+    if(!D3D11CreateTexture(1, 1, (const uint8*)&whitePixel, SV8(u8"WhiteTexture"), &RendererData.Textures[0]))
     {
         return(false);
     }
@@ -589,6 +571,9 @@ bool D3D11RendererInit(StackAllocator* allocator, HWND windowHandle)
         return(false);
     }
 
+    D3D11SetName(backBuffer, SV8(u8"BackBuffer"));
+    D3D11SetName(RendererData.RenderTargetView, SV8(u8"BackBufferRTV"));
+
     backBuffer->Release();
 
     return(true);
@@ -617,6 +602,9 @@ void D3D11RendererBeginFrame(uint32 width, uint32 height)
             return;
         }
 
+        D3D11SetName(backBuffer, SV8(u8"BackBuffer"));
+        D3D11SetName(RendererData.RenderTargetView, SV8(u8"BackBufferRTV"));
+
         backBuffer->Release();
 
         RendererData.BackBufferWidth = width;
@@ -640,14 +628,20 @@ void D3D11RendererBeginFrame(uint32 width, uint32 height)
     RendererData.Context->RSSetViewports(1, &viewport);
 
     real32 clearColor[4] = { 0.529f, 0.808f, 0.922f, 1.0f };
+
+    D3D11BeginEvent(L"Clear");
     RendererData.Context->ClearRenderTargetView(RendererData.RenderTargetView, clearColor);
+    D3D11EndEvent();
 }
 
 void D3D11RendererEndFrame()
 {
-    if(RendererData.RenderTargetView && RendererData.QuadCount > 0)
+    // NOTE(saeb): The input layout is the last object RendererSetDefaultPipeline creates; without it there's nothing to draw quads with.
+    if(RendererData.RenderTargetView && RendererData.QuadInputLayout && RendererData.QuadCount > 0)
     {
+        D3D11BeginEvent(L"Quads");
         D3D11FlushQuads();
+        D3D11EndEvent();
     }
 
     // NOTE(saeb): Reset here, not in BeginFrame; BeginFrame can early-out and would leave stale quads behind.
@@ -757,6 +751,12 @@ void D3D11RendererShutdown()
         RendererData.SwapChain = nullptr;
     }
 
+    if(RendererData.Annotation)
+    {
+        RendererData.Annotation->Release();
+        RendererData.Annotation = nullptr;
+    }
+
     if(RendererData.Context)
     {
         RendererData.Context->Release();
@@ -808,7 +808,7 @@ void RendererPushQuad(const RendererQuad* quad)
     RendererData.Quads[RendererData.QuadCount++] = *quad;
 }
 
-RendererTexture RendererCreateTexture(uint32 width, uint32 height, const uint8* pixels)
+RendererTexture RendererCreateTexture(uint32 width, uint32 height, const uint8* pixels, StringView8 debugName)
 {
     // NOTE(saeb): Not initialized, table full, or creation failed: return the white texture, so the quad still draws (white) instead of crashing.
     if(!RendererData.Device || RendererData.TextureCount >= AG_MAX_TEXTURES)
@@ -816,10 +816,85 @@ RendererTexture RendererCreateTexture(uint32 width, uint32 height, const uint8* 
         return(0);
     }
 
-    if(!D3D11CreateTexture(width, height, pixels, &RendererData.Textures[RendererData.TextureCount]))
+    if(!D3D11CreateTexture(width, height, pixels, debugName, &RendererData.Textures[RendererData.TextureCount]))
     {
         return(0);
     }
 
     return(RendererData.TextureCount++);
+}
+
+RendererPipeline RendererCreatePipeline(const uint8* pixelBytecode, usize size, StringView8 debugName)
+{
+    // NOTE(saeb): Not initialized, table full, or creation failed: return the default pipeline, so the quad still draws instead of crashing.
+    if(!RendererData.Device || !D3D11IsBytecodeValid(pixelBytecode, size) || RendererData.PipelineCount >= AG_MAX_PIPELINES)
+    {
+        return(0);
+    }
+
+    // NOTE(saeb): D3D11 checks the bytecode's own checksum here; with the debug layer set to break on errors, damaged bytecode stops in the debugger.
+    ID3D11PixelShader** pixelShader = &RendererData.Pipelines[RendererData.PipelineCount].PixelShader;
+    if(FAILED(RendererData.Device->CreatePixelShader(pixelBytecode, size, nullptr, pixelShader)))
+    {
+        *pixelShader = nullptr;
+        return(0);
+    }
+
+    D3D11SetName(*pixelShader, debugName);
+
+    return(RendererData.PipelineCount++);
+}
+
+bool RendererSetDefaultPipeline(const uint8* vertexBytecode, usize vertexSize, const uint8* pixelBytecode, usize pixelSize)
+{
+    // NOTE(saeb): Once only; replacing shaders at runtime (hot reload) would also need to release the old ones.
+    if(!RendererData.Device || RendererData.QuadVertexShader || !D3D11IsBytecodeValid(vertexBytecode, vertexSize) || !D3D11IsBytecodeValid(pixelBytecode, pixelSize))
+    {
+        return(false);
+    }
+
+    // NOTE(saeb): The input layout is validated against the vertex shader's input signature, so it needs the VS bytecode.
+    D3D11_INPUT_ELEMENT_DESC inputElements[] =
+        {
+            { "POSITION", 0, DXGI_FORMAT_R32G32_FLOAT, 0, offsetof(QuadVertex, X), D3D11_INPUT_PER_VERTEX_DATA, 0 },
+            { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, offsetof(QuadVertex, U), D3D11_INPUT_PER_VERTEX_DATA, 0 },
+            { "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, offsetof(QuadVertex, R), D3D11_INPUT_PER_VERTEX_DATA, 0 },
+        };
+
+    bool created = SUCCEEDED(RendererData.Device->CreateVertexShader(vertexBytecode, vertexSize, nullptr, &RendererData.QuadVertexShader)) &&
+        SUCCEEDED(RendererData.Device->CreatePixelShader(pixelBytecode, pixelSize, nullptr, &RendererData.Pipelines[0].PixelShader)) &&
+        SUCCEEDED(RendererData.Device->CreateInputLayout(inputElements, SSTL_ARRAYCOUNT(inputElements), vertexBytecode, vertexSize, &RendererData.QuadInputLayout));
+
+    if(created)
+    {
+        D3D11SetName(RendererData.QuadVertexShader, SV8(u8"QuadVS"));
+        D3D11SetName(RendererData.Pipelines[0].PixelShader, SV8(u8"QuadPS"));
+        D3D11SetName(RendererData.QuadInputLayout, SV8(u8"QuadInputLayout"));
+    }
+
+    if(!created)
+    {
+        // NOTE(saeb): All or nothing; EndFrame treats the input layout as "ready", so never leave half a set behind.
+        if(RendererData.QuadVertexShader)
+        {
+            RendererData.QuadVertexShader->Release();
+            RendererData.QuadVertexShader = nullptr;
+        }
+
+        if(RendererData.Pipelines[0].PixelShader)
+        {
+            RendererData.Pipelines[0].PixelShader->Release();
+            RendererData.Pipelines[0].PixelShader = nullptr;
+        }
+
+        if(RendererData.QuadInputLayout)
+        {
+            RendererData.QuadInputLayout->Release();
+            RendererData.QuadInputLayout = nullptr;
+        }
+
+        return(false);
+    }
+
+    return(true);
 }

@@ -4,6 +4,7 @@
 #include "Engine/Platform/Window.h"
 #include "Engine/Platform/Input.h"
 #include "Engine/Platform/File.h"
+#include "Engine/Asset/Asset.h"
 #include "Engine/Renderer/Renderer.h"
 
 #include <SSTL/Memory/StackAllocator.h>
@@ -23,6 +24,13 @@ inline bool GameInit(StackAllocator* allocator)
 
 inline void GameUpdate(StackAllocator* allocator, real64 deltaTime)
 {
+    RendererQuad quad = {};
+    quad.X = 100.0f; quad.Y = 200.0f;
+    quad.Width = 300.0f; quad.Height = 300.0f;
+    quad.U1 = 1.0f; quad.V1 = 1.0f;
+    quad.A = 1.0f; quad.R = 1.0f; quad.G = 0.5f;
+
+    RendererPushQuad(&quad);
 }
 
 inline void GameShutdown(StackAllocator* allocator)
