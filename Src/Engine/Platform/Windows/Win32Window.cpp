@@ -7,6 +7,7 @@ struct Window
     HWND Handle;
     String8 Title;
     uint32 Width, Height;
+    uint32 MinWidth, MinHeight; // Client area; 0 = no limit
     bool Minimized;
     bool CloseRequested;
     uint32 Flags;
@@ -29,6 +30,27 @@ static LRESULT CALLBACK Win32WindowProcedure(HWND windowHandle, UINT message, WP
         {
             // NOTE(saeb): Safety net; if the window is destroyed by anything other than Win32WindowShutdown(), still end the loop.
             WindowData.CloseRequested = true;
+        } break;
+
+        case WM_GETMINMAXINFO:
+        {
+            // NOTE(saeb): Windows limits the outer window size, frame included, so add this window's frame to the minimum client area. Only the sides with a limit are changed; the rest keep Windows' defaults.
+            if(WindowData.MinWidth > 0 || WindowData.MinHeight > 0)
+            {
+                RECT minimum = { 0, 0, (LONG)WindowData.MinWidth, (LONG)WindowData.MinHeight };
+                AdjustWindowRectEx(&minimum, (DWORD)GetWindowLongPtrW(windowHandle, GWL_STYLE), FALSE, (DWORD)GetWindowLongPtrW(windowHandle, GWL_EXSTYLE));
+
+                MINMAXINFO* info = (MINMAXINFO*)lParam;
+                if(WindowData.MinWidth > 0)
+                {
+                    info->ptMinTrackSize.x = minimum.right - minimum.left;
+                }
+
+                if(WindowData.MinHeight > 0)
+                {
+                    info->ptMinTrackSize.y = minimum.bottom - minimum.top;
+                }
+            }
         } break;
 
         case WM_SIZE:
@@ -162,6 +184,12 @@ HWND Win32WindowGetHandle()
 void WindowSetFlags(uint32 windowFlags)
 {
     WindowData.Flags = windowFlags;
+}
+
+void WindowSetMinClientAreaDimensions(uint32 width, uint32 height)
+{
+    WindowData.MinWidth = width;
+    WindowData.MinHeight = height;
 }
 
 void WindowGetClientAreaDimensions(uint32* width, uint32* height)

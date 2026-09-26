@@ -4,7 +4,7 @@
 #include <SSTL/Core/Types.h>
 #include <SSTL/Core/Assert.h>
 
-// NOTE(saeb): The .aga (Afterglow asset) file format, shared by the engine and AfterglowCooker so the two can never disagree. Little-endian only. The layout is AssetHeader, then a type-specific header, then the data. Every struct is a multiple of 16 bytes, so the data after them stays 16-byte aligned in FileRead's buffer and can be used in place.
+// NOTE(saeb): The .aga (Afterglow asset) file format, shared by the engine and cooker so the two can never disagree. Little-endian only. The layout is AssetHeader, then a type-specific header, then the data. Every struct is a multiple of 16 bytes, so the data after them stays 16-byte aligned in FileRead's buffer and can be used in place.
 
 #define AG_ASSET_MAGIC ((uint32)'A' | ((uint32)'G' << 8) | ((uint32)'A' << 16)) // "AGA\0" when viewed in a hex editor
 #define AG_ASSET_VERSION 1 // Bump on any change to this file; the engine rejects other versions, so everything gets recooked

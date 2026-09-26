@@ -1,7 +1,6 @@
 cbuffer QuadConstants : register(b0)
 {
-    float2 ScreenSize;
-    float2 Padding;
+    float4 VisibleArea; // x, y, width, height: the part of design space the window shows
 };
 
 Texture2D QuadTexture : register(t0);
@@ -25,8 +24,9 @@ PSInput VSMain(VSInput input)
 {
     PSInput output;
 
-    // Pixels (top-left origin, y down) -> clip space (center origin, y up).
-    float2 clip = (input.Position / ScreenSize) * float2(2.0, -2.0) + float2(-1.0, 1.0);
+    // Design units (top-left origin, y down) -> clip space (center origin, y up): an orthographic projection of the visible area onto the whole window.
+    float2 clip = ((input.Position - VisibleArea.xy) / VisibleArea.zw) * float2(2.0, -2.0) + float2(-1.0, 1.0);
+
     output.Position = float4(clip, 0.0, 1.0);
     output.UV = input.UV;
     output.Color = input.Color;

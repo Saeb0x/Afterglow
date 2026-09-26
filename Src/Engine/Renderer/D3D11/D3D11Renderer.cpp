@@ -39,8 +39,7 @@ struct QuadPipeline
 
 struct QuadConstants
 {
-    real32 ScreenWidth, ScreenHeight;
-    real32 Padding[2]; // Constant buffers are sized in 16-byte multiples
+    real32 VisibleX, VisibleY, VisibleWidth, VisibleHeight; // Matches Quad.hlsl's VisibleArea; exactly 16 bytes, the constant buffer granularity
 };
 
 struct Renderer
@@ -52,6 +51,9 @@ struct Renderer
     ID3DUserDefinedAnnotation* Annotation; // Null if unavailable; markers are then skipped
     IDXGISwapChain1* SwapChain;
     uint32 BackBufferWidth, BackBufferHeight;
+    real32 DesignWidth, DesignHeight; // 0 until RendererSetDesignSize: one unit per pixel
+    real32 ViewScale; // Window pixels per design unit
+    real32 VisibleX, VisibleY, VisibleWidth, VisibleHeight; // In design units
     bool TearingSupported;
     ID3D11RenderTargetView* RenderTargetView;
     ID3D11Buffer* VertexBuffer;
@@ -98,6 +100,33 @@ static void D3D11EndEvent()
     {
         RendererData.Annotation->EndEvent();
     }
+}
+
+// NOTE(saeb): Fill the window: the design area always fits entirely, centred, at the largest scale the window allows, and the window's extra length on one side becomes extra visible space. Without a design size, one unit is one pixel. Runs whenever the back buffer or the design size changes.
+static void D3D11UpdateView()
+{
+    real32 windowWidth = (real32)RendererData.BackBufferWidth;
+    real32 windowHeight = (real32)RendererData.BackBufferHeight;
+
+    if(RendererData.DesignWidth <= 0.0f || RendererData.DesignHeight <= 0.0f || windowWidth <= 0.0f || windowHeight <= 0.0f)
+    {
+        RendererData.ViewScale = 1.0f;
+        RendererData.VisibleX = 0.0f;
+        RendererData.VisibleY = 0.0f;
+        RendererData.VisibleWidth = windowWidth;
+        RendererData.VisibleHeight = windowHeight;
+        return;
+    }
+
+    real32 scaleX = windowWidth / RendererData.DesignWidth;
+    real32 scaleY = windowHeight / RendererData.DesignHeight;
+    real32 scale = (scaleX < scaleY) ? scaleX : scaleY;
+
+    RendererData.ViewScale = scale;
+    RendererData.VisibleWidth = windowWidth / scale;
+    RendererData.VisibleHeight = windowHeight / scale;
+    RendererData.VisibleX = (RendererData.DesignWidth - RendererData.VisibleWidth) * 0.5f;
+    RendererData.VisibleY = (RendererData.DesignHeight - RendererData.VisibleHeight) * 0.5f;
 }
 
 // NOTE(saeb): Every D3D11 shader is a DXBC container: "DXBC", a 16-byte checksum, a version, then its total size at byte 24. Checking the magic and size rejects truncated or garbage bytecode quietly; with the debug layer set to break on errors, passing it to D3D would stop the program instead. A flipped bit inside otherwise valid bytecode still reaches D3D's checksum.
@@ -215,8 +244,10 @@ static void D3D11FlushQuads()
     RendererData.Context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
     QuadConstants constants = {};
-    constants.ScreenWidth = (real32)RendererData.BackBufferWidth;
-    constants.ScreenHeight = (real32)RendererData.BackBufferHeight;
+    constants.VisibleX = RendererData.VisibleX;
+    constants.VisibleY = RendererData.VisibleY;
+    constants.VisibleWidth = RendererData.VisibleWidth;
+    constants.VisibleHeight = RendererData.VisibleHeight;
     RendererData.Context->UpdateSubresource(RendererData.QuadConstantBuffer, 0, nullptr, &constants, 0, 0);
 
     RendererData.Context->IASetInputLayout(RendererData.QuadInputLayout);
@@ -499,7 +530,7 @@ bool D3D11RendererInit(StackAllocator* allocator, HWND windowHandle)
     D3D11SetName(RendererData.RasterizerState, SV8(u8"CullNoneRasterizer"));
 
     D3D11_SAMPLER_DESC samplerDesc = {};
-    samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
+    samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR; // Art is scaled to the window, so blend texels; point sampling makes scaled edges jagged
     samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
     samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
     samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
@@ -558,6 +589,7 @@ bool D3D11RendererInit(StackAllocator* allocator, HWND windowHandle)
     RendererData.SwapChain->GetDesc1(&swapChainDesc);
     RendererData.BackBufferWidth = swapChainDesc.Width;
     RendererData.BackBufferHeight = swapChainDesc.Height;
+    D3D11UpdateView();
 
     ID3D11Texture2D* backBuffer = nullptr;
     if(FAILED(RendererData.SwapChain->GetBuffer(0, IID_PPV_ARGS(&backBuffer))))
@@ -609,6 +641,7 @@ void D3D11RendererBeginFrame(uint32 width, uint32 height)
 
         RendererData.BackBufferWidth = width;
         RendererData.BackBufferHeight = height;
+        D3D11UpdateView();
     }
 
     // NOTE(saeb): A failed resize leaves no view to draw into; skip the frame until device-loss handling exists.
@@ -897,4 +930,29 @@ bool RendererSetDefaultPipeline(const uint8* vertexBytecode, usize vertexSize, c
     }
 
     return(true);
+}
+
+void RendererSetDesignSize(real32 width, real32 height)
+{
+    // NOTE(saeb): Anything not positive goes back to one unit per pixel.
+    bool valid = width > 0.0f && height > 0.0f;
+    RendererData.DesignWidth = valid ? width : 0.0f;
+    RendererData.DesignHeight = valid ? height : 0.0f;
+
+    D3D11UpdateView();
+}
+
+void RendererGetVisibleArea(real32* x, real32* y, real32* width, real32* height)
+{
+    *x = RendererData.VisibleX;
+    *y = RendererData.VisibleY;
+    *width = RendererData.VisibleWidth;
+    *height = RendererData.VisibleHeight;
+}
+
+void RendererWindowToDesign(int32 windowX, int32 windowY, real32* x, real32* y)
+{
+    // NOTE(saeb): + 0.5 converts from the pixel's top-left corner to its centre, which is where the rasterizer samples it.
+    *x = RendererData.VisibleX + ((real32)windowX + 0.5f) / RendererData.ViewScale;
+    *y = RendererData.VisibleY + ((real32)windowY + 0.5f) / RendererData.ViewScale;
 }

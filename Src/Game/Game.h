@@ -13,7 +13,9 @@
 inline void GameConfigure()
 {
     WindowSetFlags(WindowFlags_None);
+    WindowSetMinClientAreaDimensions(360, 360);
     RendererSetFlags(RendererFlags_VSync);
+    RendererSetDesignSize(1000.0f, 1000.0f);
     InputSetFlags(InputFlags_Mouse | InputFlags_Keyboard);
 }
 
@@ -24,13 +26,16 @@ inline bool GameInit(StackAllocator* allocator)
 
 inline void GameUpdate(StackAllocator* allocator, real64 deltaTime)
 {
-    RendererQuad quad = {};
-    quad.X = 100.0f; quad.Y = 200.0f;
-    quad.Width = 300.0f; quad.Height = 300.0f;
-    quad.U1 = 1.0f; quad.V1 = 1.0f;
-    quad.A = 1.0f; quad.R = 1.0f; quad.G = 0.5f;
+    // NOTE(saeb): One background over everything the window shows, so the design area has no visible edge.
+    real32 visibleX, visibleY, visibleWidth, visibleHeight;
+    RendererGetVisibleArea(&visibleX, &visibleY, &visibleWidth, &visibleHeight);
 
-    RendererPushQuad(&quad);
+    RendererQuad background = {};
+    background.X = visibleX; background.Y = visibleY;
+    background.Width = visibleWidth; background.Height = visibleHeight;
+    background.U1 = 1.0f; background.V1 = 1.0f;
+    background.R = 0.180f; background.G = 0.275f; background.B = 0.212f; background.A = 1.0f;
+    RendererPushQuad(&background);
 }
 
 inline void GameShutdown(StackAllocator* allocator)
