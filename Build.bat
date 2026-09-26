@@ -21,13 +21,7 @@ if "!BUILD!"=="debug" (
     echo [Afterglow] Compiling and linking game [debug]...
     cl /nologo /std:c++20 /permissive- /utf-8 /MTd /Od /Zi ^
     /I "%~dp0Src" /I "%~dp0External\SSTL\Include" ^
-    "%~dp0Src\Engine\Platform\Windows\Win32Main.cpp" ^
-    "%~dp0Src\Engine\Platform\Windows\Win32Window.cpp" ^
-    "%~dp0Src\Engine\Platform\Windows\Win32Input.cpp" ^
-    "%~dp0Src\Engine\Platform\Windows\Win32Time.cpp" ^
-    "%~dp0Src\Engine\Platform\Windows\Win32File.cpp" ^
-    "%~dp0Src\Engine\Renderer\D3D11\D3D11Renderer.cpp" ^
-    "%~dp0Src\Engine\Asset\Asset.cpp" ^
+    "%~dp0Src\Afterglow.cpp" ^
     "%~dp0Src\Sandbox\Sandbox.cpp" ^
     /Fd"Afterglow.pdb" /Fe"Afterglow.exe" ^
     /link /nologo /DEBUG Kernel32.lib User32.lib D3D11.lib DXGI.lib DXGUID.lib
@@ -36,11 +30,7 @@ if "!BUILD!"=="debug" (
     echo [Afterglow] Compiling and linking cooker [debug]...
     cl /nologo /std:c++20 /permissive- /utf-8 /MTd /Od /Zi ^
     /I "%~dp0Src" /I "%~dp0External\stb" /I "%~dp0External\SSTL\Include" ^
-    "%~dp0Src\Cooker\Platform\Windows\Win32CookerMain.cpp" ^
-    "%~dp0Src\Cooker\Cooker.cpp" ^
-    "%~dp0Src\Cooker\CookTexture.cpp" ^
-    "%~dp0Src\Cooker\CookShader.cpp" ^
-    "%~dp0Src\Engine\Platform\Windows\Win32File.cpp" ^
+    "%~dp0Src\AfterglowCooker.cpp" ^
     /Fd"AfterglowCooker.pdb" /Fe"AfterglowCooker.exe" ^
     /link /nologo /DEBUG Kernel32.lib D3DCompiler.lib
     if !errorlevel! neq 0 goto error
@@ -48,13 +38,7 @@ if "!BUILD!"=="debug" (
     echo [Afterglow] Compiling and linking game [release]...
     cl /nologo /std:c++20 /permissive- /utf-8 /MT /O2 ^
     /I "%~dp0Src" /I "%~dp0External\SSTL\Include" ^
-    "%~dp0Src\Engine\Platform\Windows\Win32Main.cpp" ^
-    "%~dp0Src\Engine\Platform\Windows\Win32Window.cpp" ^
-    "%~dp0Src\Engine\Platform\Windows\Win32Input.cpp" ^
-    "%~dp0Src\Engine\Platform\Windows\Win32Time.cpp" ^
-    "%~dp0Src\Engine\Platform\Windows\Win32File.cpp" ^
-    "%~dp0Src\Engine\Renderer\D3D11\D3D11Renderer.cpp" ^
-    "%~dp0Src\Engine\Asset\Asset.cpp" ^
+    "%~dp0Src\Afterglow.cpp" ^
     "%~dp0Src\Sandbox\Sandbox.cpp" ^
     /Fe"Afterglow.exe" ^
     /link /nologo Kernel32.lib User32.lib D3D11.lib DXGI.lib DXGUID.lib
@@ -63,11 +47,7 @@ if "!BUILD!"=="debug" (
     echo [Afterglow] Compiling and linking cooker [release]...
     cl /nologo /std:c++20 /permissive- /utf-8 /MT /O2 ^
     /I "%~dp0Src" /I "%~dp0External\stb" /I "%~dp0External\SSTL\Include" ^
-    "%~dp0Src\Cooker\Platform\Windows\Win32CookerMain.cpp" ^
-    "%~dp0Src\Cooker\Cooker.cpp" ^
-    "%~dp0Src\Cooker\CookTexture.cpp" ^
-    "%~dp0Src\Cooker\CookShader.cpp" ^
-    "%~dp0Src\Engine\Platform\Windows\Win32File.cpp" ^
+    "%~dp0Src\AfterglowCooker.cpp" ^
     /Fe"AfterglowCooker.exe" ^
     /link /nologo Kernel32.lib D3DCompiler.lib
     if !errorlevel! neq 0 goto error
