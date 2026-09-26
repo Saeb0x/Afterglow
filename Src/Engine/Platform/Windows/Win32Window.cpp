@@ -5,7 +5,9 @@
 struct Window
 {
     HWND Handle;
+    StringView8 InitialTitle; // Used once, when the window is created
     String8 Title;
+    uint32 InitialWidth, InitialHeight; // Client area to start with; 0 = the default
     uint32 Width, Height;
     uint32 MinWidth, MinHeight; // Client area; 0 = no limit
     bool Minimized;
@@ -75,8 +77,12 @@ static LRESULT CALLBACK Win32WindowProcedure(HWND windowHandle, UINT message, WP
     return(0);
 }
 
-bool Win32WindowCreate(StackAllocator* allocator, StringView8 title, uint32 width, uint32 height)
+bool Win32WindowCreate(StackAllocator* allocator)
 {
+    StringView8 title = (WindowData.InitialTitle.Data && WindowData.InitialTitle.Length > 0) ? WindowData.InitialTitle : SV8(u8"Afterglow");
+    uint32 width = (WindowData.InitialWidth > 0) ? WindowData.InitialWidth : 1280;
+    uint32 height = (WindowData.InitialHeight > 0) ? WindowData.InitialHeight : 720;
+
     WNDCLASSEXW windowClass = {};
     windowClass.cbSize = sizeof(WNDCLASSEXW);
     windowClass.style = CS_OWNDC | CS_HREDRAW | CS_VREDRAW;
@@ -184,6 +190,17 @@ HWND Win32WindowGetHandle()
 void WindowSetFlags(uint32 windowFlags)
 {
     WindowData.Flags = windowFlags;
+}
+
+void WindowSetTitle(StringView8 title)
+{
+    WindowData.InitialTitle = title;
+}
+
+void WindowSetClientAreaDimensions(uint32 width, uint32 height)
+{
+    WindowData.InitialWidth = width;
+    WindowData.InitialHeight = height;
 }
 
 void WindowSetMinClientAreaDimensions(uint32 width, uint32 height)

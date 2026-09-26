@@ -1,10 +1,9 @@
 #include "Win32Window.h"
 #include "Engine/Platform/Window.h"
 #include "Win32Time.h"
-#include "Engine/Renderer/D3D11/D3D11Renderer.h"
 #include "Engine/Asset/Asset.h"
-
-#include "Game/Game.h"
+#include "Engine/Renderer/D3D11/D3D11Renderer.h"
+#include "Engine/Game.h"
 
 #include <SSTL/Core/Utility.h>
 
@@ -49,7 +48,7 @@ int APIENTRY WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLi
     {
         GameConfigure();
 
-        if(Win32WindowCreate(&EngineMemory, SV8(u8"Afterglow"), 1280, 720))
+        if(Win32WindowCreate(&EngineMemory))
         {
             if(D3D11RendererInit(&EngineMemory, Win32WindowGetHandle()))
             {

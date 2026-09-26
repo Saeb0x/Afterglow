@@ -28,6 +28,7 @@ if "!BUILD!"=="debug" (
     "%~dp0Src\Engine\Platform\Windows\Win32File.cpp" ^
     "%~dp0Src\Engine\Renderer\D3D11\D3D11Renderer.cpp" ^
     "%~dp0Src\Engine\Asset\Asset.cpp" ^
+    "%~dp0Src\Sandbox\Sandbox.cpp" ^
     /Fd"Afterglow.pdb" /Fe"Afterglow.exe" ^
     /link /nologo /DEBUG Kernel32.lib User32.lib D3D11.lib DXGI.lib DXGUID.lib
     if !errorlevel! neq 0 goto error
@@ -54,6 +55,7 @@ if "!BUILD!"=="debug" (
     "%~dp0Src\Engine\Platform\Windows\Win32File.cpp" ^
     "%~dp0Src\Engine\Renderer\D3D11\D3D11Renderer.cpp" ^
     "%~dp0Src\Engine\Asset\Asset.cpp" ^
+    "%~dp0Src\Sandbox\Sandbox.cpp" ^
     /Fe"Afterglow.exe" ^
     /link /nologo Kernel32.lib User32.lib D3D11.lib DXGI.lib DXGUID.lib
     if !errorlevel! neq 0 goto error
