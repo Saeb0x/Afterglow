@@ -147,8 +147,30 @@ static bool D3D11IsBytecodeValid(const uint8* bytecode, usize size)
     return(containerSize == size);
 }
 
-static bool D3D11CreateTexture(uint32 width, uint32 height, const uint8* pixels, StringView8 name, ID3D11ShaderResourceView** view)
+static bool D3D11CreateTexture(uint32 width, uint32 height, RendererTextureFormat format, const uint8* pixels, StringView8 name, ID3D11ShaderResourceView** view)
 {
+    DXGI_FORMAT textureFormat;
+    uint32 bytesPerPixel;
+    switch(format)
+    {
+        case RendererTextureFormat::RGBA8:
+        {
+            textureFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
+            bytesPerPixel = 4;
+        } break;
+
+        case RendererTextureFormat::R8:
+        {
+            textureFormat = DXGI_FORMAT_R8_UNORM;
+            bytesPerPixel = 1;
+        } break;
+
+        default:
+        {
+            return(false);
+        }
+    }
+
     // NOTE(saeb): Validate first; with the debug layer set to break on errors, a bad description would stop the program instead of just failing.
     if(!pixels || width == 0 || height == 0 || width > D3D11_REQ_TEXTURE2D_U_OR_V_DIMENSION || height > D3D11_REQ_TEXTURE2D_U_OR_V_DIMENSION)
     {
@@ -160,14 +182,14 @@ static bool D3D11CreateTexture(uint32 width, uint32 height, const uint8* pixels,
     textureDesc.Height = height;
     textureDesc.MipLevels = 1;
     textureDesc.ArraySize = 1;
-    textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+    textureDesc.Format = textureFormat;
     textureDesc.SampleDesc.Count = 1;
     textureDesc.Usage = D3D11_USAGE_IMMUTABLE; // Contents given at creation, never written again
     textureDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
 
     D3D11_SUBRESOURCE_DATA textureData = {};
     textureData.pSysMem = pixels;
-    textureData.SysMemPitch = width * 4; // Bytes per row
+    textureData.SysMemPitch = width * bytesPerPixel; // Bytes per row
 
     ID3D11Texture2D* texture = nullptr;
     if(FAILED(RendererData.Device->CreateTexture2D(&textureDesc, &textureData, &texture)))
@@ -546,7 +568,7 @@ bool D3D11RendererInit(StackAllocator* allocator, HWND windowHandle)
 
     // NOTE(saeb): Handle 0 is the built-in white texture; plain rects sample it, and textures that fail to create fall back to it.
     uint32 whitePixel = 0xFFFFFFFF;
-    if(!D3D11CreateTexture(1, 1, (const uint8*)&whitePixel, SV8(u8"WhiteTexture"), &RendererData.Textures[0]))
+    if(!D3D11CreateTexture(1, 1, RendererTextureFormat::RGBA8, (const uint8*)&whitePixel, SV8(u8"WhiteTexture"), &RendererData.Textures[0]))
     {
         return(false);
     }
@@ -841,7 +863,7 @@ void RendererPushQuad(const RendererQuad* quad)
     RendererData.Quads[RendererData.QuadCount++] = *quad;
 }
 
-RendererTexture RendererCreateTexture(uint32 width, uint32 height, const uint8* pixels, StringView8 debugName)
+RendererTexture RendererCreateTexture(uint32 width, uint32 height, RendererTextureFormat format, const uint8* pixels, StringView8 debugName)
 {
     // NOTE(saeb): Not initialized, table full, or creation failed: return the white texture, so the quad still draws (white) instead of crashing.
     if(!RendererData.Device || RendererData.TextureCount >= AG_MAX_TEXTURES)
@@ -849,7 +871,7 @@ RendererTexture RendererCreateTexture(uint32 width, uint32 height, const uint8* 
         return(0);
     }
 
-    if(!D3D11CreateTexture(width, height, pixels, debugName, &RendererData.Textures[RendererData.TextureCount]))
+    if(!D3D11CreateTexture(width, height, format, pixels, debugName, &RendererData.Textures[RendererData.TextureCount]))
     {
         return(0);
     }

@@ -4,6 +4,7 @@
 #include "Cooker/Cooker.cpp"
 #include "Cooker/CookTexture.cpp"
 #include "Cooker/CookShader.cpp" // The D3D11 shader target
+#include "Cooker/CookFont.cpp"
 
 // Platform layer.
 #include "Engine/Platform/Windows/Win32File.cpp"

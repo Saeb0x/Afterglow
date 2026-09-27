@@ -13,6 +13,7 @@
 #include <windows.h>
 
 #define AG_DEFAULT_PIPELINE_PATH u8"Data/Engine/Quad.aga"
+#define AG_TEXT_PIPELINE_PATH u8"Data/Engine/Text.aga"
 
 static StackAllocator EngineMemory;
 
@@ -52,9 +53,15 @@ int APIENTRY WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLi
         {
             if(D3D11RendererInit(&EngineMemory, Win32WindowGetHandle()))
             {
+                // NOTE(saeb): The engine's own shaders: the quad pipeline everything draws with, then the text pipeline fonts draw with (only tried once the first loaded).
                 AssetLoadResult pipelineResult = AssetLoadDefaultPipeline(&EngineMemory, SV8(AG_DEFAULT_PIPELINE_PATH));
-                if(pipelineResult == AssetLoadResult::Ok)
+                RendererPipeline textPipeline = 0;
+                AssetLoadResult textPipelineResult = (pipelineResult == AssetLoadResult::Ok) ? AssetLoadPipeline(&EngineMemory, SV8(AG_TEXT_PIPELINE_PATH), &textPipeline) : AssetLoadResult::Ok;
+
+                if(pipelineResult == AssetLoadResult::Ok && textPipelineResult == AssetLoadResult::Ok)
                 {
+                    TextSetPipeline(textPipeline);
+
                     if(GameInit(&EngineMemory))
                     {
                         ShowWindow(Win32WindowGetHandle(), SW_SHOW);
@@ -91,9 +98,13 @@ int APIENTRY WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLi
                         Win32ShowStartupError(&EngineMemory, SV8(u8"The game failed to initialize."), StringView8{ nullptr, 0 });
                     }
                 }
-                else
+                else if(pipelineResult != AssetLoadResult::Ok)
                 {
                     Win32ShowStartupError(&EngineMemory, SV8(u8"Couldn't load the default shader (" AG_DEFAULT_PIPELINE_PATH u8")."), AssetDescribeResult(pipelineResult));
+                }
+                else
+                {
+                    Win32ShowStartupError(&EngineMemory, SV8(u8"Couldn't load the text shader (" AG_TEXT_PIPELINE_PATH u8")."), AssetDescribeResult(textPipelineResult));
                 }
             }
             else

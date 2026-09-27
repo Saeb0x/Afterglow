@@ -4,6 +4,10 @@
 #include "Engine/Platform/Window.h"
 #include "Engine/Platform/Input.h"
 #include "Engine/Renderer/Renderer.h"
+#include "Engine/Renderer/Text.h"
+#include "Engine/Asset/Asset.h"
+
+static Font DebugFont;
 
 void GameConfigure()
 {
@@ -18,6 +22,7 @@ void GameConfigure()
 
 bool GameInit(StackAllocator* allocator)
 {
+    AssetLoadFont(allocator, SV8(u8"Data/Engine/LiberationMono-Regular.aga"), &DebugFont);
     return(true);
 }
 
@@ -33,6 +38,8 @@ void GameUpdate(StackAllocator* allocator, real64 deltaTime)
     background.U1 = 1.0f; background.V1 = 1.0f;
     background.R = 0.5294f; background.G = 0.8078f; background.B = 0.9216f; background.A = 1.0f;
     RendererPushQuad(&background);
+
+    TextDraw(&DebugFont, 200.0f, 300.0f, 100.0f, 1.0f, 0.0f, 0.0f, 1.0f, SV8(u8"Afterglow"));
 }
 
 void GameShutdown(StackAllocator* allocator)

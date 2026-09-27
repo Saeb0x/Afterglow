@@ -26,5 +26,6 @@ const char* CookerDescribeWrite(FileWriteResult result);
 // NOTE(saeb): Both paths are absolute UTF-8; the output's parent folders may not exist yet (FileWrite creates them). Each prints its own error and returns false on failure. The caller wraps every call in Lower and Upper frames, so a cook can allocate freely and never needs to clean up.
 bool CookTexture(CookerContext* context, StringView8 sourcePath, StringView8 outputPath);
 bool CookShader(CookerContext* context, StringView8 sourcePath, StringView8 outputPath);
+bool CookFont(CookerContext* context, StringView8 sourcePath, StringView8 outputPath);
 
 #endif

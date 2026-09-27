@@ -19,7 +19,8 @@ enum class CookerSourceType : uint8
 {
     Unknown,
     Texture,
-    Shader
+    Shader,
+    Font
 };
 
 struct CookerWalk
@@ -213,6 +214,11 @@ static CookerSourceType CookerGetSourceType(StringView8 name)
         return(CookerSourceType::Shader);
     }
 
+    if(CookerEndsWith(name, ".ttf"))
+    {
+        return(CookerSourceType::Font);
+    }
+
     return(CookerSourceType::Unknown);
 }
 
@@ -252,9 +258,13 @@ static void CookerCookFile(CookerWalk* walk, CookerSourceType type, uint64 sourc
     {
         cooked = CookTexture(&Context, sourcePath, outputPath);
     }
-    else
+    else if(type == CookerSourceType::Shader)
     {
         cooked = CookShader(&Context, sourcePath, outputPath);
+    }
+    else
+    {
+        cooked = CookFont(&Context, sourcePath, outputPath);
     }
 
     ReleaseFrame(Context.Memory, upperFrame);
