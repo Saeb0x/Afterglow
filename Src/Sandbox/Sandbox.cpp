@@ -14,7 +14,7 @@
 #if SSTL_DEBUG
 static UIContext DebugUIContext;
 static Font DebugFont;
-static UIPanel DebugPanel = { 20.0f, 20.0f, 300.0f, 400.0f };
+static UIPanel DebugPanel = { 20.0f, 20.0f, 300.0f, 400.0f, 300.0f, 400.0f };
 #endif
 
 void GameConfigure()
@@ -43,10 +43,14 @@ void GameUpdate(StackAllocator* allocator, real64 deltaTime)
     UIBegin(&DebugUIContext, &DebugFont);
     UIPanelBegin(&DebugUIContext, &DebugPanel, SV8(u8"Debug"));
 
-    // The button still takes a rect; placing it relative to the panel makes it move with the panel.
-    if(UIButton(&DebugUIContext, SV8(u8"Click me"), DebugPanel.X + 10.0f, DebugPanel.Y + 34.0f, 160.0f, 40.0f))
+    if(UIButton(&DebugUIContext, SV8(u8"Click me")))
     {
         LogPrint(allocator, SV8(u8"Button clicked!"));
+    }
+
+    if(UIButton(&DebugUIContext, SV8(u8"Another one")))
+    {
+        LogPrint(allocator, SV8(u8"Another one clicked!"));
     }
 
     UIPanelEnd(&DebugUIContext);

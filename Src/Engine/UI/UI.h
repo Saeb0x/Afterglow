@@ -8,8 +8,6 @@
 
 using UIID = uint32; // 0 = no widget
 
-#define UI_TITLE_HEIGHT 30.0f
-
 struct UIContext
 {
     // Input for this frame, in window pixels; copied in UIBegin.
@@ -22,13 +20,19 @@ struct UIContext
 
     const Font* Font;
 
-    real32 DragOffsetX, DragOffsetY; // Where the title bar was grabbed, relative to the panel's corner
+    real32 DragOffsetX, DragOffsetY; // Where the active widget was grabbed, relative to the corner it moves (top-left for the title bar, bottom-right for the grip)
     real32 ScreenWidth, ScreenHeight; // Client area size, so panels can stay inside it
+
+    // NOTE(saeb): Set by UIPanelBegin; widgets inside the panel read them.
+    UIID Seed; // The current panel's ID; widget IDs are derived from it. 0 outside panels
+    real32 Scale; // Panel size relative to its base size
+    real32 LayoutX, LayoutY, LayoutWidth; // Where the next row goes, and how wide rows are
 };
 
 struct UIPanel
 {
-    real32 X, Y, Width, Height; // Window pixels; the game sets the start, dragging changes X and Y
+    real32 X, Y, Width, Height; // Window pixels; the game sets the start, dragging and resizing change them
+    real32 BaseWidth, BaseHeight; // The size its contents are designed for; at this size they draw at scale 1
 };
 
 void UIBegin(UIContext* ui, const Font* font);
@@ -37,6 +41,10 @@ void UIEnd(UIContext* ui);
 void UIPanelBegin(UIContext* ui, UIPanel* panel, StringView8 title);
 void UIPanelEnd(UIContext* ui);
 
-bool UIButton(UIContext* ui, StringView8 label, real32 x, real32 y, real32 width, real32 height);
+// NOTE(saeb): True while the mouse is over any UI or dragging one; the game should ignore mouse clicks then. Reflects the last UIEnd.
+bool UIWantsMouse(const UIContext* ui);
+
+// NOTE(saeb): Takes the next row of the current panel. Returns true on the frame it's clicked.
+bool UIButton(UIContext* ui, StringView8 label);
 
 #endif
