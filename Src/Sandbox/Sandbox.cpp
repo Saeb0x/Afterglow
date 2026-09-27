@@ -12,15 +12,43 @@
 #include <SSTL/Core/Config.h>
 
 #if SSTL_DEBUG
-static UIContext DebugUIContext;
 static Font DebugFont;
-static UIPanel DebugPanel = { 20.0f, 20.0f, 300.0f, 400.0f, 300.0f, 400.0f };
-#endif
+static UIContext DebugUIContext;
+static UIPanel DebugPanel = { 40.0f, 40.0f, 400.0f, 410.0f, 400.0f, 410.0f }; // Sized for the title bar and nine rows
 
-// NOTE(saeb): A square in the middle of the design area, for the debug panel to edit.
-static bool ShowSquare = true;
-static real32 SquareSize = 200.0f;
-static real32 SquareRed = 1.0f;
+// NOTE(saeb): Frame times are gathered over a short window and shown as its average and worst, so the numbers are readable instead of changing every frame.
+#define SANDBOX_STATS_WINDOW 0.5 // Seconds
+
+static real64 StatsElapsed; // Seconds gathered in the current window
+static real64 StatsWorstDelta; // Longest frame in the current window
+static uint32 StatsFrames;
+
+static real64 StatsAverageMs, StatsWorstMs, StatsFPS; // The last completed window
+static usize StatsUpperPeak; // Upper heap peak in the last completed window
+static usize StatsUpperPeakEver; // Upper heap peak since startup
+
+// NOTE(saeb): Bytes as KiB below one MiB, MiB above: "12.5 KiB", "1.13 MiB".
+static void SandboxAppendBytes(String8* line, usize bytes)
+{
+    if(bytes < 1024 * 1024)
+    {
+        String8AppendReal(line, (real64)bytes / 1024.0, 1);
+        String8Append(line, SV8(u8" KiB"));
+    }
+    else
+    {
+        String8AppendReal(line, (real64)bytes / (1024.0 * 1024.0), 2);
+        String8Append(line, SV8(u8" MiB"));
+    }
+}
+
+// NOTE(saeb): Shows the line as a label, then empties it for the next one.
+static void SandboxStatsLine(String8* line)
+{
+    UILabel(&DebugUIContext, StringView8{ line->Data, line->Length });
+    line->Length = 0;
+}
+#endif
 
 void GameConfigure()
 {
@@ -44,35 +72,100 @@ bool GameInit(StackAllocator* allocator)
 
 void GameUpdate(StackAllocator* allocator, real64 deltaTime)
 {
-    // The game first, in design space; the debug UI draws over it.
-    if(ShowSquare)
-    {
-        RendererQuad square = {};
-        square.X = 500.0f - SquareSize * 0.5f; square.Y = 500.0f - SquareSize * 0.5f;
-        square.Width = SquareSize; square.Height = SquareSize;
-        square.R = SquareRed; square.G = 0.2f; square.B = 0.2f; square.A = 1.0f;
-
-        RendererPushQuad(&square);
-    }
-    
 #if SSTL_DEBUG
-    UIBegin(&DebugUIContext, &DebugFont);
-    UIPanelBegin(&DebugUIContext, &DebugPanel, SV8(u8"Debug"));
-
-    UILabel(&DebugUIContext, SV8(u8"Square"));
-    UICheckbox(&DebugUIContext, SV8(u8"Show"), &ShowSquare);
-    UISlider(&DebugUIContext, SV8(u8"Size"), &SquareSize, 50.0f, 400.0f);
-    UISlider(&DebugUIContext, SV8(u8"Red"), &SquareRed, 0.0f, 1.0f);
-
-    if(UIButton(&DebugUIContext, SV8(u8"Reset")))
+    // Gather this frame; when the window is full, publish its numbers and start a new one.
+    StatsElapsed += deltaTime;
+    StatsFrames += 1;
+    if(deltaTime > StatsWorstDelta)
     {
-        ShowSquare = true;
-        SquareSize = 200.0f;
-        SquareRed = 1.0f;
-        LogPrint(allocator, SV8(u8"Square reset"));
+        StatsWorstDelta = deltaTime;
     }
+
+    if(StatsElapsed >= SANDBOX_STATS_WINDOW)
+    {
+        StatsAverageMs = StatsElapsed / (real64)StatsFrames * 1000.0;
+        StatsWorstMs = StatsWorstDelta * 1000.0;
+        StatsFPS = (real64)StatsFrames / StatsElapsed;
+
+        // NOTE(saeb): The peak so far also covers startup (asset loading), so it's kept as the "ever" peak; resetting then makes the next window's peak cover only that window.
+        StatsUpperPeak = GetHeapPeakMemory(allocator, Heap::Upper);
+        if(StatsUpperPeak > StatsUpperPeakEver)
+        {
+            StatsUpperPeakEver = StatsUpperPeak;
+        }
+
+        ResetPeakMemory(allocator);
+
+        StatsElapsed = 0.0;
+        StatsWorstDelta = 0.0;
+        StatsFrames = 0;
+    }
+
+    RendererStats renderer;
+    RendererGetStats(&renderer);
+
+    usize lowerUsed = GetHeapUsedMemory(allocator, Heap::Lower);
+    usize capacity = GetUsedMemory(allocator) + GetAvailableMemory(allocator);
+
+    UIBegin(&DebugUIContext, &DebugFont);
+    UIPanelBegin(&DebugUIContext, &DebugPanel, SV8(u8"Stats"));
+
+    char8 buffer[96];
+    String8 line = { buffer, 0, sizeof(buffer) };
+
+    String8Append(&line, SV8(u8"Frame: "));
+    String8AppendReal(&line, StatsAverageMs, 2);
+    String8Append(&line, SV8(u8" ms ("));
+    String8AppendReal(&line, StatsFPS, 0);
+    String8Append(&line, SV8(u8" FPS)"));
+    SandboxStatsLine(&line);
+
+    String8Append(&line, SV8(u8"Worst frame: "));
+    String8AppendReal(&line, StatsWorstMs, 2);
+    String8Append(&line, SV8(u8" ms"));
+    SandboxStatsLine(&line);
+
+    String8Append(&line, SV8(u8"Draw calls: "));
+    String8AppendUInt(&line, renderer.DrawCalls);
+    SandboxStatsLine(&line);
+
+    String8Append(&line, SV8(u8"Quads: "));
+    String8AppendUInt(&line, renderer.Quads);
+    String8Append(&line, SV8(u8" / "));
+    String8AppendUInt(&line, renderer.MaxQuads);
+    SandboxStatsLine(&line);
+
+    String8Append(&line, SV8(u8"Dropped quads: "));
+    String8AppendUInt(&line, renderer.DroppedQuads);
+    SandboxStatsLine(&line);
+
+    String8Append(&line, SV8(u8"Textures: "));
+    String8AppendUInt(&line, renderer.Textures);
+    String8Append(&line, SV8(u8" / "));
+    String8AppendUInt(&line, renderer.MaxTextures);
+    String8Append(&line, SV8(u8", pipelines: "));
+    String8AppendUInt(&line, renderer.Pipelines);
+    String8Append(&line, SV8(u8" / "));
+    String8AppendUInt(&line, renderer.MaxPipelines);
+    SandboxStatsLine(&line);
+
+    String8Append(&line, SV8(u8"Lower heap: "));
+    SandboxAppendBytes(&line, lowerUsed);
+    SandboxStatsLine(&line);
+
+    String8Append(&line, SV8(u8"Upper peak: "));
+    SandboxAppendBytes(&line, StatsUpperPeak);
+    String8Append(&line, SV8(u8" (ever "));
+    SandboxAppendBytes(&line, StatsUpperPeakEver);
+    String8Append(&line, SV8(u8")"));
+    SandboxStatsLine(&line);
+
+    String8Append(&line, SV8(u8"Memory: "));
+    SandboxAppendBytes(&line, capacity);
+    SandboxStatsLine(&line);
 
     UIPanelEnd(&DebugUIContext);
+
     UIEnd(&DebugUIContext);
 #endif
 }

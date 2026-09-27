@@ -34,7 +34,21 @@ struct RendererQuad
     RendererPipeline Pipeline;
 };
 
+struct RendererStats
+{
+    // The last presented frame. Quads are drawn after the game updates, so during GameUpdate these describe the previous frame.
+    uint32 Quads;
+    uint32 DrawCalls;
+    uint32 DroppedQuads; // Pushed past MaxQuads and not drawn
+
+    // Created so far, out of the fixed table sizes.
+    uint32 Textures, MaxTextures;
+    uint32 Pipelines, MaxPipelines;
+    uint32 MaxQuads;
+};
+
 void RendererSetFlags(uint32 rendererFlags);
+void RendererGetStats(RendererStats* stats);
 
 // NOTE(saeb): Quads pushed after this use the given space until it's changed again; resets to Design at the end of every frame. Window-space quads are converted to design units when pushed, so calling RendererSetDesignSize in the middle of a frame misplaces the window-space quads already pushed.
 void RendererSetSpace(RendererSpace space);

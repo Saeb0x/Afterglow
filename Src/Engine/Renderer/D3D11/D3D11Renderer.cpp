@@ -61,6 +61,8 @@ struct Renderer
     ID3D11Buffer* IndexBuffer;
     RendererQuad* Quads;
     uint32 QuadCount;
+    uint32 DroppedQuadCount; // This frame's quads that didn't fit
+    RendererStats LastFrameStats; // Quads, draw calls and dropped quads of the last presented frame
     QuadBatch* Batches;
     ID3D11VertexShader* QuadVertexShader;
     ID3D11InputLayout* QuadInputLayout;
@@ -212,12 +214,13 @@ static bool D3D11CreateTexture(uint32 width, uint32 height, RendererTextureForma
     return(SUCCEEDED(viewResult));
 }
 
-static void D3D11FlushQuads()
+// NOTE(saeb): Returns the number of draw calls issued.
+static uint32 D3D11FlushQuads()
 {
     D3D11_MAPPED_SUBRESOURCE mapped;
     if(FAILED(RendererData.Context->Map(RendererData.VertexBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped)))
     {
-        return;
+        return(0);
     }
 
     QuadVertex* vertices = (QuadVertex*)mapped.pData;
@@ -319,6 +322,8 @@ static void D3D11FlushQuads()
             RendererData.Annotation->EndEvent();
         }
     }
+
+    return(batchCount);
 }
 
 bool D3D11RendererInit(StackAllocator* allocator, HWND windowHandle)
@@ -693,15 +698,21 @@ void D3D11RendererBeginFrame(uint32 width, uint32 height)
 void D3D11RendererEndFrame()
 {
     // NOTE(saeb): The input layout is the last object RendererSetDefaultPipeline creates; without it there's nothing to draw quads with.
+    uint32 drawCalls = 0;
     if(RendererData.RenderTargetView && RendererData.QuadInputLayout && RendererData.QuadCount > 0)
     {
         D3D11BeginEvent(L"Quads");
-        D3D11FlushQuads();
+        drawCalls = D3D11FlushQuads();
         D3D11EndEvent();
     }
 
+    RendererData.LastFrameStats.Quads = RendererData.QuadCount;
+    RendererData.LastFrameStats.DrawCalls = drawCalls;
+    RendererData.LastFrameStats.DroppedQuads = RendererData.DroppedQuadCount;
+
     // NOTE(saeb): Reset here, not in BeginFrame; BeginFrame can early-out and would leave stale quads behind.
     RendererData.QuadCount = 0;
+    RendererData.DroppedQuadCount = 0;
     RendererData.Space = RendererSpace::Design;
 
     if(RendererData.Flags & RendererFlags_VSync)
@@ -854,6 +865,16 @@ void RendererSetFlags(uint32 rendererFlags)
     RendererData.Flags = rendererFlags;
 }
 
+void RendererGetStats(RendererStats* stats)
+{
+    *stats = RendererData.LastFrameStats;
+    stats->Textures = RendererData.TextureCount;
+    stats->MaxTextures = AG_MAX_TEXTURES;
+    stats->Pipelines = RendererData.PipelineCount;
+    stats->MaxPipelines = AG_MAX_PIPELINES;
+    stats->MaxQuads = AG_MAX_QUADS;
+}
+
 void RendererSetSpace(RendererSpace space)
 {
     RendererData.Space = space;
@@ -866,9 +887,10 @@ RendererSpace RendererGetSpace()
 
 void RendererPushQuad(const RendererQuad* quad)
 {
-    // NOTE(saeb): Full; drop the quad rather than overflow. The vertex buffer can't hold more anyway.
+    // NOTE(saeb): Full; drop the quad rather than overflow. The vertex buffer can't hold more anyway. Counted, so the stats show it.
     if(RendererData.QuadCount >= AG_MAX_QUADS)
     {
+        ++RendererData.DroppedQuadCount;
         return;
     }
 

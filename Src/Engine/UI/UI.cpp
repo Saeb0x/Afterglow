@@ -102,84 +102,6 @@ static real32 UIShade(UIContext* ui, UIID id)
     return((ui->Active == id) ? 0.35f : (ui->Hot == id) ? 0.25f : 0.15f);
 }
 
-// NOTE(saeb): Fixed-point text for a number, such as "-12.50", without the C runtime's printf. Returns the length written; the buffer is always null-terminated. Values too large to show exactly print as "big".
-static usize UIFormatReal(real32 value, uint32 decimals, char8* buffer, usize capacity)
-{
-    usize length = 0;
-    if(capacity < 24)
-    {
-        if(capacity > 0)
-        {
-            buffer[0] = '\0';
-        }
-
-        return(0);
-    }
-
-    if(value != value)
-    {
-        buffer[0] = 'n'; buffer[1] = 'a'; buffer[2] = 'n'; buffer[3] = '\0';
-        return(3);
-    }
-
-    // NOTE(saeb): More than 6 decimals is beyond a real32's precision anyway, and keeps the result well inside the buffer.
-    if(decimals > 6)
-    {
-        decimals = 6;
-    }
-
-    uint64 power = 1;
-    for(uint32 index = 0; index < decimals; ++index)
-    {
-        power *= 10;
-    }
-
-    bool negative = value < 0.0f;
-    real64 magnitude = negative ? -(real64)value : (real64)value;
-    real64 scaled = magnitude * (real64)power + 0.5;
-    if(scaled >= 1.0e15)
-    {
-        buffer[0] = 'b'; buffer[1] = 'i'; buffer[2] = 'g'; buffer[3] = '\0';
-        return(3);
-    }
-
-    uint64 fixed = (uint64)scaled;
-    if(negative && fixed > 0) // No "-0.00"
-    {
-        buffer[length++] = '-';
-    }
-
-    // Whole part, written backwards into a scratch buffer, then copied forwards.
-    uint64 whole = fixed / power;
-    char8 digits[20];
-    usize digitCount = 0;
-    do
-    {
-        digits[digitCount++] = (char8)('0' + (whole % 10));
-        whole /= 10;
-    } while(whole > 0);
-
-    while(digitCount > 0)
-    {
-        buffer[length++] = digits[--digitCount];
-    }
-
-    // Fraction, with its leading zeros: 0.05 is "05", not "5".
-    if(decimals > 0)
-    {
-        buffer[length++] = '.';
-        uint64 fraction = fixed % power;
-        for(uint64 place = power / 10; place > 0; place /= 10)
-        {
-            buffer[length++] = (char8)('0' + (fraction / place) % 10);
-        }
-    }
-
-    buffer[length] = '\0';
-
-    return(length);
-}
-
 void UIBegin(UIContext* ui, const Font* font)
 {
     int32 mouseX, mouseY;
@@ -498,19 +420,14 @@ bool UISlider(UIContext* ui, StringView8 label, real32* value, real32 minimum, r
 
     UIDrawRect(ui, x, y, width * fill, height, 0.25f, 0.45f, 0.7f, 1.0f);
 
-    // "Label: 0.50" centred on the track.
-    char8 text[128];
-    usize length = 0;
-    for(usize index = 0; index < label.Length && length < 96; ++index)
-    {
-        text[length++] = label.Data[index];
-    }
+    // "Label: 0.50" centred on the track, built in a local buffer.
+    char8 buffer[128];
+    String8 text = { buffer, 0, sizeof(buffer) };
+    String8Append(&text, label);
+    String8Append(&text, SV8(u8": "));
+    String8AppendReal(&text, *value, 2);
 
-    text[length++] = ':';
-    text[length++] = ' ';
-    length += UIFormatReal(*value, 2, text + length, sizeof(text) - length);
-
-    UIDrawText(ui, StringView8{ text, length }, x, y, width, height, true);
+    UIDrawText(ui, StringView8{ text.Data, text.Length }, x, y, width, height, true);
 
     return(*value != oldValue);
 }
