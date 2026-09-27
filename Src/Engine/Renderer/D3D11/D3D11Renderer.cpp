@@ -51,6 +51,7 @@ struct Renderer
     ID3DUserDefinedAnnotation* Annotation; // Null if unavailable; markers are then skipped
     IDXGISwapChain1* SwapChain;
     uint32 BackBufferWidth, BackBufferHeight;
+    RendererSpace Space; // Space of the quads being pushed; reset to Design every frame
     real32 DesignWidth, DesignHeight; // 0 until RendererSetDesignSize: one unit per pixel
     real32 ViewScale; // Window pixels per design unit
     real32 VisibleX, VisibleY, VisibleWidth, VisibleHeight; // In design units
@@ -701,6 +702,7 @@ void D3D11RendererEndFrame()
 
     // NOTE(saeb): Reset here, not in BeginFrame; BeginFrame can early-out and would leave stale quads behind.
     RendererData.QuadCount = 0;
+    RendererData.Space = RendererSpace::Design;
 
     if(RendererData.Flags & RendererFlags_VSync)
     {
@@ -852,6 +854,11 @@ void RendererSetFlags(uint32 rendererFlags)
     RendererData.Flags = rendererFlags;
 }
 
+void RendererSetSpace(RendererSpace space)
+{
+    RendererData.Space = space;
+}
+
 void RendererPushQuad(const RendererQuad* quad)
 {
     // NOTE(saeb): Full; drop the quad rather than overflow. The vertex buffer can't hold more anyway.
@@ -860,7 +867,17 @@ void RendererPushQuad(const RendererQuad* quad)
         return;
     }
 
-    RendererData.Quads[RendererData.QuadCount++] = *quad;
+    RendererQuad* stored = &RendererData.Quads[RendererData.QuadCount++];
+    *stored = *quad;
+
+    if(RendererData.Space == RendererSpace::Window)
+    {
+        real32 unitsPerPixel = 1.0f / RendererData.ViewScale;
+        stored->X = RendererData.VisibleX + quad->X * unitsPerPixel;
+        stored->Y = RendererData.VisibleY + quad->Y * unitsPerPixel;
+        stored->Width = quad->Width * unitsPerPixel;
+        stored->Height = quad->Height * unitsPerPixel;
+    }
 }
 
 RendererTexture RendererCreateTexture(uint32 width, uint32 height, RendererTextureFormat format, const uint8* pixels, StringView8 debugName)

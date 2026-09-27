@@ -10,6 +10,12 @@ enum RendererFlags : uint32
     RendererFlags_VSync = 1 << 0
 };
 
+enum class RendererSpace : uint8
+{
+    Design, // Default: design units, scaled to fit the window
+    Window // Client-area pixels, top-left origin; never scales
+};
+
 using RendererTexture = uint32; // 0 = white texture
 using RendererPipeline = uint32; // 0 = default quad pipeline
 
@@ -29,6 +35,10 @@ struct RendererQuad
 };
 
 void RendererSetFlags(uint32 rendererFlags);
+
+// NOTE(saeb): Quads pushed after this use the given space until it's changed again; resets to Design at the end of every frame. Window-space quads are converted to design units when pushed, so calling RendererSetDesignSize in the middle of a frame misplaces the window-space quads already pushed.
+void RendererSetSpace(RendererSpace space);
+
 void RendererPushQuad(const RendererQuad* quad);
 
 // NOTE(saeb): Pixels in the given format, rows top to bottom, with no padding between rows. Returns 0 (the white texture) on failure. debugName shows up in RenderDoc / PIX and debug-layer messages; it's copied, and an empty one is fine.

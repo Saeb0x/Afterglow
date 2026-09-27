@@ -20,7 +20,7 @@ struct TextGlyph
 struct Font
 {
     RendererTexture Atlas;
-    const TextGlyph* Glyphs; // Sorted by codepoint
+    const TextGlyph* Glyphs; // Base address of the glyph array in the Lower heap. Sorted by codepoint
     uint32 GlyphCount;
     uint32 FallbackGlyph; // Index drawn for characters the font doesn't have ('?' when the font has one)
     real32 PixelHeight; // The size the atlas was generated at; TextDraw's size is relative to it

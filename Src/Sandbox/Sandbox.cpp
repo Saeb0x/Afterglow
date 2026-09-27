@@ -7,7 +7,11 @@
 #include "Engine/Renderer/Text.h"
 #include "Engine/Asset/Asset.h"
 
+#include <SSTL/Core/Config.h>
+
+#if SSTL_DEBUG
 static Font DebugFont;
+#endif
 
 void GameConfigure()
 {
@@ -22,24 +26,31 @@ void GameConfigure()
 
 bool GameInit(StackAllocator* allocator)
 {
+#if SSTL_DEBUG
     AssetLoadFont(allocator, SV8(u8"Data/Engine/LiberationMono-Regular.aga"), &DebugFont);
+#endif
+
     return(true);
 }
 
 void GameUpdate(StackAllocator* allocator, real64 deltaTime)
 {
-    // NOTE(saeb): One background over everything the window shows, so the design area has no visible edge.
-    real32 visibleX, visibleY, visibleWidth, visibleHeight;
-    RendererGetVisibleArea(&visibleX, &visibleY, &visibleWidth, &visibleHeight);
+    RendererSetSpace(RendererSpace::Window);
 
-    RendererQuad background = {};
-    background.X = visibleX; background.Y = visibleY;
-    background.Width = visibleWidth; background.Height = visibleHeight;
-    background.U1 = 1.0f; background.V1 = 1.0f;
-    background.R = 0.5294f; background.G = 0.8078f; background.B = 0.9216f; background.A = 1.0f;
-    RendererPushQuad(&background);
+    RendererQuad panel = {};
+    panel.X = 10.0f; panel.Y = 10.0f; panel.Width = 300.0f; panel.Height = 200.0f;
+    panel.R = 0.1f; panel.G = 0.1f; panel.B = 0.1f; panel.A = 0.8f;
+    RendererPushQuad(&panel);
 
-    TextDraw(&DebugFont, 200.0f, 300.0f, 100.0f, 1.0f, 0.0f, 0.0f, 1.0f, SV8(u8"Afterglow"));
+#if SSTL_DEBUG
+    TextDraw(&DebugFont, 20.0f, 20.0f, 20.0f, 1, 1, 1, 1, SV8(u8"Window space"));
+#endif
+
+    RendererSetSpace(RendererSpace::Design);
+
+#if SSTL_DEBUG
+    TextDraw(&DebugFont, 200.0f, 200.0f, 50.0f, 1.0f, 0.0f, 0.0f, 1.0f, SV8(u8"Design space"));
+#endif
 }
 
 void GameShutdown(StackAllocator* allocator)
