@@ -1,5 +1,6 @@
 #include "UI.h"
 
+#include "Engine/Platform/Window.h"
 #include "Engine/Platform/Input.h"
 #include "Engine/Renderer/Renderer.h"
 
@@ -29,6 +30,11 @@ void UIBegin(UIContext* ui, const Font* font)
     ui->NextHot = 0;
     ui->Font = font;
 
+    uint32 windowClientAreaWidth, windowClientAreaHeight;
+    WindowGetClientAreaDimensions(&windowClientAreaWidth, &windowClientAreaHeight);
+    ui->ScreenWidth = (real32)windowClientAreaWidth;
+    ui->ScreenHeight = (real32)windowClientAreaHeight;
+
     RendererSetSpace(RendererSpace::Window); // UI lives in window pixels, like the mouse
 }
 
@@ -43,6 +49,73 @@ void UIEnd(UIContext* ui)
     }
 
     RendererSetSpace(RendererSpace::Design);
+}
+
+void UIPanelBegin(UIContext* ui, UIPanel* panel, StringView8 title)
+{
+    UIID id = UIHash(title);
+
+    // Hot: is the mouse over the title bar? Same rule as the button.
+    bool overTitle = (ui->MouseX >= panel->X && ui->MouseX < panel->X + panel->Width) && (ui->MouseY >= panel->Y && ui->MouseY < panel->Y + UI_TITLE_HEIGHT);
+    if(overTitle && (ui->Active == 0 || ui->Active == id))
+    {
+        ui->NextHot = id;
+    }
+
+    // Press: grab it, and remember where on the panel it was grabbed.
+    if(ui->Hot == id && ui->MousePressed)
+    {
+        ui->Active = id;
+        ui->DragOffsetX = ui->MouseX - panel->X;
+        ui->DragOffsetY = ui->MouseY - panel->Y;
+    }
+
+    // Held: follow the mouse, keeping the grab point under it. (UIEnd clears Active on release.)
+    if(ui->Active == id)
+    {
+        panel->X = ui->MouseX - ui->DragOffsetX;
+        panel->Y = ui->MouseY - ui->DragOffsetY;
+    }
+
+    // Keep it inside the window. Every frame, so shrinking the window pushes it back in too. The "< 0" check comes last, so a panel wider than the window pins to the left edge.
+    if(panel->X > ui->ScreenWidth - panel->Width)
+    {
+        panel->X = ui->ScreenWidth - panel->Width;
+    }
+    if(panel->X < 0.0f)
+    {
+        panel->X = 0.0f;
+    }
+    if(panel->Y > ui->ScreenHeight - panel->Height)
+    {
+        panel->Y = ui->ScreenHeight - panel->Height;
+    }
+    if(panel->Y < 0.0f)
+    {
+        panel->Y = 0.0f;
+    }
+
+    // Draw: body, then title bar on top, then the title text.
+    RendererQuad body = {};
+    body.X = panel->X; body.Y = panel->Y; body.Width = panel->Width; body.Height = panel->Height;
+    body.R = 0.08f; body.G = 0.08f; body.B = 0.08f; body.A = 0.9f;
+    RendererPushQuad(&body);
+
+    real32 shade = (ui->Active == id) ? 0.35f : (ui->Hot == id) ? 0.25f : 0.18f;
+    RendererQuad titleBar = {};
+    titleBar.X = panel->X; titleBar.Y = panel->Y; titleBar.Width = panel->Width; titleBar.Height = UI_TITLE_HEIGHT;
+    titleBar.R = shade; titleBar.G = shade; titleBar.B = shade; titleBar.A = 1.0f;
+    RendererPushQuad(&titleBar);
+
+    real32 textSize = UI_TITLE_HEIGHT * 0.6f;
+    real32 textWidth, textHeight;
+    TextMeasure(ui->Font, textSize, title, &textWidth, &textHeight);
+    TextDraw(ui->Font, panel->X + 8.0f, panel->Y + (UI_TITLE_HEIGHT - textHeight) * 0.5f, textSize, 1.0f, 1.0f, 1.0f, 1.0f, title);
+}
+
+void UIPanelEnd(UIContext* ui)
+{
+    // NOTE(saeb): Nothing yet; the layout ends here.
 }
 
 bool UIButton(UIContext* ui, StringView8 label, real32 x, real32 y, real32 width, real32 height)
