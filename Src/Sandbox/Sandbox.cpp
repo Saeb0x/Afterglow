@@ -3,13 +3,16 @@
 
 #include "Engine/Platform/Window.h"
 #include "Engine/Platform/Input.h"
+#include "Engine/Platform/Log.h"
 #include "Engine/Renderer/Renderer.h"
 #include "Engine/Renderer/Text.h"
+#include "Engine/UI/UI.h"
 #include "Engine/Asset/Asset.h"
 
 #include <SSTL/Core/Config.h>
 
 #if SSTL_DEBUG
+static UIContext DebugUIContext;
 static Font DebugFont;
 #endif
 
@@ -35,21 +38,13 @@ bool GameInit(StackAllocator* allocator)
 
 void GameUpdate(StackAllocator* allocator, real64 deltaTime)
 {
-    RendererSetSpace(RendererSpace::Window);
-
-    RendererQuad panel = {};
-    panel.X = 10.0f; panel.Y = 10.0f; panel.Width = 300.0f; panel.Height = 200.0f;
-    panel.R = 0.1f; panel.G = 0.1f; panel.B = 0.1f; panel.A = 0.8f;
-    RendererPushQuad(&panel);
-
 #if SSTL_DEBUG
-    TextDraw(&DebugFont, 20.0f, 20.0f, 20.0f, 1, 1, 1, 1, SV8(u8"Window space"));
-#endif
-
-    RendererSetSpace(RendererSpace::Design);
-
-#if SSTL_DEBUG
-    TextDraw(&DebugFont, 200.0f, 200.0f, 50.0f, 1.0f, 0.0f, 0.0f, 1.0f, SV8(u8"Design space"));
+    UIBegin(&DebugUIContext, &DebugFont);
+    if(UIButton(&DebugUIContext, SV8(u8"Click me"), 20.0f, 20.0f, 160.0f, 40.0f))
+    {
+        LogPrint(allocator, SV8(u8"Button Clicked!"));
+    }
+    UIEnd(&DebugUIContext);
 #endif
 }
 
