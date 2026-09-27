@@ -38,6 +38,7 @@ void RendererSetFlags(uint32 rendererFlags);
 
 // NOTE(saeb): Quads pushed after this use the given space until it's changed again; resets to Design at the end of every frame. Window-space quads are converted to design units when pushed, so calling RendererSetDesignSize in the middle of a frame misplaces the window-space quads already pushed.
 void RendererSetSpace(RendererSpace space);
+RendererSpace RendererGetSpace();
 
 void RendererPushQuad(const RendererQuad* quad);
 

@@ -859,6 +859,11 @@ void RendererSetSpace(RendererSpace space)
     RendererData.Space = space;
 }
 
+RendererSpace RendererGetSpace()
+{
+    return(RendererData.Space);
+}
+
 void RendererPushQuad(const RendererQuad* quad)
 {
     // NOTE(saeb): Full; drop the quad rather than overflow. The vertex buffer can't hold more anyway.

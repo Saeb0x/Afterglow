@@ -35,6 +35,19 @@ static const TextGlyph* TextFindGlyph(const Font* font, uint32 codepoint)
     return(&font->Glyphs[font->FallbackGlyph]);
 }
 
+// NOTE(saeb): Rounds to the nearest whole number; also correct for negatives, where a plain (int32) cast rounds toward zero.
+static real32 TextRoundToPixel(real32 value)
+{
+    real32 shifted = value + 0.5f;
+    int32 whole = (int32)shifted;
+    if((real32)whole > shifted)
+    {
+        --whole;
+    }
+
+    return((real32)whole);
+}
+
 static bool TextIsUsable(const Font* font, real32 size)
 {
     return(font && font->Glyphs && font->GlyphCount > 0 && font->PixelHeight > 0.0f && size > 0.0f);
@@ -50,6 +63,9 @@ void TextDraw(const Font* font, real32 x, real32 y, real32 size, real32 r, real3
     real32 scale = size / font->PixelHeight;
     real32 penX = x;
     real32 baseline = y + font->Ascent * scale;
+
+    // NOTE(saeb): In window space one unit is one pixel, so small text is snapped to the pixel grid: each glyph starts on a whole pixel horizontally, which keeps stems crisp, and each line's baseline is snapped once, so every glyph on the line sits on the same pixel row. Rounding each glyph's top instead would scatter the baseline, since glyph tops sit at different fractions of a pixel. Design space isn't snapped, so moving game text stays smooth.
+    bool snap = (RendererGetSpace() == RendererSpace::Window);
 
     for(usize index = 0; index < text.Length;)
     {
@@ -68,9 +84,17 @@ void TextDraw(const Font* font, real32 x, real32 y, real32 size, real32 r, real3
         // NOTE(saeb): Every glyph shares the atlas and the pipeline, so a whole block of text batches into one draw call.
         if(glyph->Width > 0.0f && glyph->Height > 0.0f)
         {
+            real32 glyphX = penX + glyph->OffsetX * scale;
+            real32 glyphBaseline = baseline;
+            if(snap)
+            {
+                glyphX = TextRoundToPixel(glyphX);
+                glyphBaseline = TextRoundToPixel(baseline);
+            }
+
             RendererQuad quad = {};
-            quad.X = penX + glyph->OffsetX * scale;
-            quad.Y = baseline + glyph->OffsetY * scale;
+            quad.X = glyphX;
+            quad.Y = glyphBaseline + glyph->OffsetY * scale;
             quad.Width = glyph->Width * scale;
             quad.Height = glyph->Height * scale;
             quad.U0 = glyph->U0; quad.V0 = glyph->V0;
