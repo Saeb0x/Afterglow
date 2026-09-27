@@ -109,6 +109,24 @@ void TextDraw(const Font* font, real32 x, real32 y, real32 size, real32 r, real3
     }
 }
 
+void TextDrawRect(const Font* font, real32 x, real32 y, real32 width, real32 height, real32 r, real32 g, real32 b, real32 a)
+{
+    if(!font)
+    {
+        return;
+    }
+
+    // NOTE(saeb): All four corners sample the same fully-inside point, so the shader's coverage is 1 everywhere and the rect is just its colour.
+    RendererQuad quad = {};
+    quad.X = x; quad.Y = y; quad.Width = width; quad.Height = height;
+    quad.U0 = font->SolidU; quad.V0 = font->SolidV;
+    quad.U1 = font->SolidU; quad.V1 = font->SolidV;
+    quad.R = r; quad.G = g; quad.B = b; quad.A = a;
+    quad.Texture = font->Atlas;
+    quad.Pipeline = TextPipeline;
+    RendererPushQuad(&quad);
+}
+
 void TextMeasure(const Font* font, real32 size, StringView8 text, real32* width, real32* height)
 {
     *width = 0.0f;

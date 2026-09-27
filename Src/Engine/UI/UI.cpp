@@ -54,12 +54,10 @@ static bool UIIsMouseOver(UIContext* ui, real32 x, real32 y, real32 width, real3
     return((ui->MouseX >= x && ui->MouseX < x + width) && (ui->MouseY >= y && ui->MouseY < y + height));
 }
 
-static void UIDrawRect(real32 x, real32 y, real32 width, real32 height, real32 r, real32 g, real32 b, real32 a)
+// NOTE(saeb): Drawn with the UI's font, not as plain quads, so rects and text share one texture and pipeline and the whole UI batches into a single draw call.
+static void UIDrawRect(UIContext* ui, real32 x, real32 y, real32 width, real32 height, real32 r, real32 g, real32 b, real32 a)
 {
-    RendererQuad quad = {};
-    quad.X = x; quad.Y = y; quad.Width = width; quad.Height = height;
-    quad.R = r; quad.G = g; quad.B = b; quad.A = a;
-    RendererPushQuad(&quad);
+    TextDrawRect(ui->Font, x, y, width, height, r, g, b, a);
 }
 
 // NOTE(saeb): Text sized to the row and centred vertically in it; centred horizontally too, or left-aligned at x. TextDraw's y is the top of the text and TextMeasure's height is ascent + descent, so this centres exactly.
@@ -351,16 +349,10 @@ void UIPanelBegin(UIContext* ui, UIPanel* panel, StringView8 title)
     }
 
     // Draw: body, then title bar on top, then the title text.
-    RendererQuad body = {};
-    body.X = panel->X; body.Y = panel->Y; body.Width = panel->Width; body.Height = panel->Height;
-    body.R = 0.08f; body.G = 0.08f; body.B = 0.08f; body.A = 0.9f;
-    RendererPushQuad(&body);
+    UIDrawRect(ui, panel->X, panel->Y, panel->Width, panel->Height, 0.08f, 0.08f, 0.08f, 0.9f);
 
     real32 shade = (ui->Active == id) ? 0.35f : (ui->Hot == id) ? 0.25f : 0.18f;
-    RendererQuad titleBar = {};
-    titleBar.X = panel->X; titleBar.Y = panel->Y; titleBar.Width = panel->Width; titleBar.Height = UI_TITLE_HEIGHT;
-    titleBar.R = shade; titleBar.G = shade; titleBar.B = shade; titleBar.A = 1.0f;
-    RendererPushQuad(&titleBar);
+    UIDrawRect(ui, panel->X, panel->Y, panel->Width, UI_TITLE_HEIGHT, shade, shade, shade, 1.0f);
 
     real32 textSize = UI_TITLE_HEIGHT * UI_TEXT_SIZE;
     real32 textWidth, textHeight;
@@ -369,11 +361,7 @@ void UIPanelBegin(UIContext* ui, UIPanel* panel, StringView8 title)
 
     // Draw the grip, after the body so it's visible.
     real32 gripShade = (ui->Active == gripId) ? 0.6f : (ui->Hot == gripId) ? 0.45f : 0.3f;
-    RendererQuad grip = {};
-    grip.X = panel->X + panel->Width - UI_GRIP_SIZE; grip.Y = panel->Y + panel->Height - UI_GRIP_SIZE;
-    grip.Width = UI_GRIP_SIZE; grip.Height = UI_GRIP_SIZE;
-    grip.R = gripShade; grip.G = gripShade; grip.B = gripShade; grip.A = 1.0f;
-    RendererPushQuad(&grip);
+    UIDrawRect(ui, panel->X + panel->Width - UI_GRIP_SIZE, panel->Y + panel->Height - UI_GRIP_SIZE, UI_GRIP_SIZE, UI_GRIP_SIZE, gripShade, gripShade, gripShade, 1.0f);
 
     // NOTE(saeb): The same fit rule as the renderer's design size: contents designed for the base size always fit, whatever shape the panel is.
     real32 scaleX = panel->Width / panel->BaseWidth;
@@ -410,7 +398,7 @@ bool UIButton(UIContext* ui, StringView8 label)
     bool clicked = UIClickBehavior(ui, id, UIIsMouseOver(ui, x, y, width, height));
 
     real32 shade = UIShade(ui, id);
-    UIDrawRect(x, y, width, height, shade, shade, shade, 1.0f);
+    UIDrawRect(ui, x, y, width, height, shade, shade, shade, 1.0f);
     UIDrawText(ui, label, x, y, width, height, true);
 
     return(clicked);
@@ -443,12 +431,12 @@ bool UICheckbox(UIContext* ui, StringView8 label, bool* value)
     real32 boxX = x;
     real32 boxY = y + (height - boxSize) * 0.5f;
     real32 shade = UIShade(ui, id);
-    UIDrawRect(boxX, boxY, boxSize, boxSize, shade, shade, shade, 1.0f);
+    UIDrawRect(ui, boxX, boxY, boxSize, boxSize, shade, shade, shade, 1.0f);
 
     if(*value)
     {
         real32 inset = boxSize * 0.25f;
-        UIDrawRect(boxX + inset, boxY + inset, boxSize - 2.0f * inset, boxSize - 2.0f * inset, 1.0f, 1.0f, 1.0f, 1.0f);
+        UIDrawRect(ui, boxX + inset, boxY + inset, boxSize - 2.0f * inset, boxSize - 2.0f * inset, 1.0f, 1.0f, 1.0f, 1.0f);
     }
 
     real32 labelX = boxX + boxSize + UI_PADDING * ui->Scale;
@@ -495,7 +483,7 @@ bool UISlider(UIContext* ui, StringView8 label, real32* value, real32 minimum, r
 
     // Track, then the filled part up to the value.
     real32 shade = UIShade(ui, id);
-    UIDrawRect(x, y, width, height, shade, shade, shade, 1.0f);
+    UIDrawRect(ui, x, y, width, height, shade, shade, shade, 1.0f);
 
     real32 fill = (maximum > minimum) ? (*value - minimum) / (maximum - minimum) : 0.0f;
     if(fill < 0.0f)
@@ -508,7 +496,7 @@ bool UISlider(UIContext* ui, StringView8 label, real32* value, real32 minimum, r
         fill = 1.0f;
     }
 
-    UIDrawRect(x, y, width * fill, height, 0.25f, 0.45f, 0.7f, 1.0f);
+    UIDrawRect(ui, x, y, width * fill, height, 0.25f, 0.45f, 0.7f, 1.0f);
 
     // "Label: 0.50" centred on the track.
     char8 text[128];
