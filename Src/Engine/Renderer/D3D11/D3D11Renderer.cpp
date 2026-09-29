@@ -19,10 +19,9 @@ SSTL_ASSERT_STATIC_MSG(AG_MAX_QUADS * 4 <= 65536, "Afterglow: Quad vertices must
 #define AG_MAX_PIPELINES 64
 #define AG_MAX_TEXTURES 1024
 
-// NOTE(saeb): Every quad belongs to a view, the matrix that maps its units to the screen.
+// NOTE(saeb): Every quad belongs to a view, the matrix that maps its units to the screen. View 0 is the screen; the rest are this frame's cameras, in the order they were set.
 #define AG_VIEW_SCREEN 0 // Screen pixels, y down
-#define AG_VIEW_WORLD 1 // World units, with the design area fitted to the window
-#define AG_VIEW_COUNT 2
+#define AG_MAX_VIEWS 16 // Cameras set in one frame, plus the screen; far more than parallax layers need
 
 struct QuadVertex
 {
@@ -61,9 +60,9 @@ struct Renderer
     IDXGISwapChain1* SwapChain;
     int32 BackBufferWidth, BackBufferHeight;
     RendererSpace Space;
-    real32 DesignWidth, DesignHeight;
-    real32 ViewScale; // Screen pixels per world unit
-    real32 VisibleX, VisibleY, VisibleWidth, VisibleHeight; // In world units
+    Camera ViewCameras[AG_MAX_VIEWS]; // This frame's cameras by view; [0] is the screen, which needs none
+    uint32 ViewCount;
+    uint32 WorldView; // The view world quads are pushed under: the latest camera
     bool TearingSupported;
     ID3D11RenderTargetView* RenderTargetView;
     ID3D11Buffer* VertexBuffer;
@@ -113,33 +112,6 @@ static void D3D11EndEvent()
     {
         RendererData.Annotation->EndEvent();
     }
-}
-
-// NOTE(saeb): Fill the window: the design area always fits entirely, centred, at the largest scale the window allows, and the window's extra length on one side becomes extra visible space. Without a design size, one unit is one pixel.
-static void D3D11UpdateView()
-{
-    real32 windowWidth = (real32)RendererData.BackBufferWidth;
-    real32 windowHeight = (real32)RendererData.BackBufferHeight;
-
-    if(RendererData.DesignWidth <= 0.0f || RendererData.DesignHeight <= 0.0f || windowWidth <= 0.0f || windowHeight <= 0.0f)
-    {
-        RendererData.ViewScale = 1.0f;
-        RendererData.VisibleX = 0.0f;
-        RendererData.VisibleY = 0.0f;
-        RendererData.VisibleWidth = windowWidth;
-        RendererData.VisibleHeight = windowHeight;
-        return;
-    }
-
-    real32 scaleX = windowWidth / RendererData.DesignWidth;
-    real32 scaleY = windowHeight / RendererData.DesignHeight;
-    real32 scale = (scaleX < scaleY) ? scaleX : scaleY;
-
-    RendererData.ViewScale = scale;
-    RendererData.VisibleWidth = windowWidth / scale;
-    RendererData.VisibleHeight = windowHeight / scale;
-    RendererData.VisibleX = (RendererData.DesignWidth - RendererData.VisibleWidth) * 0.5f;
-    RendererData.VisibleY = (RendererData.DesignHeight - RendererData.VisibleHeight) * 0.5f;
 }
 
 // NOTE(saeb): Every D3D11 shader is a DXBC container: "DXBC", a 16-byte checksum, a version, then its total size at byte 24. Checking the magic and size rejects truncated or garbage bytecode quietly; with the debug layer set to break on errors, passing it to D3D would stop the program instead. A flipped bit inside otherwise valid bytecode still reaches D3D's checksum.
@@ -230,10 +202,13 @@ static uint32 D3D11FlushQuads()
         return(0);
     }
 
-    // NOTE(saeb): Built at draw time from the final sizes, so a resize or design-size change anywhere in the frame applies to every quad. Passing the larger y as "bottom" is what makes y point down.
-    DirectX::XMFLOAT4X4 views[AG_VIEW_COUNT];
+    // NOTE(saeb): Built at draw time from the final back buffer size. The screen maps pixels with y down (the larger y is "bottom"); each camera maps world metres with y up.
+    DirectX::XMFLOAT4X4 views[AG_MAX_VIEWS];
     DirectX::XMStoreFloat4x4(&views[AG_VIEW_SCREEN], DirectX::XMMatrixOrthographicOffCenterLH(0.0f, (real32)RendererData.BackBufferWidth, (real32)RendererData.BackBufferHeight, 0.0f, 0.0f, 1.0f));
-    DirectX::XMStoreFloat4x4(&views[AG_VIEW_WORLD], DirectX::XMMatrixOrthographicOffCenterLH(RendererData.VisibleX, RendererData.VisibleX + RendererData.VisibleWidth, RendererData.VisibleY + RendererData.VisibleHeight, RendererData.VisibleY, 0.0f, 1.0f));
+    for(uint32 view = 1; view < RendererData.ViewCount; ++view)
+    {
+        DirectX::XMStoreFloat4x4(&views[view], CameraGetViewProjection(&RendererData.ViewCameras[view], RendererData.BackBufferWidth, RendererData.BackBufferHeight));
+    }
 
     QuadVertex* vertices = (QuadVertex*)mapped.pData;
     QuadBatch* batch = nullptr;
@@ -535,6 +510,11 @@ bool D3D11RendererInit(StackAllocator* allocator, HWND windowHandle)
     // NOTE(saeb): Slot 0 is reserved for the default pipeline, which RendererSetDefaultPipeline fills from the cooked shader; created pipelines start at 1.
     RendererData.PipelineCount = 1;
 
+    // NOTE(saeb): View 1 starts as the default camera: a zeroed one is centred on the origin, one metre per pixel, zoom 1.
+    RendererData.ViewCameras[1] = {};
+    RendererData.ViewCount = 2;
+    RendererData.WorldView = 1;
+
     D3D11_BUFFER_DESC constantBufferDesc = {};
     constantBufferDesc.ByteWidth = sizeof(QuadConstants);
     constantBufferDesc.Usage = D3D11_USAGE_DEFAULT;
@@ -637,7 +617,6 @@ bool D3D11RendererInit(StackAllocator* allocator, HWND windowHandle)
     RendererData.SwapChain->GetDesc1(&swapChainDesc);
     RendererData.BackBufferWidth = (int32)swapChainDesc.Width;
     RendererData.BackBufferHeight = (int32)swapChainDesc.Height;
-    D3D11UpdateView();
 
     ID3D11Texture2D* backBuffer = nullptr;
     if(FAILED(RendererData.SwapChain->GetBuffer(0, IID_PPV_ARGS(&backBuffer))))
@@ -689,8 +668,7 @@ void D3D11RendererBeginFrame(int32 width, int32 height)
 
         RendererData.BackBufferWidth = width;
         RendererData.BackBufferHeight = height;
-        D3D11UpdateView();
-    }
+        }
 
     // NOTE(saeb): A failed resize leaves no view to draw into; skip the frame until device-loss handling exists.
     if(!RendererData.RenderTargetView)
@@ -734,6 +712,11 @@ void D3D11RendererEndFrame()
     RendererData.QuadCount = 0;
     RendererData.DroppedQuadCount = 0;
     RendererData.Space = RendererSpace::World;
+
+    // NOTE(saeb): The camera in use at the end of the frame carries over as the next frame's view 1, so a camera set once keeps applying.
+    RendererData.ViewCameras[1] = RendererData.ViewCameras[RendererData.WorldView];
+    RendererData.ViewCount = 2;
+    RendererData.WorldView = 1;
 
     if(RendererData.Flags & RendererFlags_VSync)
     {
@@ -918,7 +901,7 @@ void RendererPushQuad(const RendererQuad* quad)
     // NOTE(saeb): Stored as given, in its own units; the view's matrix maps it to the screen at draw time.
     uint32 index = RendererData.QuadCount++;
     RendererData.Quads[index] = *quad;
-    RendererData.QuadViews[index] = (RendererData.Space == RendererSpace::Screen) ? AG_VIEW_SCREEN : AG_VIEW_WORLD;
+    RendererData.QuadViews[index] = (RendererData.Space == RendererSpace::Screen) ? AG_VIEW_SCREEN : (uint8)RendererData.WorldView;
 }
 
 RendererTexture RendererCreateTexture(uint32 width, uint32 height, RendererTextureFormat format, const uint8* pixels, StringView8 debugName)
@@ -1012,27 +995,14 @@ bool RendererSetDefaultPipeline(const uint8* vertexBytecode, usize vertexSize, c
     return(true);
 }
 
-void RendererSetDesignSize(real32 width, real32 height)
+void RendererSetCamera(const Camera* camera)
 {
-    // NOTE(saeb): Anything not positive goes back to one unit per pixel.
-    bool valid = width > 0.0f && height > 0.0f;
-    RendererData.DesignWidth = valid ? width : 0.0f;
-    RendererData.DesignHeight = valid ? height : 0.0f;
+    // NOTE(saeb): Full: keep drawing with the last camera rather than overflow. Sixteen cameras in one frame means something is setting one per object.
+    if(RendererData.ViewCount >= AG_MAX_VIEWS)
+    {
+        return;
+    }
 
-    D3D11UpdateView();
-}
-
-void RendererGetVisibleArea(real32* x, real32* y, real32* width, real32* height)
-{
-    *x = RendererData.VisibleX;
-    *y = RendererData.VisibleY;
-    *width = RendererData.VisibleWidth;
-    *height = RendererData.VisibleHeight;
-}
-
-void RendererScreenToWorld(int32 screenX, int32 screenY, real32* x, real32* y)
-{
-    // NOTE(saeb): + 0.5 converts from the pixel's top-left corner to its centre, which is where the rasterizer samples it.
-    *x = RendererData.VisibleX + ((real32)screenX + 0.5f) / RendererData.ViewScale;
-    *y = RendererData.VisibleY + ((real32)screenY + 0.5f) / RendererData.ViewScale;
+    RendererData.ViewCameras[RendererData.ViewCount] = *camera;
+    RendererData.WorldView = RendererData.ViewCount++;
 }

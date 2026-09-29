@@ -4,6 +4,8 @@
 #include <SSTL/Core/Types.h>
 #include <SSTL/Core/String.h>
 
+#include "Camera.h"
+
 enum RendererFlags : uint32
 {
     RendererFlags_None,
@@ -12,7 +14,7 @@ enum RendererFlags : uint32
 
 enum class RendererSpace : uint8
 {
-    World, // Default: world units, with the design area fitted to the window
+    World, // Default: world metres, y up, seen through the current camera (RendererSetCamera)
     Screen // Pixels of the window's client area, top-left origin, y down; never scales
 };
 
@@ -27,7 +29,7 @@ enum class RendererTextureFormat : uint32
 
 struct RendererQuad
 {
-    real32 X, Y, Width, Height; // Pixels, top-left origin
+    real32 X, Y, Width, Height; // The corner with the smallest x and y, and the size: screen pixels (top-left corner, y down) or world metres (bottom-left corner, y up)
     real32 U0, V0, U1, V1; // Texture Coordinates, (U0, V0) = top-left
     real32 R, G, B, A;
     RendererTexture Texture;
@@ -56,14 +58,8 @@ void RendererPushQuad(const RendererQuad* quad);
 // NOTE(saeb): Pixels in the given format, rows top to bottom, with no padding between rows. Returns 0 (the white texture) on failure.
 RendererTexture RendererCreateTexture(uint32 width, uint32 height, RendererTextureFormat format, const uint8* pixels, StringView8 debugName);
 
-// NOTE(saeb): The design area: the part of the world the game lays out in, in world units (top-left origin, y down). It always fits entirely in the window, centred, as large as the window allows. Until this is called, one world unit is one pixel.
-void RendererSetDesignSize(real32 width, real32 height);
-
-// NOTE(saeb): The part of the world the window shows, in world units: the whole design area plus the extra space.
-void RendererGetVisibleArea(real32* x, real32* y, real32* width, real32* height);
-
-// NOTE(saeb): Converts a screen position (client-area pixels, as from InputGetMouseXY) to world units.
-void RendererScreenToWorld(int32 screenX, int32 screenY, real32* x, real32* y);
+// NOTE(saeb): World-space quads pushed after this use this camera, until another is set; it persists across frames. The camera is copied, so it can change right after. Until the first call, one metre is one pixel, with the world's origin at the window's centre.
+void RendererSetCamera(const Camera* camera);
 
 // NOTE(saeb): Bytecode is a compiled pixel shader (DXBC for D3D11) that (for now) takes the default quad vertex shader's outputs. Returns 0 (the default pipeline) on failure.
 RendererPipeline RendererCreatePipeline(const uint8* pixelBytecode, usize size, StringView8 debugName);

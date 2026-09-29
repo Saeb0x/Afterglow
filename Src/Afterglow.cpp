@@ -10,6 +10,7 @@
 // Renderer.
 #include "Engine/Renderer/D3D11/D3D11Renderer.cpp"
 #include "Engine/Renderer/Text.cpp"
+#include "Engine/Renderer/Camera.cpp"
 
 // UI.
 #include "Engine/UI/UI.cpp"

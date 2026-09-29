@@ -285,7 +285,7 @@ void UIPanelBegin(UIContext* ui, UIPanel* panel, StringView8 title)
     real32 gripShade = (ui->Active == gripId) ? 0.6f : (ui->Hot == gripId) ? 0.45f : 0.3f;
     UIDrawRect(ui, panel->X + panel->Width - UI_GRIP_SIZE, panel->Y + panel->Height - UI_GRIP_SIZE, UI_GRIP_SIZE, UI_GRIP_SIZE, gripShade, gripShade, gripShade, 1.0f);
 
-    // NOTE(saeb): The same fit rule as the renderer's design size: contents designed for the base size always fit, whatever shape the panel is.
+    // NOTE(saeb): The same fit rule as a camera's extent: contents designed for the base size always fit, whatever shape the panel is.
     real32 scaleX = panel->Width / panel->BaseWidth;
     real32 scaleY = panel->Height / panel->BaseHeight;
     ui->Scale = (scaleX < scaleY) ? scaleX : scaleY;

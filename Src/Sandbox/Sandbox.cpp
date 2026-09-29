@@ -20,7 +20,6 @@ void GameConfigure()
     WindowSetMinClientAreaDimensions(360, 360);
     InputSetFlags(InputFlags_Mouse | InputFlags_Keyboard);
     RendererSetFlags(RendererFlags_VSync);
-    RendererSetDesignSize(1000.0f, 1000.0f);
 }
 
 bool GameInit(StackAllocator* allocator)
