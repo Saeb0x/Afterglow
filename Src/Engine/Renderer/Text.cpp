@@ -64,8 +64,8 @@ void TextDraw(const Font* font, real32 x, real32 y, real32 size, real32 r, real3
     real32 penX = x;
     real32 baseline = y + font->Ascent * scale;
 
-    // NOTE(saeb): In window space one unit is one pixel, so small text is snapped to the pixel grid: each glyph starts on a whole pixel horizontally, which keeps stems crisp, and each line's baseline is snapped once, so every glyph on the line sits on the same pixel row. Rounding each glyph's top instead would scatter the baseline, since glyph tops sit at different fractions of a pixel. Design space isn't snapped, so moving game text stays smooth.
-    bool snap = (RendererGetSpace() == RendererSpace::Window);
+    // NOTE(saeb): In screen space one unit is one pixel, so small text is snapped to the pixel grid: each glyph starts on a whole pixel horizontally, which keeps stems crisp, and each line's baseline is snapped once, so every glyph on the line sits on the same pixel row. Rounding each glyph's top instead would scatter the baseline, since glyph tops sit at different fractions of a pixel. World space isn't snapped, so moving game text stays smooth.
+    bool snap = (RendererGetSpace() == RendererSpace::Screen);
 
     for(usize index = 0; index < text.Length;)
     {

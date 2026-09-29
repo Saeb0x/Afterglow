@@ -122,7 +122,7 @@ void UIBegin(UIContext* ui, const Font* font)
     ui->ScreenWidth = (real32)windowClientAreaWidth;
     ui->ScreenHeight = (real32)windowClientAreaHeight;
 
-    RendererSetSpace(RendererSpace::Window); // UI lives in window pixels, like the mouse
+    RendererSetSpace(RendererSpace::Screen); // UI lives in screen pixels, like the mouse
 }
 
 void UIEnd(UIContext* ui)
@@ -135,7 +135,7 @@ void UIEnd(UIContext* ui)
         ui->Active = 0;
     }
 
-    RendererSetSpace(RendererSpace::Design);
+    RendererSetSpace(RendererSpace::World);
 }
 
 void UIPanelBegin(UIContext* ui, UIPanel* panel, StringView8 title)

@@ -10,7 +10,7 @@ using UIID = uint32; // 0 = no widget
 
 struct UIContext
 {
-    // Input for this frame, in window pixels; copied in UIBegin.
+    // Input for this frame, in screen pixels; copied in UIBegin.
     real32 MouseX, MouseY;
     bool MouseDown, MousePressed, MouseReleased;
 
@@ -31,7 +31,7 @@ struct UIContext
 
 struct UIPanel
 {
-    real32 X, Y, Width, Height; // Window pixels; the game sets the start, dragging and resizing change them
+    real32 X, Y, Width, Height; // Screen pixels; the game sets the start, dragging and resizing change them
     real32 BaseWidth, BaseHeight; // The size its contents are designed for; at this size they draw at scale 1
 };
 

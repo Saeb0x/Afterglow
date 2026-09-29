@@ -20,8 +20,8 @@ SSTL_ASSERT_STATIC_MSG(AG_MAX_QUADS * 4 <= 65536, "Afterglow: Quad vertices must
 #define AG_MAX_TEXTURES 1024
 
 // NOTE(saeb): Every quad belongs to a view, the matrix that maps its units to the screen.
-#define AG_VIEW_SCREEN 0 // Window pixels, y down
-#define AG_VIEW_DESIGN 1 // Design units, fitted to the window
+#define AG_VIEW_SCREEN 0 // Screen pixels, y down
+#define AG_VIEW_WORLD 1 // World units, with the design area fitted to the window
 #define AG_VIEW_COUNT 2
 
 struct QuadVertex
@@ -62,8 +62,8 @@ struct Renderer
     int32 BackBufferWidth, BackBufferHeight;
     RendererSpace Space;
     real32 DesignWidth, DesignHeight;
-    real32 ViewScale; // Window pixels per design unit
-    real32 VisibleX, VisibleY, VisibleWidth, VisibleHeight; // In design units
+    real32 ViewScale; // Screen pixels per world unit
+    real32 VisibleX, VisibleY, VisibleWidth, VisibleHeight; // In world units
     bool TearingSupported;
     ID3D11RenderTargetView* RenderTargetView;
     ID3D11Buffer* VertexBuffer;
@@ -233,7 +233,7 @@ static uint32 D3D11FlushQuads()
     // NOTE(saeb): Built at draw time from the final sizes, so a resize or design-size change anywhere in the frame applies to every quad. Passing the larger y as "bottom" is what makes y point down.
     DirectX::XMFLOAT4X4 views[AG_VIEW_COUNT];
     DirectX::XMStoreFloat4x4(&views[AG_VIEW_SCREEN], DirectX::XMMatrixOrthographicOffCenterLH(0.0f, (real32)RendererData.BackBufferWidth, (real32)RendererData.BackBufferHeight, 0.0f, 0.0f, 1.0f));
-    DirectX::XMStoreFloat4x4(&views[AG_VIEW_DESIGN], DirectX::XMMatrixOrthographicOffCenterLH(RendererData.VisibleX, RendererData.VisibleX + RendererData.VisibleWidth, RendererData.VisibleY + RendererData.VisibleHeight, RendererData.VisibleY, 0.0f, 1.0f));
+    DirectX::XMStoreFloat4x4(&views[AG_VIEW_WORLD], DirectX::XMMatrixOrthographicOffCenterLH(RendererData.VisibleX, RendererData.VisibleX + RendererData.VisibleWidth, RendererData.VisibleY + RendererData.VisibleHeight, RendererData.VisibleY, 0.0f, 1.0f));
 
     QuadVertex* vertices = (QuadVertex*)mapped.pData;
     QuadBatch* batch = nullptr;
@@ -733,7 +733,7 @@ void D3D11RendererEndFrame()
     // NOTE(saeb): Reset here, not in BeginFrame; BeginFrame can early-out and would leave stale quads behind.
     RendererData.QuadCount = 0;
     RendererData.DroppedQuadCount = 0;
-    RendererData.Space = RendererSpace::Design;
+    RendererData.Space = RendererSpace::World;
 
     if(RendererData.Flags & RendererFlags_VSync)
     {
@@ -918,7 +918,7 @@ void RendererPushQuad(const RendererQuad* quad)
     // NOTE(saeb): Stored as given, in its own units; the view's matrix maps it to the screen at draw time.
     uint32 index = RendererData.QuadCount++;
     RendererData.Quads[index] = *quad;
-    RendererData.QuadViews[index] = (RendererData.Space == RendererSpace::Window) ? AG_VIEW_SCREEN : AG_VIEW_DESIGN;
+    RendererData.QuadViews[index] = (RendererData.Space == RendererSpace::Screen) ? AG_VIEW_SCREEN : AG_VIEW_WORLD;
 }
 
 RendererTexture RendererCreateTexture(uint32 width, uint32 height, RendererTextureFormat format, const uint8* pixels, StringView8 debugName)
@@ -1030,9 +1030,9 @@ void RendererGetVisibleArea(real32* x, real32* y, real32* width, real32* height)
     *height = RendererData.VisibleHeight;
 }
 
-void RendererWindowToDesign(int32 windowX, int32 windowY, real32* x, real32* y)
+void RendererScreenToWorld(int32 screenX, int32 screenY, real32* x, real32* y)
 {
     // NOTE(saeb): + 0.5 converts from the pixel's top-left corner to its centre, which is where the rasterizer samples it.
-    *x = RendererData.VisibleX + ((real32)windowX + 0.5f) / RendererData.ViewScale;
-    *y = RendererData.VisibleY + ((real32)windowY + 0.5f) / RendererData.ViewScale;
+    *x = RendererData.VisibleX + ((real32)screenX + 0.5f) / RendererData.ViewScale;
+    *y = RendererData.VisibleY + ((real32)screenY + 0.5f) / RendererData.ViewScale;
 }

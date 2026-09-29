@@ -12,8 +12,8 @@ enum RendererFlags : uint32
 
 enum class RendererSpace : uint8
 {
-    Design, // Default: design units, scaled to fit the window
-    Window // Client-area pixels, top-left origin; never scales
+    World, // Default: world units, with the design area fitted to the window
+    Screen // Pixels of the window's client area, top-left origin, y down; never scales
 };
 
 using RendererTexture = uint32; // 0 = white texture
@@ -47,7 +47,7 @@ struct RendererStats
 void RendererSetFlags(uint32 rendererFlags);
 void RendererGetStats(RendererStats* stats);
 
-// NOTE(saeb): Quads pushed after this use the given space until it's changed again; resets to Design at the end of every frame.
+// NOTE(saeb): Quads pushed after this use the given space until it's changed again; resets to World at the end of every frame.
 void RendererSetSpace(RendererSpace space);
 RendererSpace RendererGetSpace();
 
@@ -56,14 +56,14 @@ void RendererPushQuad(const RendererQuad* quad);
 // NOTE(saeb): Pixels in the given format, rows top to bottom, with no padding between rows. Returns 0 (the white texture) on failure.
 RendererTexture RendererCreateTexture(uint32 width, uint32 height, RendererTextureFormat format, const uint8* pixels, StringView8 debugName);
 
-// NOTE(saeb): The area the game lays out in, in design units (top-left origin, y down). It always fits entirely in the window, centred, as large as the window allows. Until this is called, one unit is one pixel.
+// NOTE(saeb): The design area: the part of the world the game lays out in, in world units (top-left origin, y down). It always fits entirely in the window, centred, as large as the window allows. Until this is called, one world unit is one pixel.
 void RendererSetDesignSize(real32 width, real32 height);
 
-// NOTE(saeb): The part of design space the window shows: the whole design area plus the extra space.
+// NOTE(saeb): The part of the world the window shows, in world units: the whole design area plus the extra space.
 void RendererGetVisibleArea(real32* x, real32* y, real32* width, real32* height);
 
-// NOTE(saeb): Converts a window position (client-area pixels, as from InputGetMouseXY) to design units.
-void RendererWindowToDesign(int32 windowX, int32 windowY, real32* x, real32* y);
+// NOTE(saeb): Converts a screen position (client-area pixels, as from InputGetMouseXY) to world units.
+void RendererScreenToWorld(int32 screenX, int32 screenY, real32* x, real32* y);
 
 // NOTE(saeb): Bytecode is a compiled pixel shader (DXBC for D3D11) that (for now) takes the default quad vertex shader's outputs. Returns 0 (the default pipeline) on failure.
 RendererPipeline RendererCreatePipeline(const uint8* pixelBytecode, usize size, StringView8 debugName);
