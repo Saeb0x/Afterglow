@@ -1,3 +1,6 @@
 [submodule "External/SSTL"]
 	path = External/SSTL
 	url = https://github.com/Saeb0x/SSTL.git
+[submodule "External/DirectXMath"]
+	path = External/DirectXMath
+	url = https://github.com/microsoft/DirectXMath.git

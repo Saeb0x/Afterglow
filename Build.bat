@@ -20,7 +20,7 @@ pushd "!BUILD_DIR!"
 if "!BUILD!"=="debug" (
     echo [Afterglow] Compiling and linking game [debug]...
     cl /nologo /std:c++20 /permissive- /utf-8 /MTd /Od /Zi ^
-    /I "%~dp0Src" /I "%~dp0External\SSTL\Include" ^
+    /I "%~dp0Src" /I "%~dp0External\SSTL\Include" /I "%~dp0External\DirectXMath\Inc" ^
     "%~dp0Src\Afterglow.cpp" ^
     "%~dp0Src\Sandbox\Sandbox.cpp" ^
     /Fd"Afterglow.pdb" /Fe"Afterglow.exe" ^
@@ -37,7 +37,7 @@ if "!BUILD!"=="debug" (
 ) else (
     echo [Afterglow] Compiling and linking game [release]...
     cl /nologo /std:c++20 /permissive- /utf-8 /MT /O2 ^
-    /I "%~dp0Src" /I "%~dp0External\SSTL\Include" ^
+    /I "%~dp0Src" /I "%~dp0External\SSTL\Include" /I "%~dp0External\DirectXMath\Inc" ^
     "%~dp0Src\Afterglow.cpp" ^
     "%~dp0Src\Sandbox\Sandbox.cpp" ^
     /Fe"Afterglow.exe" ^
