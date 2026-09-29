@@ -4,3 +4,6 @@
 [submodule "External/DirectXMath"]
 	path = External/DirectXMath
 	url = https://github.com/microsoft/DirectXMath.git
+[submodule "External/Box2D"]
+	path = External/Box2D
+	url = https://github.com/erincatto/box2d.git

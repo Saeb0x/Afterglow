@@ -18,13 +18,25 @@ if not exist "!BUILD_DIR!" mkdir "!BUILD_DIR!"
 pushd "!BUILD_DIR!"
 
 if "!BUILD!"=="debug" (
+    if not exist "box2d.lib" (
+        echo [Afterglow] Compiling Box2D [debug]...
+        if not exist "Box2D" mkdir "Box2D"
+        cl /nologo /c /std:c17 /utf-8 /MTd /Od /Zi ^
+        /I "%~dp0External\Box2D\include" ^
+        "%~dp0External\Box2D\src\*.c" ^
+        /Fo:"Box2D\\" /Fd:"Box2D\box2d.pdb"
+        if !errorlevel! neq 0 goto error
+        lib /nologo /OUT:"box2d.lib" "Box2D\*.obj"
+        if !errorlevel! neq 0 goto error
+    )
+
     echo [Afterglow] Compiling and linking game [debug]...
     cl /nologo /std:c++20 /permissive- /utf-8 /MTd /Od /Zi ^
-    /I "%~dp0Src" /I "%~dp0External\SSTL\Include" /I "%~dp0External\DirectXMath\Inc" ^
+    /I "%~dp0Src" /I "%~dp0External\SSTL\Include" /I "%~dp0External\DirectXMath\Inc" /I "%~dp0External\Box2D\include" ^
     "%~dp0Src\Afterglow.cpp" ^
     "%~dp0Src\Sandbox\Sandbox.cpp" ^
     /Fd"Afterglow.pdb" /Fe"Afterglow.exe" ^
-    /link /nologo /DEBUG Kernel32.lib User32.lib D3D11.lib DXGI.lib DXGUID.lib
+    /link /nologo /DEBUG Kernel32.lib User32.lib D3D11.lib DXGI.lib DXGUID.lib box2d.lib
     if !errorlevel! neq 0 goto error
 
     echo [Afterglow] Compiling and linking cooker [debug]...
@@ -35,13 +47,25 @@ if "!BUILD!"=="debug" (
     /link /nologo /DEBUG Kernel32.lib D3DCompiler.lib
     if !errorlevel! neq 0 goto error
 ) else (
+    if not exist "box2d.lib" (
+        echo [Afterglow] Compiling Box2D [release]...
+        if not exist "Box2D" mkdir "Box2D"
+        cl /nologo /c /std:c17 /utf-8 /MT /O2 ^
+        /I "%~dp0External\Box2D\include" ^
+        "%~dp0External\Box2D\src\*.c" ^
+        /Fo:"Box2D\\"
+        if !errorlevel! neq 0 goto error
+        lib /nologo /OUT:"box2d.lib" "Box2D\*.obj"
+        if !errorlevel! neq 0 goto error
+    )
+
     echo [Afterglow] Compiling and linking game [release]...
     cl /nologo /std:c++20 /permissive- /utf-8 /MT /O2 ^
-    /I "%~dp0Src" /I "%~dp0External\SSTL\Include" /I "%~dp0External\DirectXMath\Inc" ^
+    /I "%~dp0Src" /I "%~dp0External\SSTL\Include" /I "%~dp0External\DirectXMath\Inc" /I "%~dp0External\Box2D\include" ^
     "%~dp0Src\Afterglow.cpp" ^
     "%~dp0Src\Sandbox\Sandbox.cpp" ^
     /Fe"Afterglow.exe" ^
-    /link /nologo Kernel32.lib User32.lib D3D11.lib DXGI.lib DXGUID.lib
+    /link /nologo Kernel32.lib User32.lib D3D11.lib DXGI.lib DXGUID.lib box2d.lib
     if !errorlevel! neq 0 goto error
 
     echo [Afterglow] Compiling and linking cooker [release]...
