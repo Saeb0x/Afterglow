@@ -242,12 +242,21 @@ static uint32 D3D11FlushQuads()
         real32 g = quad->G * quad->A;
         real32 b = quad->B * quad->A;
 
+        // NOTE(saeb): In world space y points up, so the quad's top edge is y1, not y0. Swapping V keeps the texture's top row at the top in both spaces.
+        real32 v0 = quad->V0;
+        real32 v1 = quad->V1;
+        if(view != AG_VIEW_SCREEN)
+        {
+            v0 = quad->V1;
+            v1 = quad->V0;
+        }
+
         // NOTE(saeb): Mapped memory is write-combined; write each vertex whole, front to back, never read it back.
         QuadVertex* quadVertices = vertices + (quadIndex * 4);
-        quadVertices[0] = { x0, y0, quad->U0, quad->V0, r, g, b, quad->A }; // Top-left
-        quadVertices[1] = { x1, y0, quad->U1, quad->V0, r, g, b, quad->A }; // Top-right
-        quadVertices[2] = { x0, y1, quad->U0, quad->V1, r, g, b, quad->A }; // Bottom-left
-        quadVertices[3] = { x1, y1, quad->U1, quad->V1, r, g, b, quad->A }; // Bottom-right
+        quadVertices[0] = { x0, y0, quad->U0, v0, r, g, b, quad->A }; // (x0, y0): top-left on screen, bottom-left in the world
+        quadVertices[1] = { x1, y0, quad->U1, v0, r, g, b, quad->A };
+        quadVertices[2] = { x0, y1, quad->U0, v1, r, g, b, quad->A };
+        quadVertices[3] = { x1, y1, quad->U1, v1, r, g, b, quad->A };
     }
 
     RendererData.Context->Unmap(RendererData.VertexBuffer, 0);
