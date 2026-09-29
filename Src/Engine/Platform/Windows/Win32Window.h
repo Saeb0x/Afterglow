@@ -1,8 +1,7 @@
 #if !defined(AFTERGLOW_WIN32WINDOW_H)
 #define AFTERGLOW_WIN32WINDOW_H
 
-#include <SSTL/Core/Types.h>
-#include <SSTL/Core/String.h>
+#include <SSTL/Memory/StackAllocator.h>
 
 #if !defined(WIN32_LEAN_AND_MEAN)
 #define WIN32_LEAN_AND_MEAN

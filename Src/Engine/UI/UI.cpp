@@ -117,7 +117,7 @@ void UIBegin(UIContext* ui, const Font* font)
     ui->Seed = 0;
     ui->Scale = 1.0f; // Widgets outside any panel draw at their base size
 
-    uint32 windowClientAreaWidth, windowClientAreaHeight;
+    int32 windowClientAreaWidth, windowClientAreaHeight;
     WindowGetClientAreaDimensions(&windowClientAreaWidth, &windowClientAreaHeight);
     ui->ScreenWidth = (real32)windowClientAreaWidth;
     ui->ScreenHeight = (real32)windowClientAreaHeight;

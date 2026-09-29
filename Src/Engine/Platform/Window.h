@@ -11,10 +11,10 @@ enum WindowFlags : uint32
 };
 
 void WindowSetFlags(uint32 windowFlags);
-void WindowSetTitle(StringView8 title); // The default is "Afterglow"
-void WindowSetClientAreaDimensions(uint32 width, uint32 height); // The default is 1280 x 720
-void WindowSetMinClientAreaDimensions(uint32 width, uint32 height); // The smallest client area the user can resize the window to; 0 means no limit on that side. Call it in GameConfigure, like WindowSetFlags.
-void WindowGetClientAreaDimensions(uint32* width, uint32* height);
+void WindowSetTitle(StringView8 title);
+void WindowSetClientAreaDimensions(int32 width, int32 height);
+void WindowSetMinClientAreaDimensions(int32 width, int32 height);
+void WindowGetClientAreaDimensions(int32* width, int32* height);
 bool WindowGetMinimized();
 
 #endif

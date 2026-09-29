@@ -17,7 +17,6 @@
 
 static StackAllocator EngineMemory;
 
-// NOTE(saeb): Startup failures happen before the window is shown, so without a message the game would simply never appear. Builds "message\n\nReason: reason" in scratch on both heaps, released before returning.
 static void Win32ShowStartupError(StackAllocator* allocator, StringView8 message, StringView8 reason)
 {
     Frame lowerScratch = GetFrame(allocator, Heap::Lower);
@@ -42,7 +41,6 @@ static void Win32ShowStartupError(StackAllocator* allocator, StringView8 message
 
 int APIENTRY WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, int showCommand)
 {
-    // NOTE(saeb): Only a clean run through the main loop counts as success; every startup failure exits with 1.
     int exitCode = 1;
 
     if(InitStackAllocator(&EngineMemory, SSTL_MIB(64)))
@@ -79,7 +77,7 @@ int APIENTRY WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLi
 
                             Frame frameScratch = GetFrame(&EngineMemory, Heap::Upper);
 
-                            uint32 windowClientAreaWidth, windowClientAreaHeight;
+                            int32 windowClientAreaWidth, windowClientAreaHeight;
                             WindowGetClientAreaDimensions(&windowClientAreaWidth, &windowClientAreaHeight);
 
                             D3D11RendererBeginFrame(windowClientAreaWidth, windowClientAreaHeight);
@@ -90,7 +88,6 @@ int APIENTRY WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLi
                         }
 
                         GameShutdown(&EngineMemory);
-
                         exitCode = 0;
                     }
                     else
@@ -112,9 +109,7 @@ int APIENTRY WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLi
                 Win32ShowStartupError(&EngineMemory, SV8(u8"Couldn't initialize Direct3D 11. Afterglow needs Windows 10 or later and a GPU with Direct3D feature level 11.0."), StringView8{ nullptr, 0 });
             }
 
-            // NOTE(saeb): Called even if Init failed; Init can fail halfway, and Shutdown only releases what exists.
             D3D11RendererShutdown();
-
             Win32WindowShutdown();
         }
         else
@@ -126,7 +121,6 @@ int APIENTRY WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLi
     }
     else
     {
-        // NOTE(saeb): No allocator to build a message with, so a fixed one.
         MessageBoxW(nullptr, L"Couldn't reserve memory to start.", L"Afterglow", MB_OK | MB_ICONERROR);
     }
 

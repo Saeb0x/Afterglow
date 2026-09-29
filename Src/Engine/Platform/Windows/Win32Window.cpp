@@ -5,11 +5,11 @@
 struct Window
 {
     HWND Handle;
-    StringView8 InitialTitle; // Used once, when the window is created
+    StringView8 InitialTitle;
     String8 Title;
-    uint32 InitialWidth, InitialHeight; // Client area to start with; 0 = the default
-    uint32 Width, Height;
-    uint32 MinWidth, MinHeight; // Client area; 0 = no limit
+    int32 InitialWidth, InitialHeight;
+    int32 Width, Height;
+    int32 MinWidth, MinHeight;
     bool Minimized;
     bool CloseRequested;
     uint32 Flags;
@@ -24,22 +24,19 @@ static LRESULT CALLBACK Win32WindowProcedure(HWND windowHandle, UINT message, WP
     {
         case WM_CLOSE:
         {
-            // NOTE(saeb): Don't destroy here; the renderer still owns resources tied to this window. Flag it and let the main loop shut down in order.
             WindowData.CloseRequested = true;
         } break;
 
         case WM_DESTROY:
         {
-            // NOTE(saeb): Safety net; if the window is destroyed by anything other than Win32WindowShutdown(), still end the loop.
             WindowData.CloseRequested = true;
         } break;
 
         case WM_GETMINMAXINFO:
         {
-            // NOTE(saeb): Windows limits the outer window size, frame included, so add this window's frame to the minimum client area. Only the sides with a limit are changed; the rest keep Windows' defaults.
             if(WindowData.MinWidth > 0 || WindowData.MinHeight > 0)
             {
-                RECT minimum = { 0, 0, (LONG)WindowData.MinWidth, (LONG)WindowData.MinHeight };
+                RECT minimum = { 0, 0, WindowData.MinWidth, WindowData.MinHeight };
                 AdjustWindowRectEx(&minimum, (DWORD)GetWindowLongPtrW(windowHandle, GWL_STYLE), FALSE, (DWORD)GetWindowLongPtrW(windowHandle, GWL_EXSTYLE));
 
                 MINMAXINFO* info = (MINMAXINFO*)lParam;
@@ -80,8 +77,8 @@ static LRESULT CALLBACK Win32WindowProcedure(HWND windowHandle, UINT message, WP
 bool Win32WindowCreate(StackAllocator* allocator)
 {
     StringView8 title = (WindowData.InitialTitle.Data && WindowData.InitialTitle.Length > 0) ? WindowData.InitialTitle : SV8(u8"Afterglow");
-    uint32 width = (WindowData.InitialWidth > 0) ? WindowData.InitialWidth : 1280;
-    uint32 height = (WindowData.InitialHeight > 0) ? WindowData.InitialHeight : 720;
+    int32 width = (WindowData.InitialWidth > 0) ? WindowData.InitialWidth : 1280;
+    int32 height = (WindowData.InitialHeight > 0) ? WindowData.InitialHeight : 720;
 
     WNDCLASSEXW windowClass = {};
     windowClass.cbSize = sizeof(WNDCLASSEXW);
@@ -96,11 +93,11 @@ bool Win32WindowCreate(StackAllocator* allocator)
         return(false);
     }
 
-    uint32 windowStyle = WS_OVERLAPPEDWINDOW;
-    uint32 windowWidth = width;
-    uint32 windowHeight = height;
-    uint32 windowX = CW_USEDEFAULT;
-    uint32 windowY = CW_USEDEFAULT;
+    DWORD windowStyle = WS_OVERLAPPEDWINDOW;
+    int32 windowWidth = width;
+    int32 windowHeight = height;
+    int32 windowX = CW_USEDEFAULT;
+    int32 windowY = CW_USEDEFAULT;
 
     if(WindowData.Flags & WindowFlags_Fullscreen)
     {
@@ -112,20 +109,20 @@ bool Win32WindowCreate(StackAllocator* allocator)
     }
     else
     {
-        RECT windowClientArea = { 0, 0, (LONG)width, (LONG)height };
-        AdjustWindowRectEx(&windowClientArea, (DWORD)windowStyle, FALSE, 0);
+        RECT windowClientArea = { 0, 0, width, height };
+        AdjustWindowRectEx(&windowClientArea, windowStyle, FALSE, 0);
 
-        windowWidth = (uint32)(windowClientArea.right - windowClientArea.left);
-        windowHeight = (uint32)(windowClientArea.bottom - windowClientArea.top);
+        windowWidth = windowClientArea.right - windowClientArea.left;
+        windowHeight = windowClientArea.bottom - windowClientArea.top;
     }
 
     Frame frameScratch = GetFrame(allocator, Heap::Upper);
     HWND windowHandle = CreateWindowExW(0,
                                         L"AfterglowWin32WindowClass",
                                         (LPCWSTR)((SV8ToSV16(allocator, title)).Data),
-                                        (DWORD)windowStyle,
-                                        (int)windowX, (int)windowY,
-                                        (int)windowWidth, (int)windowHeight,
+                                        windowStyle,
+                                        windowX, windowY,
+                                        windowWidth, windowHeight,
                                         nullptr,
                                         nullptr,
                                         GetModuleHandleW(nullptr),
@@ -143,10 +140,8 @@ bool Win32WindowCreate(StackAllocator* allocator)
 
     RECT windowClientArea = {};
     GetClientRect(windowHandle, &windowClientArea);
-    WindowData.Width = (uint32)(windowClientArea.right - windowClientArea.left);
-    WindowData.Height = (uint32)(windowClientArea.bottom - windowClientArea.top);
-
-    WindowData.Minimized = false;
+    WindowData.Width = windowClientArea.right - windowClientArea.left;
+    WindowData.Height = windowClientArea.bottom - windowClientArea.top;
 
     return(true);
 }
@@ -197,19 +192,19 @@ void WindowSetTitle(StringView8 title)
     WindowData.InitialTitle = title;
 }
 
-void WindowSetClientAreaDimensions(uint32 width, uint32 height)
+void WindowSetClientAreaDimensions(int32 width, int32 height)
 {
     WindowData.InitialWidth = width;
     WindowData.InitialHeight = height;
 }
 
-void WindowSetMinClientAreaDimensions(uint32 width, uint32 height)
+void WindowSetMinClientAreaDimensions(int32 width, int32 height)
 {
     WindowData.MinWidth = width;
     WindowData.MinHeight = height;
 }
 
-void WindowGetClientAreaDimensions(uint32* width, uint32* height)
+void WindowGetClientAreaDimensions(int32* width, int32* height)
 {
     *width = WindowData.Width;
     *height = WindowData.Height;

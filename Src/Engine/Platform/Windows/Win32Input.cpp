@@ -1,6 +1,8 @@
 #include "Win32Input.h"
 #include "Engine/Platform/Input.h"
 
+#include <SSTL/Core/Types.h>
+
 struct InputButtonState
 {
     bool IsDown; // State at the end of the frame; persists across frames
@@ -281,7 +283,6 @@ void Win32InputProcess(HWND windowHandle, UINT message, WPARAM wParam, LPARAM lP
 
         case WM_ACTIVATEAPP:
         {
-            // NOTE(saeb): App lost activation mid-press; the key/button-up goes to another app, so release everything.
             if(wParam == FALSE)
             {
                 if(InputData.Flags & InputFlags_Keyboard)
