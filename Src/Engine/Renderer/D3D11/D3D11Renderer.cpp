@@ -10,12 +10,19 @@
 #include <d3d11_1.h>
 #include <dxgi1_6.h>
 
+#include <DirectXMath.h>
+
 // NOTE(saeb): 16384 quads * 4 = 65536 vertices, the most a 16-bit index can address.
 #define AG_MAX_QUADS 16384
 SSTL_ASSERT_STATIC_MSG(AG_MAX_QUADS * 4 <= 65536, "Afterglow: Quad vertices must be addressable by 16-bit indices.");
 
 #define AG_MAX_PIPELINES 64
 #define AG_MAX_TEXTURES 1024
+
+// NOTE(saeb): Every quad belongs to a view, the matrix that maps its units to the screen.
+#define AG_VIEW_SCREEN 0 // Window pixels, y down
+#define AG_VIEW_DESIGN 1 // Design units, fitted to the window
+#define AG_VIEW_COUNT 2
 
 struct QuadVertex
 {
@@ -28,6 +35,7 @@ struct QuadBatch
 {
     RendererPipeline Pipeline;
     RendererTexture Texture;
+    uint32 View;
     uint32 FirstQuad;
     uint32 QuadCount;
 };
@@ -39,8 +47,9 @@ struct QuadPipeline
 
 struct QuadConstants
 {
-    real32 VisibleX, VisibleY, VisibleWidth, VisibleHeight; // Matches Quad.hlsl's VisibleArea; exactly 16 bytes, the constant buffer granularity
+    DirectX::XMFLOAT4X4 ViewProjection; // Matches Quad.hlsl's ViewProjection: row-major, as DirectXMath stores it
 };
+SSTL_ASSERT_STATIC_MSG(sizeof(QuadConstants) % 16 == 0, "Afterglow: Constant buffers must be a multiple of 16 bytes.");
 
 struct Renderer
 {
@@ -60,6 +69,7 @@ struct Renderer
     ID3D11Buffer* VertexBuffer;
     ID3D11Buffer* IndexBuffer;
     RendererQuad* Quads;
+    uint8* QuadViews; // Parallel to Quads: the view each one was pushed under
     uint32 QuadCount;
     uint32 DroppedQuadCount;
     RendererStats LastFrameStats;
@@ -220,6 +230,11 @@ static uint32 D3D11FlushQuads()
         return(0);
     }
 
+    // NOTE(saeb): Built at draw time from the final sizes, so a resize or design-size change anywhere in the frame applies to every quad. Passing the larger y as "bottom" is what makes y point down.
+    DirectX::XMFLOAT4X4 views[AG_VIEW_COUNT];
+    DirectX::XMStoreFloat4x4(&views[AG_VIEW_SCREEN], DirectX::XMMatrixOrthographicOffCenterLH(0.0f, (real32)RendererData.BackBufferWidth, (real32)RendererData.BackBufferHeight, 0.0f, 0.0f, 1.0f));
+    DirectX::XMStoreFloat4x4(&views[AG_VIEW_DESIGN], DirectX::XMMatrixOrthographicOffCenterLH(RendererData.VisibleX, RendererData.VisibleX + RendererData.VisibleWidth, RendererData.VisibleY + RendererData.VisibleHeight, RendererData.VisibleY, 0.0f, 1.0f));
+
     QuadVertex* vertices = (QuadVertex*)mapped.pData;
     QuadBatch* batch = nullptr;
     uint32 batchCount = 0;
@@ -227,13 +242,15 @@ static uint32 D3D11FlushQuads()
     for(uint32 quadIndex = 0; quadIndex < RendererData.QuadCount; ++quadIndex)
     {
         const RendererQuad* quad = &RendererData.Quads[quadIndex];
+        uint32 view = RendererData.QuadViews[quadIndex];
 
         // NOTE(saeb): Only consecutive quads merge; submission order is the layering order for alpha.
-        if(!batch || batch->Pipeline != quad->Pipeline || batch->Texture != quad->Texture)
+        if(!batch || batch->Pipeline != quad->Pipeline || batch->Texture != quad->Texture || batch->View != view)
         {
             batch = &RendererData.Batches[batchCount++];
             batch->Pipeline = quad->Pipeline;
             batch->Texture = quad->Texture;
+            batch->View = view;
             batch->FirstQuad = quadIndex;
             batch->QuadCount = 0;
         }
@@ -266,13 +283,6 @@ static uint32 D3D11FlushQuads()
     RendererData.Context->IASetIndexBuffer(RendererData.IndexBuffer, DXGI_FORMAT_R16_UINT, 0);
     RendererData.Context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-    QuadConstants constants = {};
-    constants.VisibleX = RendererData.VisibleX;
-    constants.VisibleY = RendererData.VisibleY;
-    constants.VisibleWidth = RendererData.VisibleWidth;
-    constants.VisibleHeight = RendererData.VisibleHeight;
-    RendererData.Context->UpdateSubresource(RendererData.QuadConstantBuffer, 0, nullptr, &constants, 0, 0);
-
     RendererData.Context->IASetInputLayout(RendererData.QuadInputLayout);
     RendererData.Context->VSSetShader(RendererData.QuadVertexShader, nullptr, 0);
     RendererData.Context->VSSetConstantBuffers(0, 1, &RendererData.QuadConstantBuffer);
@@ -282,6 +292,7 @@ static uint32 D3D11FlushQuads()
 
     RendererPipeline boundPipeline = UINT32_MAX;
     RendererTexture boundTexture = UINT32_MAX;
+    uint32 boundView = UINT32_MAX;
 
     for(uint32 batchIndex = 0; batchIndex < batchCount; ++batchIndex)
     {
@@ -303,12 +314,20 @@ static uint32 D3D11FlushQuads()
             boundTexture = texture;
         }
 
+        if(current->View != boundView)
+        {
+            QuadConstants constants;
+            constants.ViewProjection = views[current->View];
+            RendererData.Context->UpdateSubresource(RendererData.QuadConstantBuffer, 0, nullptr, &constants, 0, 0);
+            boundView = current->View;
+        }
+
         // NOTE(saeb): One event per batch, so RenderDoc / PIX show why batches split. GetStatus() is TRUE only while a capture tool is attached, so normal runs never format the label.
         bool labeled = RendererData.Annotation && RendererData.Annotation->GetStatus();
         if(labeled)
         {
             wchar_t label[128];
-            wsprintfW(label, L"Batch %u: %u quads, texture %u, pipeline %u", batchIndex, current->QuadCount, texture, pipeline);
+            wsprintfW(label, L"Batch %u: %u quads, texture %u, pipeline %u, view %u", batchIndex, current->QuadCount, texture, pipeline, current->View);
             RendererData.Annotation->BeginEvent(label);
         }
 
@@ -504,10 +523,11 @@ bool D3D11RendererInit(StackAllocator* allocator, HWND windowHandle)
 
     D3D11SetName(RendererData.IndexBuffer, SV8(u8"QuadIndices"));
 
-    // NOTE(saeb): AG_MAX_QUADS (16384) * 56 bytes = 896 KiB for the quads and 16384 * 16 bytes = 256 KiB for the batches. Sizing the batch array for the worst case (every quad changes state) means no check for running out of batches.
+    // NOTE(saeb): AG_MAX_QUADS (16384) * 56 bytes = 896 KiB for the quads, 16384 bytes = 16 KiB for their views and 16384 * 20 bytes = 320 KiB for the batches. Sizing the batch array for the worst case (every quad changes state) means no check for running out of batches.
     RendererData.Quads = (RendererQuad*)Allocate(allocator, Heap::Lower, AG_MAX_QUADS * sizeof(RendererQuad), alignof(RendererQuad));
+    RendererData.QuadViews = (uint8*)Allocate(allocator, Heap::Lower, AG_MAX_QUADS * sizeof(uint8), alignof(uint8));
     RendererData.Batches = (QuadBatch*)Allocate(allocator, Heap::Lower, AG_MAX_QUADS * sizeof(QuadBatch), alignof(QuadBatch));
-    if(!RendererData.Quads || !RendererData.Batches)
+    if(!RendererData.Quads || !RendererData.QuadViews || !RendererData.Batches)
     {
         return(false);
     }
@@ -808,8 +828,9 @@ void D3D11RendererShutdown()
         RendererData.VertexBuffer = nullptr;
     }
 
-    // NOTE(saeb): The quad and batch arrays live in the engine's Lower heap; ShutdownStackAllocator frees them.
+    // NOTE(saeb): The quad, view and batch arrays live in the engine's Lower heap; ShutdownStackAllocator frees them.
     RendererData.Quads = nullptr;
+    RendererData.QuadViews = nullptr;
     RendererData.Batches = nullptr;
     RendererData.QuadCount = 0;
 
@@ -894,17 +915,10 @@ void RendererPushQuad(const RendererQuad* quad)
         return;
     }
 
-    RendererQuad* stored = &RendererData.Quads[RendererData.QuadCount++];
-    *stored = *quad;
-
-    if(RendererData.Space == RendererSpace::Window)
-    {
-        real32 unitsPerPixel = 1.0f / RendererData.ViewScale;
-        stored->X = RendererData.VisibleX + quad->X * unitsPerPixel;
-        stored->Y = RendererData.VisibleY + quad->Y * unitsPerPixel;
-        stored->Width = quad->Width * unitsPerPixel;
-        stored->Height = quad->Height * unitsPerPixel;
-    }
+    // NOTE(saeb): Stored as given, in its own units; the view's matrix maps it to the screen at draw time.
+    uint32 index = RendererData.QuadCount++;
+    RendererData.Quads[index] = *quad;
+    RendererData.QuadViews[index] = (RendererData.Space == RendererSpace::Window) ? AG_VIEW_SCREEN : AG_VIEW_DESIGN;
 }
 
 RendererTexture RendererCreateTexture(uint32 width, uint32 height, RendererTextureFormat format, const uint8* pixels, StringView8 debugName)

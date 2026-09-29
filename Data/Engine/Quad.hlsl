@@ -1,6 +1,6 @@
 cbuffer QuadConstants : register(b0)
 {
-    float4 VisibleArea; // x, y, width, height: the part of design space the window shows
+    row_major float4x4 ViewProjection;
 };
 
 Texture2D QuadTexture : register(t0);
@@ -24,10 +24,8 @@ PSInput VSMain(VSInput input)
 {
     PSInput output;
 
-    // Design units (top-left origin, y down) -> clip space (center origin, y up): an orthographic projection of the visible area onto the whole window.
-    float2 clip = ((input.Position - VisibleArea.xy) / VisibleArea.zw) * float2(2.0, -2.0) + float2(-1.0, 1.0);
-
-    output.Position = float4(clip, 0.0, 1.0);
+    // NOTE(saeb): z = 0 and w = 1: a flat 2D point that the matrix fully places.
+    output.Position = mul(float4(input.Position, 0.0, 1.0), ViewProjection);
     output.UV = input.UV;
     output.Color = input.Color;
 
