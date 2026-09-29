@@ -63,6 +63,7 @@ struct Renderer
     Camera ViewCameras[AG_MAX_VIEWS]; // This frame's cameras by view; [0] is the screen, which needs none
     uint32 ViewCount;
     uint32 WorldView; // The view world quads are pushed under: the latest camera
+    bool WorldViewUsed; // A world quad has been pushed under WorldView, so a new camera needs a new view
     bool TearingSupported;
     ID3D11RenderTargetView* RenderTargetView;
     ID3D11Buffer* VertexBuffer;
@@ -544,6 +545,7 @@ bool D3D11RendererInit(StackAllocator* allocator, HWND windowHandle)
     RendererData.ViewCameras[1] = {};
     RendererData.ViewCount = 2;
     RendererData.WorldView = 1;
+    RendererData.WorldViewUsed = false;
 
     D3D11_BUFFER_DESC constantBufferDesc = {};
     constantBufferDesc.ByteWidth = sizeof(QuadConstants);
@@ -747,6 +749,7 @@ void D3D11RendererEndFrame()
     RendererData.ViewCameras[1] = RendererData.ViewCameras[RendererData.WorldView];
     RendererData.ViewCount = 2;
     RendererData.WorldView = 1;
+    RendererData.WorldViewUsed = false;
 
     if(RendererData.Flags & RendererFlags_VSync)
     {
@@ -931,7 +934,15 @@ void RendererPushQuad(const RendererQuad* quad)
     // NOTE(saeb): Stored as given, in its own units; the view's matrix maps it to the screen at draw time.
     uint32 index = RendererData.QuadCount++;
     RendererData.Quads[index] = *quad;
-    RendererData.QuadViews[index] = (RendererData.Space == RendererSpace::Screen) ? AG_VIEW_SCREEN : (uint8)RendererData.WorldView;
+    if(RendererData.Space == RendererSpace::Screen)
+    {
+        RendererData.QuadViews[index] = AG_VIEW_SCREEN;
+    }
+    else
+    {
+        RendererData.QuadViews[index] = (uint8)RendererData.WorldView;
+        RendererData.WorldViewUsed = true;
+    }
 }
 
 RendererTexture RendererCreateTexture(uint32 width, uint32 height, RendererTextureFormat format, const uint8* pixels, StringView8 debugName)
@@ -1027,6 +1038,13 @@ bool RendererSetDefaultPipeline(const uint8* vertexBytecode, usize vertexSize, c
 
 void RendererSetCamera(const Camera* camera)
 {
+    // NOTE(saeb): Nothing has been drawn with the current camera yet, so replace it rather than add a view: a camera set every frame keeps reusing view 1, and setting one several times before drawing can't fill the table.
+    if(!RendererData.WorldViewUsed)
+    {
+        RendererData.ViewCameras[RendererData.WorldView] = *camera;
+        return;
+    }
+
     // NOTE(saeb): Full: keep drawing with the last camera rather than overflow. Sixteen cameras in one frame means something is setting one per object.
     if(RendererData.ViewCount >= AG_MAX_VIEWS)
     {
@@ -1035,4 +1053,5 @@ void RendererSetCamera(const Camera* camera)
 
     RendererData.ViewCameras[RendererData.ViewCount] = *camera;
     RendererData.WorldView = RendererData.ViewCount++;
+    RendererData.WorldViewUsed = false;
 }
