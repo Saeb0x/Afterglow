@@ -45,7 +45,7 @@ struct FileInfo
 
 struct FileDirectoryEntry
 {
-    StringView8 Name; // UTF-8, the name only ("Player.png"); valid only during the callback
+    StringView8 Name;
     FileInfo Info;
 };
 

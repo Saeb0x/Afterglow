@@ -19,9 +19,9 @@ SSTL_ASSERT_STATIC_MSG(AG_MAX_QUADS * 4 <= 65536, "Afterglow: Quad vertices must
 
 struct QuadVertex
 {
-    real32 X, Y; // Position
-    real32 U, V; // Texture Coordinates
-    real32 R, G, B, A; // Color
+    real32 X, Y;
+    real32 U, V;
+    real32 R, G, B, A;
 };
 
 struct QuadBatch
@@ -48,11 +48,11 @@ struct Renderer
     IDXGIAdapter1* Adapter;
     ID3D11Device* Device;
     ID3D11DeviceContext* Context;
-    ID3DUserDefinedAnnotation* Annotation; // Null if unavailable; markers are then skipped
+    ID3DUserDefinedAnnotation* Annotation;
     IDXGISwapChain1* SwapChain;
-    uint32 BackBufferWidth, BackBufferHeight;
-    RendererSpace Space; // Space of the quads being pushed; reset to Design every frame
-    real32 DesignWidth, DesignHeight; // 0 until RendererSetDesignSize: one unit per pixel
+    int32 BackBufferWidth, BackBufferHeight;
+    RendererSpace Space;
+    real32 DesignWidth, DesignHeight;
     real32 ViewScale; // Window pixels per design unit
     real32 VisibleX, VisibleY, VisibleWidth, VisibleHeight; // In design units
     bool TearingSupported;
@@ -61,8 +61,8 @@ struct Renderer
     ID3D11Buffer* IndexBuffer;
     RendererQuad* Quads;
     uint32 QuadCount;
-    uint32 DroppedQuadCount; // This frame's quads that didn't fit
-    RendererStats LastFrameStats; // Quads, draw calls and dropped quads of the last presented frame
+    uint32 DroppedQuadCount;
+    RendererStats LastFrameStats;
     QuadBatch* Batches;
     ID3D11VertexShader* QuadVertexShader;
     ID3D11InputLayout* QuadInputLayout;
@@ -105,7 +105,7 @@ static void D3D11EndEvent()
     }
 }
 
-// NOTE(saeb): Fill the window: the design area always fits entirely, centred, at the largest scale the window allows, and the window's extra length on one side becomes extra visible space. Without a design size, one unit is one pixel. Runs whenever the back buffer or the design size changes.
+// NOTE(saeb): Fill the window: the design area always fits entirely, centred, at the largest scale the window allows, and the window's extra length on one side becomes extra visible space. Without a design size, one unit is one pixel.
 static void D3D11UpdateView()
 {
     real32 windowWidth = (real32)RendererData.BackBufferWidth;
@@ -174,7 +174,6 @@ static bool D3D11CreateTexture(uint32 width, uint32 height, RendererTextureForma
         }
     }
 
-    // NOTE(saeb): Validate first; with the debug layer set to break on errors, a bad description would stop the program instead of just failing.
     if(!pixels || width == 0 || height == 0 || width > D3D11_REQ_TEXTURE2D_U_OR_V_DIMENSION || height > D3D11_REQ_TEXTURE2D_U_OR_V_DIMENSION)
     {
         return(false);
@@ -187,12 +186,12 @@ static bool D3D11CreateTexture(uint32 width, uint32 height, RendererTextureForma
     textureDesc.ArraySize = 1;
     textureDesc.Format = textureFormat;
     textureDesc.SampleDesc.Count = 1;
-    textureDesc.Usage = D3D11_USAGE_IMMUTABLE; // Contents given at creation, never written again
+    textureDesc.Usage = D3D11_USAGE_IMMUTABLE;
     textureDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
 
     D3D11_SUBRESOURCE_DATA textureData = {};
     textureData.pSysMem = pixels;
-    textureData.SysMemPitch = width * bytesPerPixel; // Bytes per row
+    textureData.SysMemPitch = width * bytesPerPixel;
 
     ID3D11Texture2D* texture = nullptr;
     if(FAILED(RendererData.Device->CreateTexture2D(&textureDesc, &textureData, &texture)))
@@ -202,7 +201,6 @@ static bool D3D11CreateTexture(uint32 width, uint32 height, RendererTextureForma
 
     HRESULT viewResult = RendererData.Device->CreateShaderResourceView(texture, nullptr, view);
 
-    // NOTE(saeb): Name both; RenderDoc lists textures and views separately.
     D3D11SetName(texture, name);
     if(SUCCEEDED(viewResult))
     {
@@ -214,7 +212,6 @@ static bool D3D11CreateTexture(uint32 width, uint32 height, RendererTextureForma
     return(SUCCEEDED(viewResult));
 }
 
-// NOTE(saeb): Returns the number of draw calls issued.
 static uint32 D3D11FlushQuads()
 {
     D3D11_MAPPED_SUBRESOURCE mapped;
@@ -283,7 +280,7 @@ static uint32 D3D11FlushQuads()
     RendererData.Context->PSSetSamplers(0, 1, &RendererData.SamplerState);
     RendererData.Context->OMSetBlendState(RendererData.BlendState, nullptr, 0xFFFFFFFF);
 
-    RendererPipeline boundPipeline = UINT32_MAX; // Nothing bound yet
+    RendererPipeline boundPipeline = UINT32_MAX;
     RendererTexture boundTexture = UINT32_MAX;
 
     for(uint32 batchIndex = 0; batchIndex < batchCount; ++batchIndex)
@@ -441,8 +438,12 @@ bool D3D11RendererInit(StackAllocator* allocator, HWND windowHandle)
     ID3D11InfoQueue* infoQueue = nullptr;
     if(SUCCEEDED(RendererData.Device->QueryInterface(IID_PPV_ARGS(&infoQueue))))
     {
-        infoQueue->SetBreakOnSeverity(D3D11_MESSAGE_SEVERITY_CORRUPTION, TRUE);
-        infoQueue->SetBreakOnSeverity(D3D11_MESSAGE_SEVERITY_ERROR, TRUE);
+        if(IsDebuggerPresent())
+        {
+            infoQueue->SetBreakOnSeverity(D3D11_MESSAGE_SEVERITY_CORRUPTION, TRUE);
+            infoQueue->SetBreakOnSeverity(D3D11_MESSAGE_SEVERITY_ERROR, TRUE);
+        }
+
         infoQueue->Release();
     }
 #endif
@@ -486,7 +487,7 @@ bool D3D11RendererInit(StackAllocator* allocator, HWND windowHandle)
 
     D3D11_BUFFER_DESC indexBufferDesc = {};
     indexBufferDesc.ByteWidth = indexCount * sizeof(uint16);
-    indexBufferDesc.Usage = D3D11_USAGE_IMMUTABLE; // Filled once at creation, never written again
+    indexBufferDesc.Usage = D3D11_USAGE_IMMUTABLE;
     indexBufferDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
 
     D3D11_SUBRESOURCE_DATA indexData = {};
@@ -494,7 +495,6 @@ bool D3D11RendererInit(StackAllocator* allocator, HWND windowHandle)
 
     HRESULT indexResult = RendererData.Device->CreateBuffer(&indexBufferDesc, &indexData, &RendererData.IndexBuffer);
 
-    // NOTE(saeb): The data is copied during CreateBuffer, so the scratch can go right away.
     ReleaseFrame(allocator, frameScratch);
 
     if(FAILED(indexResult))
@@ -517,7 +517,7 @@ bool D3D11RendererInit(StackAllocator* allocator, HWND windowHandle)
 
     D3D11_BUFFER_DESC constantBufferDesc = {};
     constantBufferDesc.ByteWidth = sizeof(QuadConstants);
-    constantBufferDesc.Usage = D3D11_USAGE_DEFAULT; // Updated with UpdateSubresource
+    constantBufferDesc.Usage = D3D11_USAGE_DEFAULT;
     constantBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
 
     if(FAILED(RendererData.Device->CreateBuffer(&constantBufferDesc, nullptr, &RendererData.QuadConstantBuffer)))
@@ -548,7 +548,7 @@ bool D3D11RendererInit(StackAllocator* allocator, HWND windowHandle)
     D3D11_RASTERIZER_DESC rasterizerDesc = {};
     rasterizerDesc.FillMode = D3D11_FILL_SOLID;
     rasterizerDesc.CullMode = D3D11_CULL_NONE; // A negative width/height flips winding; still draw it
-    rasterizerDesc.DepthClipEnable = TRUE; // D3D11'S default is TRUE, but a zeroed desc makes it FALSE
+    rasterizerDesc.DepthClipEnable = TRUE; // D3D11's default is TRUE, but a zeroed desc makes it FALSE
 
     if(FAILED(RendererData.Device->CreateRasterizerState(&rasterizerDesc, &RendererData.RasterizerState)))
     {
@@ -595,7 +595,7 @@ bool D3D11RendererInit(StackAllocator* allocator, HWND windowHandle)
     }
 
     DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
-    swapChainDesc.Width = 0; // 0 = take the window's client size
+    swapChainDesc.Width = 0;
     swapChainDesc.Height = 0;
     swapChainDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
     swapChainDesc.SampleDesc.Count = 1; // Flip model can't be multisampled; MSAA would be a separate target resolved into this one
@@ -615,8 +615,8 @@ bool D3D11RendererInit(StackAllocator* allocator, HWND windowHandle)
     RendererData.Factory->MakeWindowAssociation(windowHandle, DXGI_MWA_NO_ALT_ENTER);
 
     RendererData.SwapChain->GetDesc1(&swapChainDesc);
-    RendererData.BackBufferWidth = swapChainDesc.Width;
-    RendererData.BackBufferHeight = swapChainDesc.Height;
+    RendererData.BackBufferWidth = (int32)swapChainDesc.Width;
+    RendererData.BackBufferHeight = (int32)swapChainDesc.Height;
     D3D11UpdateView();
 
     ID3D11Texture2D* backBuffer = nullptr;
@@ -639,7 +639,7 @@ bool D3D11RendererInit(StackAllocator* allocator, HWND windowHandle)
     return(true);
 }
 
-void D3D11RendererBeginFrame(uint32 width, uint32 height)
+void D3D11RendererBeginFrame(int32 width, int32 height)
 {
     if((width != RendererData.BackBufferWidth || height != RendererData.BackBufferHeight) && width > 0 && height > 0)
     {
@@ -648,7 +648,7 @@ void D3D11RendererBeginFrame(uint32 width, uint32 height)
         RendererData.RenderTargetView->Release();
         RendererData.RenderTargetView = nullptr;
 
-        RendererData.SwapChain->ResizeBuffers(0, width, height, DXGI_FORMAT_UNKNOWN, RendererData.TearingSupported ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0);
+        RendererData.SwapChain->ResizeBuffers(0, (UINT)width, (UINT)height, DXGI_FORMAT_UNKNOWN, RendererData.TearingSupported ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0);
 
         ID3D11Texture2D* backBuffer = nullptr;
         if(FAILED(RendererData.SwapChain->GetBuffer(0, IID_PPV_ARGS(&backBuffer))))
@@ -909,7 +909,7 @@ void RendererPushQuad(const RendererQuad* quad)
 
 RendererTexture RendererCreateTexture(uint32 width, uint32 height, RendererTextureFormat format, const uint8* pixels, StringView8 debugName)
 {
-    // NOTE(saeb): Not initialized, table full, or creation failed: return the white texture, so the quad still draws (white) instead of crashing.
+    // NOTE(saeb): Not initialized, table full, or creation failed: return the white texture, so the quad still draws instead of crashing.
     if(!RendererData.Device || RendererData.TextureCount >= AG_MAX_TEXTURES)
     {
         return(0);

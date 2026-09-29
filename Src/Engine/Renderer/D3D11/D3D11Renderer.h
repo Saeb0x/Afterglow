@@ -10,7 +10,7 @@
 #include <windows.h>
 
 bool D3D11RendererInit(StackAllocator* allocator, HWND windowHandle);
-void D3D11RendererBeginFrame(uint32 width, uint32 height);
+void D3D11RendererBeginFrame(int32 width, int32 height);
 void D3D11RendererEndFrame();
 void D3D11RendererShutdown();
 
