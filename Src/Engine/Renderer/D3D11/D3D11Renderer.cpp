@@ -232,10 +232,31 @@ static uint32 D3D11FlushQuads()
 
         ++batch->QuadCount;
 
+        // NOTE(saeb): Corners in vertex order: (X, Y), (X + W, Y), (X, Y + H), (X + W, Y + H).
         real32 x0 = quad->X;
         real32 y0 = quad->Y;
         real32 x1 = quad->X + quad->Width;
         real32 y1 = quad->Y + quad->Height;
+        real32 cornerX[4] = { x0, x1, x0, x1 };
+        real32 cornerY[4] = { y0, y0, y1, y1 };
+
+        // NOTE(saeb): Turn each corner around the centre. Skipped at 0, so text and UI keep the exact axis-aligned path. Screen space has y down, which would turn the same formula clockwise, so its angle is negated: positive is counter-clockwise on screen in both spaces.
+        if(quad->Rotation != 0.0f)
+        {
+            real32 rotation = (view == AG_VIEW_SCREEN) ? -quad->Rotation : quad->Rotation;
+            real32 sine, cosine;
+            DirectX::XMScalarSinCos(&sine, &cosine, rotation);
+
+            real32 centreX = quad->X + quad->Width * 0.5f;
+            real32 centreY = quad->Y + quad->Height * 0.5f;
+            for(uint32 corner = 0; corner < 4; ++corner)
+            {
+                real32 offsetX = cornerX[corner] - centreX;
+                real32 offsetY = cornerY[corner] - centreY;
+                cornerX[corner] = centreX + offsetX * cosine - offsetY * sine;
+                cornerY[corner] = centreY + offsetX * sine + offsetY * cosine;
+            }
+        }
 
         // NOTE(saeb): The game passes straight colors; premultiply here so the blend state's ONE is correct.
         real32 r = quad->R * quad->A;
@@ -253,10 +274,10 @@ static uint32 D3D11FlushQuads()
 
         // NOTE(saeb): Mapped memory is write-combined; write each vertex whole, front to back, never read it back.
         QuadVertex* quadVertices = vertices + (quadIndex * 4);
-        quadVertices[0] = { x0, y0, quad->U0, v0, r, g, b, quad->A }; // (x0, y0): top-left on screen, bottom-left in the world
-        quadVertices[1] = { x1, y0, quad->U1, v0, r, g, b, quad->A };
-        quadVertices[2] = { x0, y1, quad->U0, v1, r, g, b, quad->A };
-        quadVertices[3] = { x1, y1, quad->U1, v1, r, g, b, quad->A };
+        quadVertices[0] = { cornerX[0], cornerY[0], quad->U0, v0, r, g, b, quad->A }; // (X, Y): top-left on screen, bottom-left in the world
+        quadVertices[1] = { cornerX[1], cornerY[1], quad->U1, v0, r, g, b, quad->A };
+        quadVertices[2] = { cornerX[2], cornerY[2], quad->U0, v1, r, g, b, quad->A };
+        quadVertices[3] = { cornerX[3], cornerY[3], quad->U1, v1, r, g, b, quad->A };
     }
 
     RendererData.Context->Unmap(RendererData.VertexBuffer, 0);
@@ -507,7 +528,7 @@ bool D3D11RendererInit(StackAllocator* allocator, HWND windowHandle)
 
     D3D11SetName(RendererData.IndexBuffer, SV8(u8"QuadIndices"));
 
-    // NOTE(saeb): AG_MAX_QUADS (16384) * 56 bytes = 896 KiB for the quads, 16384 bytes = 16 KiB for their views and 16384 * 20 bytes = 320 KiB for the batches. Sizing the batch array for the worst case (every quad changes state) means no check for running out of batches.
+    // NOTE(saeb): AG_MAX_QUADS (16384) * 60 bytes = 960 KiB for the quads, 16384 bytes = 16 KiB for their views and 16384 * 20 bytes = 320 KiB for the batches. Sizing the batch array for the worst case (every quad changes state) means no check for running out of batches.
     RendererData.Quads = (RendererQuad*)Allocate(allocator, Heap::Lower, AG_MAX_QUADS * sizeof(RendererQuad), alignof(RendererQuad));
     RendererData.QuadViews = (uint8*)Allocate(allocator, Heap::Lower, AG_MAX_QUADS * sizeof(uint8), alignof(uint8));
     RendererData.Batches = (QuadBatch*)Allocate(allocator, Heap::Lower, AG_MAX_QUADS * sizeof(QuadBatch), alignof(QuadBatch));

@@ -32,6 +32,7 @@ struct RendererQuad
     real32 X, Y, Width, Height; // The corner with the smallest x and y, and the size: screen pixels (top-left corner, y down) or world metres (bottom-left corner, y up)
     real32 U0, V0, U1, V1; // Texture coordinates; (U0, V0) is the texture's top-left, which stays at the top of the quad in both spaces
     real32 R, G, B, A;
+    real32 Rotation; // Radians around the quad's centre, counter-clockwise on screen in both spaces; 0 = axis-aligned
     RendererTexture Texture;
     RendererPipeline Pipeline;
 };
