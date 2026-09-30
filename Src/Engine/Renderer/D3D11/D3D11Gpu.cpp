@@ -1,11 +1,24 @@
-#include "Engine/Renderer/D3D11/D3D11Gpu.h"
 #include "Engine/Renderer/Gpu.h"
 #include "Engine/Renderer/Internal/GpuInternal.h"
 
 #include <SSTL/Core/Config.h>
 #include <SSTL/Core/Utility.h>
+#include <SSTL/Core/Assert.h>
 
+#include <d3d11.h>
+#include <d3d11_1.h>
 #include <dxgi1_6.h>
+
+// NOTE(saeb): What a GpuPipeline points to.
+struct D3D11Pipeline
+{
+    ID3D11VertexShader* VertexShader;
+    ID3D11PixelShader* PixelShader;
+    ID3D11InputLayout* InputLayout; // Null for a pipeline with no vertex attributes
+    ID3D11BlendState* BlendState;
+    ID3D11RasterizerState* RasterizerState;
+    D3D11_PRIMITIVE_TOPOLOGY Topology;
+};
 
 struct Gpu
 {
@@ -17,10 +30,50 @@ struct Gpu
     IDXGISwapChain1* SwapChain;
     ID3D11RenderTargetView* RenderTargetView;
     int32 BackBufferWidth, BackBufferHeight;
+    ID3D11SamplerState* Samplers[(uint32)GpuSampler::Count];
     GpuStats Stats;
     GpuCaps Caps;
 };
 static Gpu GpuData;
+
+// NOTE(saeb): Shows up in RenderDoc / PIX and in debug-layer messages, including the live-object report at shutdown.
+static void D3D11SetName(ID3D11DeviceChild* object, StringView8 name)
+{
+    if(!object || !name.Data || name.Length == 0)
+    {
+        return;
+    }
+
+    object->SetPrivateData(WKPDID_D3DDebugObjectName, (UINT)name.Length, name.Data);
+}
+
+// NOTE(saeb): Every D3D11 shader is a DXBC container: "DXBC", a 16-byte checksum, a version, then its total size at byte 24. Checking the magic and size rejects truncated or garbage bytecode quietly; with the debug layer set to break on errors, passing it to D3D would stop the program instead. A flipped bit inside otherwise valid bytecode still reaches D3D's checksum.
+static bool D3D11IsBytecodeValid(const uint8* bytecode, usize size)
+{
+    if(!bytecode || size < 32)
+    {
+        return(false);
+    }
+
+    if(bytecode[0] != 'D' || bytecode[1] != 'X' || bytecode[2] != 'B' || bytecode[3] != 'C')
+    {
+        return(false);
+    }
+
+    uint32 containerSize = (uint32)bytecode[24] | ((uint32)bytecode[25] << 8) | ((uint32)bytecode[26] << 16) | ((uint32)bytecode[27] << 24);
+
+    return(containerSize == size);
+}
+
+static ID3D11Buffer* D3D11GpuGetBuffer(GpuBuffer buffer)
+{
+    return((ID3D11Buffer*)buffer.Object);
+}
+
+static ID3D11ShaderResourceView* D3D11GpuGetTexture(GpuTexture texture)
+{
+    return((ID3D11ShaderResourceView*)texture.Object);
+}
 
 static bool D3D11CreateBackBufferView()
 {
@@ -182,6 +235,31 @@ GpuInitResult GpuInit(const GpuDesc* desc)
 
     GpuData.Caps.MaxTextureSize = D3D11_REQ_TEXTURE2D_U_OR_V_DIMENSION;
 
+    // NOTE(saeb): The fixed sampler set, in GpuSampler order.
+    StringView8 samplerNames[] = { SV8(u8"LinearClampSampler"), SV8(u8"LinearWrapSampler"), SV8(u8"PointClampSampler"), SV8(u8"PointWrapSampler") };
+    SSTL_ASSERT_STATIC_MSG(SSTL_ARRAYCOUNT(samplerNames) == (uint32)GpuSampler::Count, "Afterglow: One sampler name per GpuSampler.");
+    for(uint32 index = 0; index < (uint32)GpuSampler::Count; ++index)
+    {
+        bool linear = (index == (uint32)GpuSampler::LinearClamp || index == (uint32)GpuSampler::LinearWrap);
+        bool wrap = (index == (uint32)GpuSampler::LinearWrap || index == (uint32)GpuSampler::PointWrap);
+        D3D11_TEXTURE_ADDRESS_MODE address = wrap ? D3D11_TEXTURE_ADDRESS_WRAP : D3D11_TEXTURE_ADDRESS_CLAMP;
+
+        D3D11_SAMPLER_DESC samplerDesc = {};
+        samplerDesc.Filter = linear ? D3D11_FILTER_MIN_MAG_MIP_LINEAR : D3D11_FILTER_MIN_MAG_MIP_POINT;
+        samplerDesc.AddressU = address;
+        samplerDesc.AddressV = address;
+        samplerDesc.AddressW = address;
+        samplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
+        samplerDesc.MaxLOD = D3D11_FLOAT32_MAX; // Zeroed would lock every texture to mip 0
+
+        if(FAILED(GpuData.Device->CreateSamplerState(&samplerDesc, &GpuData.Samplers[index])))
+        {
+            return(GpuInitResult::Unsupported);
+        }
+
+        D3D11SetName(GpuData.Samplers[index], samplerNames[index]);
+    }
+
     // NOTE(saeb): Tearing is what lets VSync-off actually present immediately on flip-model swap chains (needs Windows 10 + driver support).
     IDXGIFactory5* factory5 = nullptr;
     if(SUCCEEDED(GpuData.Factory->QueryInterface(IID_PPV_ARGS(&factory5))))
@@ -235,6 +313,15 @@ void GpuShutdown()
     {
         GpuData.Context->ClearState();
         GpuData.Context->Flush();
+    }
+
+    for(uint32 index = 0; index < (uint32)GpuSampler::Count; ++index)
+    {
+        if(GpuData.Samplers[index])
+        {
+            GpuData.Samplers[index]->Release();
+            GpuData.Samplers[index] = nullptr;
+        }
     }
 
     if(GpuData.RenderTargetView)
@@ -563,38 +650,190 @@ void GpuEndMarker()
     }
 }
 
-ID3D11Device* D3D11GpuGetDevice()
+bool GpuMarkersEnabled()
 {
-    return(GpuData.Device);
+    return(GpuData.Annotation && GpuData.Annotation->GetStatus());
 }
 
-ID3D11DeviceContext* D3D11GpuGetContext()
+static void D3D11ReleasePipeline(D3D11Pipeline* pipeline)
 {
-    return(GpuData.Context);
+    if(pipeline->VertexShader)
+    {
+        pipeline->VertexShader->Release();
+    }
+
+    if(pipeline->PixelShader)
+    {
+        pipeline->PixelShader->Release();
+    }
+
+    if(pipeline->InputLayout)
+    {
+        pipeline->InputLayout->Release();
+    }
+
+    if(pipeline->BlendState)
+    {
+        pipeline->BlendState->Release();
+    }
+
+    if(pipeline->RasterizerState)
+    {
+        pipeline->RasterizerState->Release();
+    }
+
+    *pipeline = {};
 }
 
-ID3DUserDefinedAnnotation* D3D11GpuGetAnnotation()
+GpuPipeline GpuCreatePipeline(StackAllocator* allocator, const GpuPipelineDesc* desc)
 {
-    return(GpuData.Annotation);
+    GpuPipeline result = {};
+
+    if(!GpuData.Device || desc->AttributeCount > GPU_MAX_VERTEX_ATTRIBUTES ||
+       !D3D11IsBytecodeValid((const uint8*)desc->VertexShader, desc->VertexShaderSize) ||
+       !D3D11IsBytecodeValid((const uint8*)desc->PixelShader, desc->PixelShaderSize))
+    {
+        return(result);
+    }
+
+    // NOTE(saeb): D3D11 matches vertex data to shader inputs by name; location N is the name ATTRIBN, so shaders declare their inputs as ATTRIB0, ATTRIB1, ...
+    D3D11_INPUT_ELEMENT_DESC inputElements[GPU_MAX_VERTEX_ATTRIBUTES] = {};
+    for(uint32 index = 0; index < desc->AttributeCount; ++index)
+    {
+        const GpuVertexAttribute* attribute = &desc->Attributes[index];
+
+        DXGI_FORMAT format;
+        switch(attribute->Format)
+        {
+            case GpuVertexFormat::Float2:
+            {
+                format = DXGI_FORMAT_R32G32_FLOAT;
+            } break;
+
+            case GpuVertexFormat::Float4:
+            {
+                format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+            } break;
+
+            default:
+            {
+                return(result);
+            }
+        }
+
+        inputElements[index].SemanticName = "ATTRIB";
+        inputElements[index].SemanticIndex = attribute->Location;
+        inputElements[index].Format = format;
+        inputElements[index].AlignedByteOffset = attribute->Offset;
+        inputElements[index].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
+    }
+
+    D3D11_BLEND_DESC blendDesc = {};
+    blendDesc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+    if(desc->Blend == GpuBlend::Premultiplied)
+    {
+        // NOTE(saeb): Premultiplied "over": color = src + dst * (1 - srcAlpha); src.rgb already carries its alpha.
+        blendDesc.RenderTarget[0].BlendEnable = TRUE;
+        blendDesc.RenderTarget[0].SrcBlend = D3D11_BLEND_ONE;
+        blendDesc.RenderTarget[0].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
+        blendDesc.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
+        blendDesc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
+        blendDesc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_INV_SRC_ALPHA;
+        blendDesc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
+    }
+
+    D3D11_RASTERIZER_DESC rasterizerDesc = {};
+    rasterizerDesc.FillMode = D3D11_FILL_SOLID;
+    rasterizerDesc.CullMode = (desc->Cull == GpuCull::Back) ? D3D11_CULL_BACK : D3D11_CULL_NONE;
+    rasterizerDesc.DepthClipEnable = TRUE; // D3D11's default is TRUE, but a zeroed desc makes it FALSE
+
+    // NOTE(saeb): Identical blend and rasterizer descs return the same shared object, so pipelines with the same states cost nothing extra.
+    D3D11Pipeline pipeline = {};
+    pipeline.Topology = (desc->Primitive == GpuPrimitive::Lines) ? D3D11_PRIMITIVE_TOPOLOGY_LINELIST : D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+
+    bool created = SUCCEEDED(GpuData.Device->CreateVertexShader(desc->VertexShader, desc->VertexShaderSize, nullptr, &pipeline.VertexShader)) &&
+        SUCCEEDED(GpuData.Device->CreatePixelShader(desc->PixelShader, desc->PixelShaderSize, nullptr, &pipeline.PixelShader)) &&
+        (desc->AttributeCount == 0 || SUCCEEDED(GpuData.Device->CreateInputLayout(inputElements, desc->AttributeCount, desc->VertexShader, desc->VertexShaderSize, &pipeline.InputLayout))) &&
+        SUCCEEDED(GpuData.Device->CreateBlendState(&blendDesc, &pipeline.BlendState)) &&
+        SUCCEEDED(GpuData.Device->CreateRasterizerState(&rasterizerDesc, &pipeline.RasterizerState));
+
+    D3D11Pipeline* record = created ? (D3D11Pipeline*)Allocate(allocator, Heap::Lower, sizeof(D3D11Pipeline), alignof(D3D11Pipeline)) : nullptr;
+    if(!record)
+    {
+        D3D11ReleasePipeline(&pipeline);
+        return(result);
+    }
+
+    D3D11SetName(pipeline.VertexShader, desc->DebugName);
+    D3D11SetName(pipeline.PixelShader, desc->DebugName);
+    D3D11SetName(pipeline.InputLayout, desc->DebugName);
+
+    *record = pipeline;
+    ++GpuData.Stats.Pipelines;
+    result.Object = record;
+
+    return(result);
 }
 
-ID3D11Buffer* D3D11GpuGetBuffer(GpuBuffer buffer)
+void GpuDestroyPipeline(GpuPipeline pipeline)
 {
-    return((ID3D11Buffer*)buffer.Object);
+    D3D11Pipeline* record = (D3D11Pipeline*)pipeline.Object;
+    if(record)
+    {
+        D3D11ReleasePipeline(record);
+        --GpuData.Stats.Pipelines;
+    }
 }
 
-ID3D11ShaderResourceView* D3D11GpuGetTexture(GpuTexture texture)
+void GpuSetPipeline(GpuPipeline pipeline)
 {
-    return((ID3D11ShaderResourceView*)texture.Object);
-}
-
-// NOTE(saeb): Shows up in RenderDoc / PIX and in debug-layer messages, including the live-object report at shutdown.
-void D3D11SetName(ID3D11DeviceChild* object, StringView8 name)
-{
-    if(!object || !name.Data || name.Length == 0)
+    D3D11Pipeline* record = (D3D11Pipeline*)pipeline.Object;
+    if(!record)
     {
         return;
     }
 
-    object->SetPrivateData(WKPDID_D3DDebugObjectName, (UINT)name.Length, name.Data);
+    GpuData.Context->IASetInputLayout(record->InputLayout);
+    GpuData.Context->IASetPrimitiveTopology(record->Topology);
+    GpuData.Context->VSSetShader(record->VertexShader, nullptr, 0);
+    GpuData.Context->PSSetShader(record->PixelShader, nullptr, 0);
+    GpuData.Context->RSSetState(record->RasterizerState);
+    GpuData.Context->OMSetBlendState(record->BlendState, nullptr, 0xFFFFFFFF);
+}
+
+void GpuSetVertexBuffer(GpuBuffer buffer, uint32 stride)
+{
+    ID3D11Buffer* object = D3D11GpuGetBuffer(buffer);
+    UINT offset = 0;
+    GpuData.Context->IASetVertexBuffers(0, 1, &object, &stride, &offset);
+}
+
+void GpuSetIndexBuffer(GpuBuffer buffer, GpuIndexFormat format)
+{
+    GpuData.Context->IASetIndexBuffer(D3D11GpuGetBuffer(buffer), (format == GpuIndexFormat::U32) ? DXGI_FORMAT_R32_UINT : DXGI_FORMAT_R16_UINT, 0);
+}
+
+void GpuSetConstantBuffer(uint32 slot, GpuBuffer buffer)
+{
+    ID3D11Buffer* object = D3D11GpuGetBuffer(buffer);
+    GpuData.Context->VSSetConstantBuffers(slot, 1, &object);
+    GpuData.Context->PSSetConstantBuffers(slot, 1, &object);
+}
+
+void GpuSetTexture(uint32 slot, GpuTexture texture, GpuSampler sampler)
+{
+    ID3D11ShaderResourceView* view = D3D11GpuGetTexture(texture);
+    ID3D11SamplerState* samplerState = ((uint32)sampler < (uint32)GpuSampler::Count) ? GpuData.Samplers[(uint32)sampler] : nullptr;
+    GpuData.Context->PSSetShaderResources(slot, 1, &view);
+    GpuData.Context->PSSetSamplers(slot, 1, &samplerState);
+}
+
+void GpuDraw(uint32 vertexCount, uint32 firstVertex)
+{
+    GpuData.Context->Draw(vertexCount, firstVertex);
+}
+
+void GpuDrawIndexed(uint32 indexCount, uint32 firstIndex)
+{
+    GpuData.Context->DrawIndexed(indexCount, firstIndex, 0);
 }

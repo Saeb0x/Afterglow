@@ -3,6 +3,7 @@
 
 #include <SSTL/Core/Types.h>
 #include <SSTL/Core/String.h>
+#include <SSTL/Memory/StackAllocator.h>
 
 struct GpuCaps
 {
@@ -13,11 +14,6 @@ struct GpuCaps
 };
 
 struct GpuBuffer
-{
-    void* Object;
-};
-
-struct GpuTexture
 {
     void* Object;
 };
@@ -44,6 +40,11 @@ struct GpuBufferDesc
     StringView8 DebugName;
 };
 
+struct GpuTexture
+{
+    void* Object;
+};
+
 enum class GpuFormat : uint8
 {
     RGBA8,
@@ -58,10 +59,79 @@ struct GpuTextureDesc
     StringView8 DebugName;
 };
 
+struct GpuPipeline
+{
+    void* Object;
+};
+
+enum class GpuVertexFormat : uint8
+{
+    Float2,
+    Float4
+};
+
+struct GpuVertexAttribute
+{
+    uint32 Location; // Which shader input
+    GpuVertexFormat Format;
+    uint32 Offset; // Bytes into the vertex
+};
+
+enum class GpuBlend : uint8
+{
+    Opaque,
+    Premultiplied
+};
+
+enum class GpuCull : uint8
+{
+    None,
+    Back
+};
+
+enum class GpuPrimitive : uint8
+{
+    Triangles,
+    Lines
+};
+
+#define GPU_MAX_VERTEX_ATTRIBUTES 8
+
+struct GpuPipelineDesc
+{
+    const void* VertexShader;
+    usize VertexShaderSize;
+    const void* PixelShader;
+    usize PixelShaderSize;
+    GpuVertexAttribute Attributes[GPU_MAX_VERTEX_ATTRIBUTES];
+    uint32 AttributeCount;
+    GpuBlend Blend;
+    GpuCull Cull;
+    GpuPrimitive Primitive;
+    StringView8 DebugName;
+};
+
+enum class GpuSampler : uint8
+{
+    LinearClamp,
+    LinearWrap,
+    PointClamp,
+    PointWrap,
+
+    Count
+};
+
+enum class GpuIndexFormat : uint8
+{
+    U16,
+    U32
+};
+
 struct GpuStats
 {
     uint32 Buffers;
     uint32 Textures;
+    uint32 Pipelines;
 };
 
 void GpuGetCaps(GpuCaps* caps);
@@ -74,9 +144,22 @@ void GpuUnmapBuffer(GpuBuffer buffer);
 GpuTexture GpuCreateTexture(const GpuTextureDesc* desc);
 void GpuDestroyTexture(GpuTexture texture);
 
+// NOTE(saeb): The pipeline's own record lives in the allocator's Lower heap until that frame is released; GpuDestroyPipeline releases its GPU objects.
+GpuPipeline GpuCreatePipeline(StackAllocator* allocator, const GpuPipelineDesc* desc);
+void GpuDestroyPipeline(GpuPipeline pipeline);
+
+void GpuSetPipeline(GpuPipeline pipeline);
+void GpuSetVertexBuffer(GpuBuffer buffer, uint32 stride);
+void GpuSetIndexBuffer(GpuBuffer buffer, GpuIndexFormat format);
+void GpuSetConstantBuffer(uint32 slot, GpuBuffer buffer); // Vertex and pixel stages
+void GpuSetTexture(uint32 slot, GpuTexture texture, GpuSampler sampler);
+void GpuDraw(uint32 vertexCount, uint32 firstVertex);
+void GpuDrawIndexed(uint32 indexCount, uint32 firstIndex);
+
 void GpuGetStats(GpuStats* stats);
 
 void GpuBeginMarker(StringView8 name);
 void GpuEndMarker();
+bool GpuMarkersEnabled();
 
 #endif

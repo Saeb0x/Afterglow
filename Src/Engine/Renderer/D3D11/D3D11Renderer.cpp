@@ -1,5 +1,4 @@
 #include "Engine/Renderer/D3D11/D3D11Renderer.h"
-#include "Engine/Renderer/D3D11/D3D11Gpu.h"
 #include "Engine/Renderer/Renderer.h"
 #include "Engine/Renderer/Gpu.h"
 #include "Engine/Renderer/Internal/GpuInternal.h"
@@ -8,9 +7,6 @@
 #include <SSTL/Core/Utility.h>
 #include <SSTL/Core/Assert.h>
 #include <SSTL/Core/String.h>
-
-#include <d3d11.h>
-#include <d3d11_1.h>
 
 #include <DirectXMath.h>
 
@@ -40,11 +36,6 @@ struct QuadBatch
     uint32 QuadCount;
 };
 
-struct QuadPipeline
-{
-    ID3D11PixelShader* PixelShader;
-};
-
 struct QuadConstants
 {
     DirectX::XMFLOAT4X4 ViewProjection; // Matches Quad.hlsl's ViewProjection: row-major, as DirectXMath stores it
@@ -67,42 +58,37 @@ struct Renderer
     uint32 DroppedQuadCount;
     RendererStats LastFrameStats;
     QuadBatch* Batches;
-    ID3D11VertexShader* QuadVertexShader;
-    ID3D11InputLayout* QuadInputLayout;
     GpuBuffer QuadConstantBuffer;
-    ID3D11BlendState* BlendState;
-    ID3D11RasterizerState* RasterizerState;
-    ID3D11SamplerState* SamplerState;
-    QuadPipeline Pipelines[AG_MAX_PIPELINES];
+    const uint8* QuadVertexShader; // A copy in the Lower heap: every quad pipeline pairs it with its own pixel shader
+    usize QuadVertexShaderSize;
+    GpuPipeline Pipelines[AG_MAX_PIPELINES];
     uint32 PipelineCount;
     GpuTexture WhiteTexture;
     uint32 Flags;
 };
 static Renderer RendererData;
 
-// NOTE(saeb): Every D3D11 shader is a DXBC container: "DXBC", a 16-byte checksum, a version, then its total size at byte 24. Checking the magic and size rejects truncated or garbage bytecode quietly; with the debug layer set to break on errors, passing it to D3D would stop the program instead. A flipped bit inside otherwise valid bytecode still reaches D3D's checksum.
-static bool D3D11IsBytecodeValid(const uint8* bytecode, usize size)
+static GpuPipeline RendererCreateQuadPipeline(StackAllocator* allocator, const uint8* pixelBytecode, usize pixelSize, StringView8 debugName)
 {
-    if(!bytecode || size < 32)
-    {
-        return(false);
-    }
+    GpuPipelineDesc desc = {};
+    desc.VertexShader = RendererData.QuadVertexShader;
+    desc.VertexShaderSize = RendererData.QuadVertexShaderSize;
+    desc.PixelShader = pixelBytecode;
+    desc.PixelShaderSize = pixelSize;
+    desc.Attributes[0] = { 0, GpuVertexFormat::Float2, offsetof(QuadVertex, X) };
+    desc.Attributes[1] = { 1, GpuVertexFormat::Float2, offsetof(QuadVertex, U) };
+    desc.Attributes[2] = { 2, GpuVertexFormat::Float4, offsetof(QuadVertex, R) };
+    desc.AttributeCount = 3;
+    desc.Blend = GpuBlend::Premultiplied;
+    desc.Cull = GpuCull::None; // A negative width/height flips winding; still draw it
+    desc.Primitive = GpuPrimitive::Triangles;
+    desc.DebugName = debugName;
 
-    if(bytecode[0] != 'D' || bytecode[1] != 'X' || bytecode[2] != 'B' || bytecode[3] != 'C')
-    {
-        return(false);
-    }
-
-    uint32 containerSize = (uint32)bytecode[24] | ((uint32)bytecode[25] << 8) | ((uint32)bytecode[26] << 16) | ((uint32)bytecode[27] << 24);
-
-    return(containerSize == size);
+    return(GpuCreatePipeline(allocator, &desc));
 }
 
 static uint32 D3D11FlushQuads()
 {
-    ID3D11DeviceContext* context = D3D11GpuGetContext();
-    ID3DUserDefinedAnnotation* annotation = D3D11GpuGetAnnotation();
-
     QuadVertex* vertices = (QuadVertex*)GpuMapBuffer(RendererData.VertexBuffer);
     if(!vertices)
     {
@@ -191,50 +177,33 @@ static uint32 D3D11FlushQuads()
 
     GpuUnmapBuffer(RendererData.VertexBuffer);
 
-    ID3D11Buffer* vertexBuffer = D3D11GpuGetBuffer(RendererData.VertexBuffer);
-    ID3D11Buffer* indexBuffer = D3D11GpuGetBuffer(RendererData.IndexBuffer);
-    ID3D11Buffer* constantBuffer = D3D11GpuGetBuffer(RendererData.QuadConstantBuffer);
-    ID3D11ShaderResourceView* whiteTexture = D3D11GpuGetTexture(RendererData.WhiteTexture);
-
-    UINT stride = sizeof(QuadVertex);
-    UINT offset = 0;
-    context->IASetVertexBuffers(0, 1, &vertexBuffer, &stride, &offset);
-    context->IASetIndexBuffer(indexBuffer, DXGI_FORMAT_R16_UINT, 0);
-    context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
-    context->IASetInputLayout(RendererData.QuadInputLayout);
-    context->VSSetShader(RendererData.QuadVertexShader, nullptr, 0);
-    context->VSSetConstantBuffers(0, 1, &constantBuffer);
-    context->RSSetState(RendererData.RasterizerState);
-    context->PSSetSamplers(0, 1, &RendererData.SamplerState);
-    context->OMSetBlendState(RendererData.BlendState, nullptr, 0xFFFFFFFF);
+    GpuSetVertexBuffer(RendererData.VertexBuffer, sizeof(QuadVertex));
+    GpuSetIndexBuffer(RendererData.IndexBuffer, GpuIndexFormat::U16);
+    GpuSetConstantBuffer(0, RendererData.QuadConstantBuffer);
 
     RendererPipeline boundPipeline = UINT32_MAX;
-    ID3D11ShaderResourceView* boundTexture = nullptr;
+    void* boundTexture = nullptr;
     uint32 boundView = UINT32_MAX;
+    bool labeled = GpuMarkersEnabled();
 
     for(uint32 batchIndex = 0; batchIndex < batchCount; ++batchIndex)
     {
         QuadBatch* current = &RendererData.Batches[batchIndex];
 
         // NOTE(saeb): An invalid handle falls back to the defaults instead of binding garbage.
-        RendererPipeline pipeline = (current->Pipeline < RendererData.PipelineCount) ? current->Pipeline : 0;
-        ID3D11ShaderResourceView* texture = D3D11GpuGetTexture(current->Texture);
-        if(!texture)
-        {
-            texture = whiteTexture;
-        }
+        RendererPipeline pipeline = (current->Pipeline < RendererData.PipelineCount && RendererData.Pipelines[current->Pipeline].Object) ? current->Pipeline : 0;
+        GpuTexture texture = current->Texture.Object ? current->Texture : RendererData.WhiteTexture;
 
         if(pipeline != boundPipeline)
         {
-            context->PSSetShader(RendererData.Pipelines[pipeline].PixelShader, nullptr, 0);
+            GpuSetPipeline(RendererData.Pipelines[pipeline]);
             boundPipeline = pipeline;
         }
 
-        if(texture != boundTexture)
+        if(texture.Object != boundTexture)
         {
-            context->PSSetShaderResources(0, 1, &texture);
-            boundTexture = texture;
+            GpuSetTexture(0, texture, GpuSampler::LinearClamp); // Art is scaled to the window, so blend texels; point sampling makes scaled edges jagged
+            boundTexture = texture.Object;
         }
 
         if(current->View != boundView)
@@ -248,20 +217,27 @@ static uint32 D3D11FlushQuads()
             boundView = current->View;
         }
 
-        // NOTE(saeb): One event per batch, so RenderDoc / PIX show why batches split. GetStatus() is TRUE only while a capture tool is attached, so normal runs never format the label.
-        bool labeled = annotation && annotation->GetStatus();
+        // NOTE(saeb): One event per batch, so RenderDoc / PIX show why batches split. Labels are only formatted while a capture tool is attached.
         if(labeled)
         {
-            wchar_t label[128];
-            wsprintfW(label, L"Batch %u: %u quads, texture %08X, pipeline %u, view %u", batchIndex, current->QuadCount, (uint32)(usize)current->Texture.Object, pipeline, current->View);
-            annotation->BeginEvent(label);
+            char8 buffer[128];
+            String8 label = { buffer, 0, sizeof(buffer) };
+            String8Append(&label, SV8(u8"Batch "));
+            String8AppendUInt(&label, batchIndex);
+            String8Append(&label, SV8(u8": "));
+            String8AppendUInt(&label, current->QuadCount);
+            String8Append(&label, SV8(u8" quads, pipeline "));
+            String8AppendUInt(&label, pipeline);
+            String8Append(&label, SV8(u8", view "));
+            String8AppendUInt(&label, current->View);
+            GpuBeginMarker(StringView8{ label.Data, label.Length });
         }
 
-        context->DrawIndexed(current->QuadCount * 6, current->FirstQuad * 6, 0);
+        GpuDrawIndexed(current->QuadCount * 6, current->FirstQuad * 6);
 
         if(labeled)
         {
-            annotation->EndEvent();
+            GpuEndMarker();
         }
     }
 
@@ -352,53 +328,6 @@ bool D3D11RendererInit(StackAllocator* allocator)
         return(false);
     }
 
-    ID3D11Device* device = D3D11GpuGetDevice();
-
-    // NOTE(saeb): Premultiplied "over": color = src + dst * (1 - srcAlpha); src.rgb already carries its alpha.
-    D3D11_BLEND_DESC blendDesc = {};
-    blendDesc.RenderTarget[0].BlendEnable = TRUE;
-    blendDesc.RenderTarget[0].SrcBlend = D3D11_BLEND_ONE;
-    blendDesc.RenderTarget[0].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
-    blendDesc.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
-    blendDesc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
-    blendDesc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_INV_SRC_ALPHA;
-    blendDesc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
-    blendDesc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
-
-    if(FAILED(device->CreateBlendState(&blendDesc, &RendererData.BlendState)))
-    {
-        return(false);
-    }
-
-    D3D11SetName(RendererData.BlendState, SV8(u8"PremultipliedBlend"));
-
-    D3D11_RASTERIZER_DESC rasterizerDesc = {};
-    rasterizerDesc.FillMode = D3D11_FILL_SOLID;
-    rasterizerDesc.CullMode = D3D11_CULL_NONE; // A negative width/height flips winding; still draw it
-    rasterizerDesc.DepthClipEnable = TRUE; // D3D11's default is TRUE, but a zeroed desc makes it FALSE
-
-    if(FAILED(device->CreateRasterizerState(&rasterizerDesc, &RendererData.RasterizerState)))
-    {
-        return(false);
-    }
-
-    D3D11SetName(RendererData.RasterizerState, SV8(u8"CullNoneRasterizer"));
-
-    D3D11_SAMPLER_DESC samplerDesc = {};
-    samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR; // Art is scaled to the window, so blend texels; point sampling makes scaled edges jagged
-    samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
-    samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
-    samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
-    samplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
-    samplerDesc.MaxLOD = D3D11_FLOAT32_MAX; // Zeroed would lock every texture to mip 0
-
-    if(FAILED(device->CreateSamplerState(&samplerDesc, &RendererData.SamplerState)))
-    {
-        return(false);
-    }
-
-    D3D11SetName(RendererData.SamplerState, SV8(u8"PointClampSampler"));
-
     // NOTE(saeb): Quads with no texture ({0}) or a destroyed one sample this, so they draw solid.
     uint32 whitePixel = 0xFFFFFFFF;
     GpuTextureDesc whiteDesc = {};
@@ -429,9 +358,9 @@ void D3D11RendererBeginFrame(int32 width, int32 height)
 
 void D3D11RendererEndFrame()
 {
-    // NOTE(saeb): The input layout is the last object RendererSetDefaultPipeline creates; without it there's nothing to draw quads with.
+    // NOTE(saeb): Without the default pipeline (RendererSetDefaultPipeline) there's nothing to draw quads with.
     uint32 drawCalls = 0;
-    if(RendererData.FrameActive && RendererData.QuadInputLayout && RendererData.QuadCount > 0)
+    if(RendererData.FrameActive && RendererData.Pipelines[0].Object && RendererData.QuadCount > 0)
     {
         GpuBeginMarker(SV8(u8"Quads"));
         drawCalls = D3D11FlushQuads();
@@ -466,46 +395,17 @@ void D3D11RendererShutdown()
     GpuDestroyTexture(RendererData.WhiteTexture);
     RendererData.WhiteTexture = {};
 
-    // NOTE(saeb): Walk the full array, not just up to the count; a failed Init can create an object before its count is set.
+    // NOTE(saeb): Walk the full array, not just up to the count; slot 0 is filled after Init.
     for(uint32 pipelineIndex = 0; pipelineIndex < AG_MAX_PIPELINES; ++pipelineIndex)
     {
-        if(RendererData.Pipelines[pipelineIndex].PixelShader)
-        {
-            RendererData.Pipelines[pipelineIndex].PixelShader->Release();
-            RendererData.Pipelines[pipelineIndex].PixelShader = nullptr;
-        }
+        GpuDestroyPipeline(RendererData.Pipelines[pipelineIndex]);
+        RendererData.Pipelines[pipelineIndex] = {};
     }
     RendererData.PipelineCount = 0;
 
-    if(RendererData.SamplerState)
-    {
-        RendererData.SamplerState->Release();
-        RendererData.SamplerState = nullptr;
-    }
-
-    if(RendererData.RasterizerState)
-    {
-        RendererData.RasterizerState->Release();
-        RendererData.RasterizerState = nullptr;
-    }
-
-    if(RendererData.BlendState)
-    {
-        RendererData.BlendState->Release();
-        RendererData.BlendState = nullptr;
-    }
-
-    if(RendererData.QuadInputLayout)
-    {
-        RendererData.QuadInputLayout->Release();
-        RendererData.QuadInputLayout = nullptr;
-    }
-
-    if(RendererData.QuadVertexShader)
-    {
-        RendererData.QuadVertexShader->Release();
-        RendererData.QuadVertexShader = nullptr;
-    }
+    // NOTE(saeb): The copy lives in the engine's Lower heap, like the pipeline records.
+    RendererData.QuadVertexShader = nullptr;
+    RendererData.QuadVertexShaderSize = 0;
 
     GpuDestroyBuffer(RendererData.QuadConstantBuffer);
     GpuDestroyBuffer(RendererData.IndexBuffer);
@@ -567,79 +467,60 @@ void RendererPushQuad(const RendererQuad* quad)
     }
 }
 
-RendererPipeline RendererCreatePipeline(const uint8* pixelBytecode, usize size, StringView8 debugName)
+RendererPipeline RendererCreatePipeline(StackAllocator* allocator, const uint8* pixelBytecode, usize size, StringView8 debugName)
 {
-    // NOTE(saeb): Not initialized, table full, or creation failed: return the default pipeline, so the quad still draws instead of crashing.
-    ID3D11Device* device = D3D11GpuGetDevice();
-    if(!device || !D3D11IsBytecodeValid(pixelBytecode, size) || RendererData.PipelineCount >= AG_MAX_PIPELINES)
+    // NOTE(saeb): No default pipeline yet, table full, or creation failed: return the default pipeline, so the quad still draws instead of crashing.
+    if(!RendererData.QuadVertexShader || RendererData.PipelineCount >= AG_MAX_PIPELINES)
     {
         return(0);
     }
 
-    // NOTE(saeb): D3D11 checks the bytecode's own checksum here; with the debug layer set to break on errors, damaged bytecode stops in the debugger.
-    ID3D11PixelShader** pixelShader = &RendererData.Pipelines[RendererData.PipelineCount].PixelShader;
-    if(FAILED(device->CreatePixelShader(pixelBytecode, size, nullptr, pixelShader)))
+    GpuPipeline pipeline = RendererCreateQuadPipeline(allocator, pixelBytecode, size, debugName);
+    if(!pipeline.Object)
     {
-        *pixelShader = nullptr;
         return(0);
     }
 
-    D3D11SetName(*pixelShader, debugName);
+    RendererData.Pipelines[RendererData.PipelineCount] = pipeline;
 
     return(RendererData.PipelineCount++);
 }
 
-bool RendererSetDefaultPipeline(const uint8* vertexBytecode, usize vertexSize, const uint8* pixelBytecode, usize pixelSize)
+bool RendererSetDefaultPipeline(StackAllocator* allocator, const uint8* vertexBytecode, usize vertexSize, const uint8* pixelBytecode, usize pixelSize)
 {
     // NOTE(saeb): Once only; replacing shaders at runtime (hot reload) would also need to release the old ones.
-    ID3D11Device* device = D3D11GpuGetDevice();
-    if(!device || RendererData.QuadVertexShader || !D3D11IsBytecodeValid(vertexBytecode, vertexSize) || !D3D11IsBytecodeValid(pixelBytecode, pixelSize))
+    if(RendererData.Pipelines[0].Object || !vertexBytecode || vertexSize == 0)
     {
         return(false);
     }
 
-    // NOTE(saeb): The input layout is validated against the vertex shader's input signature, so it needs the VS bytecode.
-    D3D11_INPUT_ELEMENT_DESC inputElements[] =
-        {
-            { "POSITION", 0, DXGI_FORMAT_R32G32_FLOAT, 0, offsetof(QuadVertex, X), D3D11_INPUT_PER_VERTEX_DATA, 0 },
-            { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, offsetof(QuadVertex, U), D3D11_INPUT_PER_VERTEX_DATA, 0 },
-            { "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, offsetof(QuadVertex, R), D3D11_INPUT_PER_VERTEX_DATA, 0 },
-        };
+    // NOTE(saeb): All or nothing: on failure the copy is given back, and EndFrame keeps treating a missing pipeline 0 as "not ready".
+    Frame lowerFrame = GetFrame(allocator, Heap::Lower);
 
-    bool created = SUCCEEDED(device->CreateVertexShader(vertexBytecode, vertexSize, nullptr, &RendererData.QuadVertexShader)) &&
-        SUCCEEDED(device->CreatePixelShader(pixelBytecode, pixelSize, nullptr, &RendererData.Pipelines[0].PixelShader)) &&
-        SUCCEEDED(device->CreateInputLayout(inputElements, SSTL_ARRAYCOUNT(inputElements), vertexBytecode, vertexSize, &RendererData.QuadInputLayout));
-
-    if(created)
+    uint8* vertexCopy = (uint8*)Allocate(allocator, Heap::Lower, vertexSize, 16);
+    if(!vertexCopy)
     {
-        D3D11SetName(RendererData.QuadVertexShader, SV8(u8"QuadVS"));
-        D3D11SetName(RendererData.Pipelines[0].PixelShader, SV8(u8"QuadPS"));
-        D3D11SetName(RendererData.QuadInputLayout, SV8(u8"QuadInputLayout"));
-    }
-
-    if(!created)
-    {
-        // NOTE(saeb): All or nothing; EndFrame treats the input layout as "ready", so never leave half a set behind.
-        if(RendererData.QuadVertexShader)
-        {
-            RendererData.QuadVertexShader->Release();
-            RendererData.QuadVertexShader = nullptr;
-        }
-
-        if(RendererData.Pipelines[0].PixelShader)
-        {
-            RendererData.Pipelines[0].PixelShader->Release();
-            RendererData.Pipelines[0].PixelShader = nullptr;
-        }
-
-        if(RendererData.QuadInputLayout)
-        {
-            RendererData.QuadInputLayout->Release();
-            RendererData.QuadInputLayout = nullptr;
-        }
-
         return(false);
     }
+
+    for(usize index = 0; index < vertexSize; ++index)
+    {
+        vertexCopy[index] = vertexBytecode[index];
+    }
+
+    RendererData.QuadVertexShader = vertexCopy;
+    RendererData.QuadVertexShaderSize = vertexSize;
+
+    GpuPipeline pipeline = RendererCreateQuadPipeline(allocator, pixelBytecode, pixelSize, SV8(u8"QuadPipeline"));
+    if(!pipeline.Object)
+    {
+        RendererData.QuadVertexShader = nullptr;
+        RendererData.QuadVertexShaderSize = 0;
+        ReleaseFrame(allocator, lowerFrame);
+        return(false);
+    }
+
+    RendererData.Pipelines[0] = pipeline;
 
     return(true);
 }

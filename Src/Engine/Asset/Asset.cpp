@@ -116,7 +116,7 @@ static AssetLoadResult AssetValidateShader(const uint8* payload, uint64 payloadS
     return(AssetLoadResult::Ok);
 }
 
-static AssetLoadResult AssetCreateDefaultPipeline(const uint8* payload, uint64 payloadSize)
+static AssetLoadResult AssetCreateDefaultPipeline(StackAllocator* allocator, const uint8* payload, uint64 payloadSize)
 {
     const AssetShaderHeader* shaderHeader = nullptr;
     AssetLoadResult result = AssetValidateShader(payload, payloadSize, &shaderHeader);
@@ -130,7 +130,7 @@ static AssetLoadResult AssetCreateDefaultPipeline(const uint8* payload, uint64 p
         return(AssetLoadResult::MissingStage);
     }
 
-    if(!RendererSetDefaultPipeline(payload + shaderHeader->VertexOffset, shaderHeader->VertexSize, payload + shaderHeader->PixelOffset, shaderHeader->PixelSize))
+    if(!RendererSetDefaultPipeline(allocator, payload + shaderHeader->VertexOffset, shaderHeader->VertexSize, payload + shaderHeader->PixelOffset, shaderHeader->PixelSize))
     {
         return(AssetLoadResult::RendererFailed);
     }
@@ -138,7 +138,7 @@ static AssetLoadResult AssetCreateDefaultPipeline(const uint8* payload, uint64 p
     return(AssetLoadResult::Ok);
 }
 
-static AssetLoadResult AssetCreatePipeline(const uint8* payload, uint64 payloadSize, StringView8 path, RendererPipeline* pipeline)
+static AssetLoadResult AssetCreatePipeline(StackAllocator* allocator, const uint8* payload, uint64 payloadSize, StringView8 path, RendererPipeline* pipeline)
 {
     const AssetShaderHeader* shaderHeader = nullptr;
     AssetLoadResult result = AssetValidateShader(payload, payloadSize, &shaderHeader);
@@ -152,7 +152,7 @@ static AssetLoadResult AssetCreatePipeline(const uint8* payload, uint64 payloadS
         return(AssetLoadResult::MissingStage);
     }
 
-    RendererPipeline handle = RendererCreatePipeline(payload + shaderHeader->PixelOffset, shaderHeader->PixelSize, path);
+    RendererPipeline handle = RendererCreatePipeline(allocator, payload + shaderHeader->PixelOffset, shaderHeader->PixelSize, path);
     if(handle == 0)
     {
         return(AssetLoadResult::RendererFailed);
@@ -313,7 +313,7 @@ AssetLoadResult AssetLoadDefaultPipeline(StackAllocator* allocator, StringView8 
     AssetLoadResult result = AssetReadPayload(allocator, path, AssetType::Shader, &payload, &payloadSize);
     if(result == AssetLoadResult::Ok)
     {
-        result = AssetCreateDefaultPipeline(payload, payloadSize);
+        result = AssetCreateDefaultPipeline(allocator, payload, payloadSize);
     }
 
     ReleaseFrame(allocator, scratch);
@@ -333,7 +333,7 @@ AssetLoadResult AssetLoadPipeline(StackAllocator* allocator, StringView8 path, R
     AssetLoadResult result = AssetReadPayload(allocator, path, AssetType::Shader, &payload, &payloadSize);
     if(result == AssetLoadResult::Ok)
     {
-        result = AssetCreatePipeline(payload, payloadSize, path, pipeline);
+        result = AssetCreatePipeline(allocator, payload, payloadSize, path, pipeline);
     }
 
     ReleaseFrame(allocator, scratch);

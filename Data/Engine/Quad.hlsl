@@ -8,9 +8,9 @@ SamplerState QuadSampler : register(s0);
 
 struct VSInput
 {
-    float2 Position : POSITION;
-    float2 UV : TEXCOORD;
-    float4 Color : COLOR;
+    float2 Position : ATTRIB0;
+    float2 UV : ATTRIB1;
+    float4 Color : ATTRIB2;
 };
 
 struct PSInput
@@ -35,4 +35,4 @@ PSInput VSMain(VSInput input)
 float4 PSMain(PSInput input) : SV_Target
 {
     return QuadTexture.Sample(QuadSampler, input.UV) * input.Color;
-}
+}
