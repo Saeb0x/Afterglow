@@ -44,7 +44,7 @@ static AssetLoadResult AssetReadPayload(StackAllocator* allocator, StringView8 p
     return(AssetLoadResult::Ok);
 }
 
-static AssetLoadResult AssetCreateTexture(const uint8* payload, uint64 payloadSize, StringView8 path, RendererTexture* texture)
+static AssetLoadResult AssetCreateTexture(const uint8* payload, uint64 payloadSize, StringView8 path, GpuTexture* texture)
 {
     if(payloadSize < sizeof(AssetTextureHeader))
     {
@@ -67,8 +67,15 @@ static AssetLoadResult AssetCreateTexture(const uint8* payload, uint64 payloadSi
         return(AssetLoadResult::Corrupt);
     }
 
-    RendererTexture handle = RendererCreateTexture(width, height, RendererTextureFormat::RGBA8, (const uint8*)(textureHeader + 1), path);
-    if(handle == 0)
+    GpuTextureDesc textureDesc = {};
+    textureDesc.Width = width;
+    textureDesc.Height = height;
+    textureDesc.Format = GpuFormat::RGBA8;
+    textureDesc.Data = textureHeader + 1;
+    textureDesc.DebugName = path;
+
+    GpuTexture handle = GpuCreateTexture(&textureDesc);
+    if(!handle.Object)
     {
         return(AssetLoadResult::RendererFailed);
     }
@@ -247,8 +254,15 @@ static AssetLoadResult AssetCreateFont(StackAllocator* allocator, const uint8* p
         glyph->Advance = source->Advance;
     }
 
-    RendererTexture atlasTexture = RendererCreateTexture(atlasWidth, atlasHeight, RendererTextureFormat::R8, atlas, path);
-    if(atlasTexture == 0)
+    GpuTextureDesc atlasDesc = {};
+    atlasDesc.Width = atlasWidth;
+    atlasDesc.Height = atlasHeight;
+    atlasDesc.Format = GpuFormat::R8;
+    atlasDesc.Data = atlas;
+    atlasDesc.DebugName = path;
+
+    GpuTexture atlasTexture = GpuCreateTexture(&atlasDesc);
+    if(!atlasTexture.Object)
     {
         // NOTE(saeb): Give the glyph table back, so a failed load leaves the allocator exactly as it was.
         ReleaseFrame(allocator, lowerFrame);
@@ -269,9 +283,9 @@ static AssetLoadResult AssetCreateFont(StackAllocator* allocator, const uint8* p
     return(AssetLoadResult::Ok);
 }
 
-AssetLoadResult AssetLoadTexture(StackAllocator* allocator, StringView8 path, RendererTexture* texture)
+AssetLoadResult AssetLoadTexture(StackAllocator* allocator, StringView8 path, GpuTexture* texture)
 {
-    *texture = 0;
+    *texture = {};
 
     // NOTE(saeb): The GPU copies the pixels at creation, so the whole file is scratch.
     Frame scratch = GetFrame(allocator, Heap::Upper);
@@ -345,6 +359,12 @@ AssetLoadResult AssetLoadFont(StackAllocator* allocator, StringView8 path, Font*
     ReleaseFrame(allocator, scratch);
 
     return(result);
+}
+
+void AssetUnloadFont(Font* font)
+{
+    GpuDestroyTexture(font->Atlas);
+    *font = {};
 }
 
 StringView8 AssetDescribeResult(AssetLoadResult result)

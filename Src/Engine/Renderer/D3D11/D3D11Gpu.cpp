@@ -17,6 +17,7 @@ struct Gpu
     IDXGISwapChain1* SwapChain;
     ID3D11RenderTargetView* RenderTargetView;
     int32 BackBufferWidth, BackBufferHeight;
+    GpuStats Stats;
     GpuCaps Caps;
 };
 static Gpu GpuData;
@@ -294,6 +295,189 @@ void GpuGetCaps(GpuCaps* caps)
     *caps = GpuData.Caps;
 }
 
+GpuBuffer GpuCreateBuffer(const GpuBufferDesc* desc)
+{
+    GpuBuffer buffer = {};
+
+    bool immutable = (desc->Usage == GpuUsage::Immutable);
+    if(!GpuData.Device || desc->Size == 0 || (immutable && !desc->Data))
+    {
+        return(buffer);
+    }
+
+    UINT bindFlags;
+    switch(desc->Type)
+    {
+        case GpuBufferType::Vertex:
+        {
+            bindFlags = D3D11_BIND_VERTEX_BUFFER;
+        } break;
+
+        case GpuBufferType::Index:
+        {
+            bindFlags = D3D11_BIND_INDEX_BUFFER;
+        } break;
+
+        case GpuBufferType::Constant:
+        {
+            if(desc->Size % 16 != 0)
+            {
+                return(buffer);
+            }
+
+            bindFlags = D3D11_BIND_CONSTANT_BUFFER;
+        } break;
+
+        default:
+        {
+            return(buffer);
+        }
+    }
+
+    D3D11_BUFFER_DESC bufferDesc = {};
+    bufferDesc.ByteWidth = desc->Size;
+    bufferDesc.Usage = immutable ? D3D11_USAGE_IMMUTABLE : D3D11_USAGE_DYNAMIC;
+    bufferDesc.BindFlags = bindFlags;
+    bufferDesc.CPUAccessFlags = immutable ? 0 : D3D11_CPU_ACCESS_WRITE;
+
+    D3D11_SUBRESOURCE_DATA data = {};
+    data.pSysMem = desc->Data;
+
+    ID3D11Buffer* object = nullptr;
+    if(FAILED(GpuData.Device->CreateBuffer(&bufferDesc, desc->Data ? &data : nullptr, &object)))
+    {
+        return(buffer);
+    }
+
+    D3D11SetName(object, desc->DebugName);
+
+    ++GpuData.Stats.Buffers;
+    buffer.Object = object;
+
+    return(buffer);
+}
+
+void GpuDestroyBuffer(GpuBuffer buffer)
+{
+    ID3D11Buffer* object = D3D11GpuGetBuffer(buffer);
+    if(object)
+    {
+        object->Release();
+        --GpuData.Stats.Buffers;
+    }
+}
+
+void* GpuMapBuffer(GpuBuffer buffer)
+{
+    ID3D11Buffer* object = D3D11GpuGetBuffer(buffer);
+    if(!object)
+    {
+        return(nullptr);
+    }
+
+    D3D11_MAPPED_SUBRESOURCE mapped;
+    if(FAILED(GpuData.Context->Map(object, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped)))
+    {
+        return(nullptr);
+    }
+
+    return(mapped.pData);
+}
+
+void GpuUnmapBuffer(GpuBuffer buffer)
+{
+    ID3D11Buffer* object = D3D11GpuGetBuffer(buffer);
+    if(object)
+    {
+        GpuData.Context->Unmap(object, 0);
+    }
+}
+
+GpuTexture GpuCreateTexture(const GpuTextureDesc* desc)
+{
+    GpuTexture texture = {};
+
+    DXGI_FORMAT textureFormat;
+    uint32 bytesPerPixel;
+    switch(desc->Format)
+    {
+        case GpuFormat::RGBA8:
+        {
+            textureFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
+            bytesPerPixel = 4;
+        } break;
+
+        case GpuFormat::R8:
+        {
+            textureFormat = DXGI_FORMAT_R8_UNORM;
+            bytesPerPixel = 1;
+        } break;
+
+        default:
+        {
+            return(texture);
+        }
+    }
+
+    if(!GpuData.Device || !desc->Data || desc->Width == 0 || desc->Height == 0 || desc->Width > GpuData.Caps.MaxTextureSize || desc->Height > GpuData.Caps.MaxTextureSize)
+    {
+        return(texture);
+    }
+
+    D3D11_TEXTURE2D_DESC textureDesc = {};
+    textureDesc.Width = desc->Width;
+    textureDesc.Height = desc->Height;
+    textureDesc.MipLevels = 1;
+    textureDesc.ArraySize = 1;
+    textureDesc.Format = textureFormat;
+    textureDesc.SampleDesc.Count = 1;
+    textureDesc.Usage = D3D11_USAGE_IMMUTABLE;
+    textureDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+
+    D3D11_SUBRESOURCE_DATA textureData = {};
+    textureData.pSysMem = desc->Data;
+    textureData.SysMemPitch = desc->Width * bytesPerPixel;
+
+    ID3D11Texture2D* object = nullptr;
+    if(FAILED(GpuData.Device->CreateTexture2D(&textureDesc, &textureData, &object)))
+    {
+        return(texture);
+    }
+
+    ID3D11ShaderResourceView* view = nullptr;
+    HRESULT viewResult = GpuData.Device->CreateShaderResourceView(object, nullptr, &view);
+
+    D3D11SetName(object, desc->DebugName);
+    object->Release(); // The view holds its own reference to the texture
+
+    if(FAILED(viewResult))
+    {
+        return(texture);
+    }
+
+    D3D11SetName(view, desc->DebugName);
+
+    ++GpuData.Stats.Textures;
+    texture.Object = view;
+
+    return(texture);
+}
+
+void GpuDestroyTexture(GpuTexture texture)
+{
+    ID3D11ShaderResourceView* view = D3D11GpuGetTexture(texture);
+    if(view)
+    {
+        view->Release();
+        --GpuData.Stats.Textures;
+    }
+}
+
+void GpuGetStats(GpuStats* stats)
+{
+    *stats = GpuData.Stats;
+}
+
 bool GpuBeginFrame(int32 width, int32 height)
 {
     if((width != GpuData.BackBufferWidth || height != GpuData.BackBufferHeight) && width > 0 && height > 0)
@@ -392,6 +576,16 @@ ID3D11DeviceContext* D3D11GpuGetContext()
 ID3DUserDefinedAnnotation* D3D11GpuGetAnnotation()
 {
     return(GpuData.Annotation);
+}
+
+ID3D11Buffer* D3D11GpuGetBuffer(GpuBuffer buffer)
+{
+    return((ID3D11Buffer*)buffer.Object);
+}
+
+ID3D11ShaderResourceView* D3D11GpuGetTexture(GpuTexture texture)
+{
+    return((ID3D11ShaderResourceView*)texture.Object);
 }
 
 // NOTE(saeb): Shows up in RenderDoc / PIX and in debug-layer messages, including the live-object report at shutdown.

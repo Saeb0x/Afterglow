@@ -5,6 +5,7 @@
 #include <SSTL/Core/String.h>
 
 #include "Engine/Renderer/Camera.h"
+#include "Engine/Renderer/Gpu.h"
 
 enum RendererFlags : uint32
 {
@@ -18,14 +19,7 @@ enum class RendererSpace : uint8
     Screen // Pixels of the window's client area, top-left origin, y down; never scales
 };
 
-using RendererTexture = uint32; // 0 = white texture
 using RendererPipeline = uint32; // 0 = default quad pipeline
-
-enum class RendererTextureFormat : uint32
-{
-    RGBA8, // 4 bytes per pixel: premultiplied colour
-    R8 // 1 byte per pixel: single values such as signed distance fields; shaders read it as .r
-};
 
 struct RendererQuad
 {
@@ -33,7 +27,7 @@ struct RendererQuad
     real32 U0, V0, U1, V1; // Texture coordinates; (U0, V0) is the texture's top-left, which stays at the top of the quad in both spaces
     real32 R, G, B, A;
     real32 Rotation; // Radians around the quad's centre, counter-clockwise on screen in both spaces; 0 = axis-aligned
-    RendererTexture Texture;
+    GpuTexture Texture; // {0} draws solid
     RendererPipeline Pipeline;
 };
 
@@ -42,7 +36,6 @@ struct RendererStats
     uint32 Quads;
     uint32 DrawCalls;
     uint32 DroppedQuads;
-    uint32 Textures, MaxTextures;
     uint32 Pipelines, MaxPipelines;
     uint32 MaxQuads;
 };
@@ -55,9 +48,6 @@ void RendererSetSpace(RendererSpace space);
 RendererSpace RendererGetSpace();
 
 void RendererPushQuad(const RendererQuad* quad);
-
-// NOTE(saeb): Pixels in the given format, rows top to bottom, with no padding between rows. Returns 0 (the white texture) on failure.
-RendererTexture RendererCreateTexture(uint32 width, uint32 height, RendererTextureFormat format, const uint8* pixels, StringView8 debugName);
 
 // NOTE(saeb): World-space quads pushed after this use this camera, until another is set; it persists across frames. The camera is copied, so it can change right after. Until the first call, one metre is one pixel, with the world's origin at the window's centre.
 void RendererSetCamera(const Camera* camera);

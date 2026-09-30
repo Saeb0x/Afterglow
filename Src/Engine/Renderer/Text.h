@@ -19,7 +19,7 @@ struct TextGlyph
 // NOTE(saeb): A loaded font (see AssetLoadFont): one signed distance field atlas texture plus the glyph table.
 struct Font
 {
-    RendererTexture Atlas;
+    GpuTexture Atlas;
     const TextGlyph* Glyphs; // Base address of the glyph array in the Lower heap. Sorted by codepoint
     uint32 GlyphCount;
     uint32 FallbackGlyph; // Index drawn for characters the font doesn't have ('?' when the font has one)

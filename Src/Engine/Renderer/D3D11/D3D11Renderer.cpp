@@ -19,7 +19,6 @@
 SSTL_ASSERT_STATIC_MSG(AG_MAX_QUADS * 4 <= 65536, "Afterglow: Quad vertices must be addressable by 16-bit indices.");
 
 #define AG_MAX_PIPELINES 64
-#define AG_MAX_TEXTURES 1024
 
 // NOTE(saeb): Every quad belongs to a view, the matrix that maps its units to the screen. View 0 is the screen; the rest are this frame's cameras, in the order they were set.
 #define AG_VIEW_SCREEN 0 // Screen pixels, y down
@@ -35,7 +34,7 @@ struct QuadVertex
 struct QuadBatch
 {
     RendererPipeline Pipeline;
-    RendererTexture Texture;
+    GpuTexture Texture;
     uint32 View;
     uint32 FirstQuad;
     uint32 QuadCount;
@@ -60,8 +59,8 @@ struct Renderer
     uint32 ViewCount;
     uint32 WorldView; // The view world quads are pushed under: the latest camera
     bool WorldViewUsed; // A world quad has been pushed under WorldView, so a new camera needs a new view
-    ID3D11Buffer* VertexBuffer;
-    ID3D11Buffer* IndexBuffer;
+    GpuBuffer VertexBuffer;
+    GpuBuffer IndexBuffer;
     RendererQuad* Quads;
     uint8* QuadViews; // Parallel to Quads: the view each one was pushed under
     uint32 QuadCount;
@@ -70,15 +69,14 @@ struct Renderer
     QuadBatch* Batches;
     ID3D11VertexShader* QuadVertexShader;
     ID3D11InputLayout* QuadInputLayout;
-    ID3D11Buffer* QuadConstantBuffer;
+    GpuBuffer QuadConstantBuffer;
     ID3D11BlendState* BlendState;
     ID3D11RasterizerState* RasterizerState;
     ID3D11SamplerState* SamplerState;
     QuadPipeline Pipelines[AG_MAX_PIPELINES];
     uint32 PipelineCount;
-    ID3D11ShaderResourceView* Textures[AG_MAX_TEXTURES];
-    uint32 TextureCount;
-    uint32 Flags;    
+    GpuTexture WhiteTexture;
+    uint32 Flags;
 };
 static Renderer RendererData;
 
@@ -100,77 +98,13 @@ static bool D3D11IsBytecodeValid(const uint8* bytecode, usize size)
     return(containerSize == size);
 }
 
-static bool D3D11CreateTexture(uint32 width, uint32 height, RendererTextureFormat format, const uint8* pixels, StringView8 name, ID3D11ShaderResourceView** view)
-{
-    DXGI_FORMAT textureFormat;
-    uint32 bytesPerPixel;
-    switch(format)
-    {
-        case RendererTextureFormat::RGBA8:
-        {
-            textureFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
-            bytesPerPixel = 4;
-        } break;
-
-        case RendererTextureFormat::R8:
-        {
-            textureFormat = DXGI_FORMAT_R8_UNORM;
-            bytesPerPixel = 1;
-        } break;
-
-        default:
-        {
-            return(false);
-        }
-    }
-
-    if(!pixels || width == 0 || height == 0 || width > D3D11_REQ_TEXTURE2D_U_OR_V_DIMENSION || height > D3D11_REQ_TEXTURE2D_U_OR_V_DIMENSION)
-    {
-        return(false);
-    }
-
-    D3D11_TEXTURE2D_DESC textureDesc = {};
-    textureDesc.Width = width;
-    textureDesc.Height = height;
-    textureDesc.MipLevels = 1;
-    textureDesc.ArraySize = 1;
-    textureDesc.Format = textureFormat;
-    textureDesc.SampleDesc.Count = 1;
-    textureDesc.Usage = D3D11_USAGE_IMMUTABLE;
-    textureDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-
-    D3D11_SUBRESOURCE_DATA textureData = {};
-    textureData.pSysMem = pixels;
-    textureData.SysMemPitch = width * bytesPerPixel;
-
-    ID3D11Device* device = D3D11GpuGetDevice();
-
-    ID3D11Texture2D* texture = nullptr;
-    if(FAILED(device->CreateTexture2D(&textureDesc, &textureData, &texture)))
-    {
-        return(false);
-    }
-
-    HRESULT viewResult = device->CreateShaderResourceView(texture, nullptr, view);
-
-    D3D11SetName(texture, name);
-    if(SUCCEEDED(viewResult))
-    {
-        D3D11SetName(*view, name);
-    }
-
-    texture->Release(); // The view holds its own reference to the texture
-
-    return(SUCCEEDED(viewResult));
-}
-
 static uint32 D3D11FlushQuads()
 {
     ID3D11DeviceContext* context = D3D11GpuGetContext();
     ID3DUserDefinedAnnotation* annotation = D3D11GpuGetAnnotation();
 
-    D3D11_MAPPED_SUBRESOURCE mapped;
-    if(FAILED(context->Map(RendererData.VertexBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped)))
+    QuadVertex* vertices = (QuadVertex*)GpuMapBuffer(RendererData.VertexBuffer);
+    if(!vertices)
     {
         return(0);
     }
@@ -186,7 +120,6 @@ static uint32 D3D11FlushQuads()
         DirectX::XMStoreFloat4x4(&views[view], CameraGetViewProjection(&RendererData.ViewCameras[view], backBufferWidth, backBufferHeight));
     }
 
-    QuadVertex* vertices = (QuadVertex*)mapped.pData;
     QuadBatch* batch = nullptr;
     uint32 batchCount = 0;
 
@@ -196,7 +129,7 @@ static uint32 D3D11FlushQuads()
         uint32 view = RendererData.QuadViews[quadIndex];
 
         // NOTE(saeb): Only consecutive quads merge; submission order is the layering order for alpha.
-        if(!batch || batch->Pipeline != quad->Pipeline || batch->Texture != quad->Texture || batch->View != view)
+        if(!batch || batch->Pipeline != quad->Pipeline || batch->Texture.Object != quad->Texture.Object || batch->View != view)
         {
             batch = &RendererData.Batches[batchCount++];
             batch->Pipeline = quad->Pipeline;
@@ -256,23 +189,28 @@ static uint32 D3D11FlushQuads()
         quadVertices[3] = { cornerX[3], cornerY[3], quad->U1, v1, r, g, b, quad->A };
     }
 
-    context->Unmap(RendererData.VertexBuffer, 0);
+    GpuUnmapBuffer(RendererData.VertexBuffer);
+
+    ID3D11Buffer* vertexBuffer = D3D11GpuGetBuffer(RendererData.VertexBuffer);
+    ID3D11Buffer* indexBuffer = D3D11GpuGetBuffer(RendererData.IndexBuffer);
+    ID3D11Buffer* constantBuffer = D3D11GpuGetBuffer(RendererData.QuadConstantBuffer);
+    ID3D11ShaderResourceView* whiteTexture = D3D11GpuGetTexture(RendererData.WhiteTexture);
 
     UINT stride = sizeof(QuadVertex);
     UINT offset = 0;
-    context->IASetVertexBuffers(0, 1, &RendererData.VertexBuffer, &stride, &offset);
-    context->IASetIndexBuffer(RendererData.IndexBuffer, DXGI_FORMAT_R16_UINT, 0);
+    context->IASetVertexBuffers(0, 1, &vertexBuffer, &stride, &offset);
+    context->IASetIndexBuffer(indexBuffer, DXGI_FORMAT_R16_UINT, 0);
     context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
     context->IASetInputLayout(RendererData.QuadInputLayout);
     context->VSSetShader(RendererData.QuadVertexShader, nullptr, 0);
-    context->VSSetConstantBuffers(0, 1, &RendererData.QuadConstantBuffer);
+    context->VSSetConstantBuffers(0, 1, &constantBuffer);
     context->RSSetState(RendererData.RasterizerState);
     context->PSSetSamplers(0, 1, &RendererData.SamplerState);
     context->OMSetBlendState(RendererData.BlendState, nullptr, 0xFFFFFFFF);
 
     RendererPipeline boundPipeline = UINT32_MAX;
-    RendererTexture boundTexture = UINT32_MAX;
+    ID3D11ShaderResourceView* boundTexture = nullptr;
     uint32 boundView = UINT32_MAX;
 
     for(uint32 batchIndex = 0; batchIndex < batchCount; ++batchIndex)
@@ -281,7 +219,11 @@ static uint32 D3D11FlushQuads()
 
         // NOTE(saeb): An invalid handle falls back to the defaults instead of binding garbage.
         RendererPipeline pipeline = (current->Pipeline < RendererData.PipelineCount) ? current->Pipeline : 0;
-        RendererTexture texture = (current->Texture < RendererData.TextureCount) ? current->Texture : 0;
+        ID3D11ShaderResourceView* texture = D3D11GpuGetTexture(current->Texture);
+        if(!texture)
+        {
+            texture = whiteTexture;
+        }
 
         if(pipeline != boundPipeline)
         {
@@ -291,15 +233,18 @@ static uint32 D3D11FlushQuads()
 
         if(texture != boundTexture)
         {
-            context->PSSetShaderResources(0, 1, &RendererData.Textures[texture]);
+            context->PSSetShaderResources(0, 1, &texture);
             boundTexture = texture;
         }
 
         if(current->View != boundView)
         {
-            QuadConstants constants;
-            constants.ViewProjection = views[current->View];
-            context->UpdateSubresource(RendererData.QuadConstantBuffer, 0, nullptr, &constants, 0, 0);
+            QuadConstants* constants = (QuadConstants*)GpuMapBuffer(RendererData.QuadConstantBuffer);
+            if(constants)
+            {
+                constants->ViewProjection = views[current->View];
+                GpuUnmapBuffer(RendererData.QuadConstantBuffer);
+            }
             boundView = current->View;
         }
 
@@ -308,7 +253,7 @@ static uint32 D3D11FlushQuads()
         if(labeled)
         {
             wchar_t label[128];
-            wsprintfW(label, L"Batch %u: %u quads, texture %u, pipeline %u, view %u", batchIndex, current->QuadCount, texture, pipeline, current->View);
+            wsprintfW(label, L"Batch %u: %u quads, texture %08X, pipeline %u, view %u", batchIndex, current->QuadCount, (uint32)(usize)current->Texture.Object, pipeline, current->View);
             annotation->BeginEvent(label);
         }
 
@@ -325,20 +270,17 @@ static uint32 D3D11FlushQuads()
 
 bool D3D11RendererInit(StackAllocator* allocator)
 {
-    ID3D11Device* device = D3D11GpuGetDevice();
+    GpuBufferDesc vertexBufferDesc = {};
+    vertexBufferDesc.Type = GpuBufferType::Vertex;
+    vertexBufferDesc.Usage = GpuUsage::Dynamic;
+    vertexBufferDesc.Size = AG_MAX_QUADS * 4 * sizeof(QuadVertex);
+    vertexBufferDesc.DebugName = SV8(u8"QuadVertices");
 
-    D3D11_BUFFER_DESC vertexBufferDesc = {};
-    vertexBufferDesc.ByteWidth = AG_MAX_QUADS * 4 * sizeof(QuadVertex);
-    vertexBufferDesc.Usage = D3D11_USAGE_DYNAMIC; // CPU writes it, GPU reads it
-    vertexBufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-    vertexBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-
-    if(FAILED(device->CreateBuffer(&vertexBufferDesc, nullptr, &RendererData.VertexBuffer)))
+    RendererData.VertexBuffer = GpuCreateBuffer(&vertexBufferDesc);
+    if(!RendererData.VertexBuffer.Object)
     {
         return(false);
     }
-
-    D3D11SetName(RendererData.VertexBuffer, SV8(u8"QuadVertices"));
 
     Frame frameScratch = GetFrame(allocator, Heap::Upper);
 
@@ -364,24 +306,21 @@ bool D3D11RendererInit(StackAllocator* allocator)
         quadIndices[5] = (uint16)(firstVertex + 3);
     }
 
-    D3D11_BUFFER_DESC indexBufferDesc = {};
-    indexBufferDesc.ByteWidth = indexCount * sizeof(uint16);
-    indexBufferDesc.Usage = D3D11_USAGE_IMMUTABLE;
-    indexBufferDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
+    GpuBufferDesc indexBufferDesc = {};
+    indexBufferDesc.Type = GpuBufferType::Index;
+    indexBufferDesc.Usage = GpuUsage::Immutable;
+    indexBufferDesc.Size = indexCount * sizeof(uint16);
+    indexBufferDesc.Data = indices;
+    indexBufferDesc.DebugName = SV8(u8"QuadIndices");
 
-    D3D11_SUBRESOURCE_DATA indexData = {};
-    indexData.pSysMem = indices;
-
-    HRESULT indexResult = device->CreateBuffer(&indexBufferDesc, &indexData, &RendererData.IndexBuffer);
+    RendererData.IndexBuffer = GpuCreateBuffer(&indexBufferDesc);
 
     ReleaseFrame(allocator, frameScratch);
 
-    if(FAILED(indexResult))
+    if(!RendererData.IndexBuffer.Object)
     {
         return(false);
     }
-
-    D3D11SetName(RendererData.IndexBuffer, SV8(u8"QuadIndices"));
 
     // NOTE(saeb): AG_MAX_QUADS (16384) * 60 bytes = 960 KiB for the quads, 16384 bytes = 16 KiB for their views and 16384 * 20 bytes = 320 KiB for the batches. Sizing the batch array for the worst case (every quad changes state) means no check for running out of batches.
     RendererData.Quads = (RendererQuad*)Allocate(allocator, Heap::Lower, AG_MAX_QUADS * sizeof(RendererQuad), alignof(RendererQuad));
@@ -401,17 +340,19 @@ bool D3D11RendererInit(StackAllocator* allocator)
     RendererData.WorldView = 1;
     RendererData.WorldViewUsed = false;
 
-    D3D11_BUFFER_DESC constantBufferDesc = {};
-    constantBufferDesc.ByteWidth = sizeof(QuadConstants);
-    constantBufferDesc.Usage = D3D11_USAGE_DEFAULT;
-    constantBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+    GpuBufferDesc constantBufferDesc = {};
+    constantBufferDesc.Type = GpuBufferType::Constant;
+    constantBufferDesc.Usage = GpuUsage::Dynamic;
+    constantBufferDesc.Size = sizeof(QuadConstants);
+    constantBufferDesc.DebugName = SV8(u8"QuadConstants");
 
-    if(FAILED(device->CreateBuffer(&constantBufferDesc, nullptr, &RendererData.QuadConstantBuffer)))
+    RendererData.QuadConstantBuffer = GpuCreateBuffer(&constantBufferDesc);
+    if(!RendererData.QuadConstantBuffer.Object)
     {
         return(false);
     }
 
-    D3D11SetName(RendererData.QuadConstantBuffer, SV8(u8"QuadConstants"));
+    ID3D11Device* device = D3D11GpuGetDevice();
 
     // NOTE(saeb): Premultiplied "over": color = src + dst * (1 - srcAlpha); src.rgb already carries its alpha.
     D3D11_BLEND_DESC blendDesc = {};
@@ -458,13 +399,20 @@ bool D3D11RendererInit(StackAllocator* allocator)
 
     D3D11SetName(RendererData.SamplerState, SV8(u8"PointClampSampler"));
 
-    // NOTE(saeb): Handle 0 is the built-in white texture; plain rects sample it, and textures that fail to create fall back to it.
+    // NOTE(saeb): Quads with no texture ({0}) or a destroyed one sample this, so they draw solid.
     uint32 whitePixel = 0xFFFFFFFF;
-    if(!D3D11CreateTexture(1, 1, RendererTextureFormat::RGBA8, (const uint8*)&whitePixel, SV8(u8"WhiteTexture"), &RendererData.Textures[0]))
+    GpuTextureDesc whiteDesc = {};
+    whiteDesc.Width = 1;
+    whiteDesc.Height = 1;
+    whiteDesc.Format = GpuFormat::RGBA8;
+    whiteDesc.Data = &whitePixel;
+    whiteDesc.DebugName = SV8(u8"WhiteTexture");
+
+    RendererData.WhiteTexture = GpuCreateTexture(&whiteDesc);
+    if(!RendererData.WhiteTexture.Object)
     {
         return(false);
     }
-    RendererData.TextureCount = 1;
 
     return(true);
 }
@@ -515,17 +463,10 @@ void D3D11RendererEndFrame()
 
 void D3D11RendererShutdown()
 {
-    // NOTE(saeb): Walk the full arrays, not just up to the counts; a failed Init can create an object before its count is set.
-    for(uint32 textureIndex = 0; textureIndex < AG_MAX_TEXTURES; ++textureIndex)
-    {
-        if(RendererData.Textures[textureIndex])
-        {
-            RendererData.Textures[textureIndex]->Release();
-            RendererData.Textures[textureIndex] = nullptr;
-        }
-    }
-    RendererData.TextureCount = 0;
+    GpuDestroyTexture(RendererData.WhiteTexture);
+    RendererData.WhiteTexture = {};
 
+    // NOTE(saeb): Walk the full array, not just up to the count; a failed Init can create an object before its count is set.
     for(uint32 pipelineIndex = 0; pipelineIndex < AG_MAX_PIPELINES; ++pipelineIndex)
     {
         if(RendererData.Pipelines[pipelineIndex].PixelShader)
@@ -554,12 +495,6 @@ void D3D11RendererShutdown()
         RendererData.BlendState = nullptr;
     }
 
-    if(RendererData.QuadConstantBuffer)
-    {
-        RendererData.QuadConstantBuffer->Release();
-        RendererData.QuadConstantBuffer = nullptr;
-    }
-
     if(RendererData.QuadInputLayout)
     {
         RendererData.QuadInputLayout->Release();
@@ -572,17 +507,12 @@ void D3D11RendererShutdown()
         RendererData.QuadVertexShader = nullptr;
     }
 
-    if(RendererData.IndexBuffer)
-    {
-        RendererData.IndexBuffer->Release();
-        RendererData.IndexBuffer = nullptr;
-    }
-
-    if(RendererData.VertexBuffer)
-    {
-        RendererData.VertexBuffer->Release();
-        RendererData.VertexBuffer = nullptr;
-    }
+    GpuDestroyBuffer(RendererData.QuadConstantBuffer);
+    GpuDestroyBuffer(RendererData.IndexBuffer);
+    GpuDestroyBuffer(RendererData.VertexBuffer);
+    RendererData.QuadConstantBuffer = {};
+    RendererData.IndexBuffer = {};
+    RendererData.VertexBuffer = {};
 
     // NOTE(saeb): The quad, view and batch arrays live in the engine's Lower heap; ShutdownStackAllocator frees them.
     RendererData.Quads = nullptr;
@@ -599,8 +529,6 @@ void RendererSetFlags(uint32 rendererFlags)
 void RendererGetStats(RendererStats* stats)
 {
     *stats = RendererData.LastFrameStats;
-    stats->Textures = RendererData.TextureCount;
-    stats->MaxTextures = AG_MAX_TEXTURES;
     stats->Pipelines = RendererData.PipelineCount;
     stats->MaxPipelines = AG_MAX_PIPELINES;
     stats->MaxQuads = AG_MAX_QUADS;
@@ -637,22 +565,6 @@ void RendererPushQuad(const RendererQuad* quad)
         RendererData.QuadViews[index] = (uint8)RendererData.WorldView;
         RendererData.WorldViewUsed = true;
     }
-}
-
-RendererTexture RendererCreateTexture(uint32 width, uint32 height, RendererTextureFormat format, const uint8* pixels, StringView8 debugName)
-{
-    // NOTE(saeb): Not initialized, table full, or creation failed: return the white texture, so the quad still draws instead of crashing.
-    if(!D3D11GpuGetDevice() || RendererData.TextureCount >= AG_MAX_TEXTURES)
-    {
-        return(0);
-    }
-
-    if(!D3D11CreateTexture(width, height, format, pixels, debugName, &RendererData.Textures[RendererData.TextureCount]))
-    {
-        return(0);
-    }
-
-    return(RendererData.TextureCount++);
 }
 
 RendererPipeline RendererCreatePipeline(const uint8* pixelBytecode, usize size, StringView8 debugName)
