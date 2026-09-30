@@ -15,6 +15,12 @@ enum class Renderer2DSpace : uint8
 
 using Renderer2DPipeline = uint32; // 0 = default quad pipeline
 
+enum class Renderer2DMode : uint8
+{
+    Sprite, // The texture times the colour; with no texture, the colour alone
+    Text // The texture is a signed distance field (a font atlas); draws its edge, crisp at any size
+};
+
 struct Renderer2DQuad
 {
     real32 X, Y, Width, Height; // The corner with the smallest x and y, and the size: screen pixels (top-left corner, y down) or world metres (bottom-left corner, y up)
@@ -22,6 +28,7 @@ struct Renderer2DQuad
     real32 R, G, B, A;
     real32 Rotation; // Radians around the quad's centre, counter-clockwise on screen in both spaces; 0 = axis-aligned
     GpuTexture Texture; // {0} draws solid
+    Renderer2DMode Mode;
     Renderer2DPipeline Pipeline;
 };
 

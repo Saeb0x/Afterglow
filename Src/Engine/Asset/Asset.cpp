@@ -180,21 +180,6 @@ static AssetLoadResult AssetCreateFont(StackAllocator* allocator, const uint8* p
     const AssetGlyph* glyphs = (const AssetGlyph*)(header + 1);
     const uint8* atlas = (const uint8*)(glyphs + glyphCount);
 
-    // NOTE(saeb): Linear filtering at the solid point reads the four texels around it; all of them must be fully inside, or solid rects would draw faded.
-    uint32 solidX = header->SolidX;
-    uint32 solidY = header->SolidY;
-    if(solidX < 1 || solidY < 1 || solidX >= atlasWidth || solidY >= atlasHeight)
-    {
-        return(AssetLoadResult::Corrupt);
-    }
-
-    const uint8* solidRowAbove = atlas + (solidY - 1) * atlasWidth;
-    const uint8* solidRow = atlas + solidY * atlasWidth;
-    if(solidRowAbove[solidX - 1] != 255 || solidRowAbove[solidX] != 255 || solidRow[solidX - 1] != 255 || solidRow[solidX] != 255)
-    {
-        return(AssetLoadResult::Corrupt);
-    }
-
     // NOTE(saeb): Every rectangle must lie inside the atlas, and codepoints must strictly increase, which the binary search in TextDraw relies on.
     uint32 fallbackGlyph = 0;
     for(uint32 index = 0; index < glyphCount; ++index)
@@ -265,8 +250,6 @@ static AssetLoadResult AssetCreateFont(StackAllocator* allocator, const uint8* p
     font->Ascent = header->Ascent;
     font->Descent = header->Descent;
     font->LineHeight = header->LineHeight;
-    font->SolidU = (real32)solidX * inverseWidth;
-    font->SolidV = (real32)solidY * inverseHeight;
 
     return(AssetLoadResult::Ok);
 }

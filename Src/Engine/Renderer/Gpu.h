@@ -66,6 +66,7 @@ struct GpuPipeline
 
 enum class GpuVertexFormat : uint8
 {
+    Float,
     Float2,
     Float4
 };

@@ -1,12 +1,5 @@
 #include "Engine/Renderer/Text.h"
 
-static Renderer2DPipeline TextPipeline;
-
-void TextSetPipeline(Renderer2DPipeline pipeline)
-{
-    TextPipeline = pipeline;
-}
-
 // NOTE(saeb): Glyphs are sorted by codepoint, so a binary search; anything missing gets the fallback glyph.
 static const TextGlyph* TextFindGlyph(const Font* font, uint32 codepoint)
 {
@@ -81,7 +74,7 @@ void TextDraw(const Font* font, real32 x, real32 y, real32 size, real32 r, real3
 
         const TextGlyph* glyph = TextFindGlyph(font, decoded.Codepoint);
 
-        // NOTE(saeb): Every glyph shares the atlas and the pipeline, so a whole block of text batches into one draw call.
+        // NOTE(saeb): Every glyph shares the atlas, so a whole block of text batches into one draw call.
         if(glyph->Width > 0.0f && glyph->Height > 0.0f)
         {
             real32 glyphX = penX + glyph->OffsetX * scale;
@@ -101,30 +94,12 @@ void TextDraw(const Font* font, real32 x, real32 y, real32 size, real32 r, real3
             quad.U1 = glyph->U1; quad.V1 = glyph->V1;
             quad.R = r; quad.G = g; quad.B = b; quad.A = a;
             quad.Texture = font->Atlas;
-            quad.Pipeline = TextPipeline;
+            quad.Mode = Renderer2DMode::Text;
             Renderer2DPushQuad(&quad);
         }
 
         penX += glyph->Advance * scale;
     }
-}
-
-void TextDrawRect(const Font* font, real32 x, real32 y, real32 width, real32 height, real32 r, real32 g, real32 b, real32 a)
-{
-    if(!font)
-    {
-        return;
-    }
-
-    // NOTE(saeb): All four corners sample the same fully-inside point, so the shader's coverage is 1 everywhere and the rect is just its colour.
-    Renderer2DQuad quad = {};
-    quad.X = x; quad.Y = y; quad.Width = width; quad.Height = height;
-    quad.U0 = font->SolidU; quad.V0 = font->SolidV;
-    quad.U1 = font->SolidU; quad.V1 = font->SolidV;
-    quad.R = r; quad.G = g; quad.B = b; quad.A = a;
-    quad.Texture = font->Atlas;
-    quad.Pipeline = TextPipeline;
-    Renderer2DPushQuad(&quad);
 }
 
 void TextMeasure(const Font* font, real32 size, StringView8 text, real32* width, real32* height)

@@ -23,11 +23,17 @@ SSTL_ASSERT_STATIC_MSG(AG_MAX_QUADS * 4 <= 65536, "Afterglow: Quad vertices must
 #define AG_VIEW_SCREEN 0 // Screen pixels, y down
 #define AG_MAX_VIEWS 16 // Cameras set in one frame, plus the screen; far more than parallax layers need
 
+// NOTE(saeb): What the pixel shader does with a vertex; Quad.hlsl reads the same values.
+#define AG_QUAD_SOLID 0.0f
+#define AG_QUAD_TEXTURED 1.0f
+#define AG_QUAD_TEXT 2.0f
+
 struct QuadVertex
 {
     real32 X, Y;
     real32 U, V;
     real32 R, G, B, A;
+    real32 Mode; // AG_QUAD_SOLID, AG_QUAD_TEXTURED or AG_QUAD_TEXT
 };
 
 struct QuadBatch
@@ -79,7 +85,8 @@ static GpuPipeline Renderer2DCreateQuadPipeline(StackAllocator* allocator, const
     desc.Attributes[0] = { 0, GpuVertexFormat::Float2, offsetof(QuadVertex, X) };
     desc.Attributes[1] = { 1, GpuVertexFormat::Float2, offsetof(QuadVertex, U) };
     desc.Attributes[2] = { 2, GpuVertexFormat::Float4, offsetof(QuadVertex, R) };
-    desc.AttributeCount = 3;
+    desc.Attributes[3] = { 3, GpuVertexFormat::Float, offsetof(QuadVertex, Mode) };
+    desc.AttributeCount = 4;
     desc.Blend = GpuBlend::Premultiplied;
     desc.Cull = GpuCull::None; // A negative width/height flips winding; still draw it
     desc.Primitive = GpuPrimitive::Triangles;
@@ -115,15 +122,22 @@ static uint32 Renderer2DFlushQuads()
         const Renderer2DQuad* quad = &Renderer2DData.Quads[quadIndex];
         uint32 view = Renderer2DData.QuadViews[quadIndex];
 
-        // NOTE(saeb): Only consecutive quads merge; submission order is the layering order for alpha.
-        if(!batch || batch->Pipeline != quad->Pipeline || batch->Texture.Object != quad->Texture.Object || batch->View != view)
+        // NOTE(saeb): Only consecutive quads merge; submission order is the layering order for alpha. A solid quad never samples its texture, so it joins a batch with any texture, and a batch of only solid quads takes the texture of the first textured quad that joins it.
+        bool textured = (quad->Texture.Object != nullptr);
+        bool textureConflict = textured && batch && batch->Texture.Object && batch->Texture.Object != quad->Texture.Object;
+        if(!batch || batch->Pipeline != quad->Pipeline || textureConflict || batch->View != view)
         {
             batch = &Renderer2DData.Batches[batchCount++];
             batch->Pipeline = quad->Pipeline;
-            batch->Texture = quad->Texture;
+            batch->Texture = {};
             batch->View = view;
             batch->FirstQuad = quadIndex;
             batch->QuadCount = 0;
+        }
+
+        if(textured)
+        {
+            batch->Texture = quad->Texture;
         }
 
         ++batch->QuadCount;
@@ -168,12 +182,18 @@ static uint32 Renderer2DFlushQuads()
             v1 = quad->V0;
         }
 
+        real32 mode = AG_QUAD_SOLID;
+        if(textured)
+        {
+            mode = (quad->Mode == Renderer2DMode::Text) ? AG_QUAD_TEXT : AG_QUAD_TEXTURED;
+        }
+
         // NOTE(saeb): Mapped memory is write-combined; write each vertex whole, front to back, never read it back.
         QuadVertex* quadVertices = vertices + (quadIndex * 4);
-        quadVertices[0] = { cornerX[0], cornerY[0], quad->U0, v0, r, g, b, quad->A }; // (X, Y): top-left on screen, bottom-left in the world
-        quadVertices[1] = { cornerX[1], cornerY[1], quad->U1, v0, r, g, b, quad->A };
-        quadVertices[2] = { cornerX[2], cornerY[2], quad->U0, v1, r, g, b, quad->A };
-        quadVertices[3] = { cornerX[3], cornerY[3], quad->U1, v1, r, g, b, quad->A };
+        quadVertices[0] = { cornerX[0], cornerY[0], quad->U0, v0, r, g, b, quad->A, mode }; // (X, Y): top-left on screen, bottom-left in the world
+        quadVertices[1] = { cornerX[1], cornerY[1], quad->U1, v0, r, g, b, quad->A, mode };
+        quadVertices[2] = { cornerX[2], cornerY[2], quad->U0, v1, r, g, b, quad->A, mode };
+        quadVertices[3] = { cornerX[3], cornerY[3], quad->U1, v1, r, g, b, quad->A, mode };
     }
 
     GpuUnmapBuffer(Renderer2DData.VertexBuffer);
@@ -193,6 +213,7 @@ static uint32 Renderer2DFlushQuads()
 
         // NOTE(saeb): An invalid handle falls back to the defaults instead of binding garbage.
         Renderer2DPipeline pipeline = (current->Pipeline < Renderer2DData.PipelineCount && Renderer2DData.Pipelines[current->Pipeline].Object) ? current->Pipeline : 0;
+        // NOTE(saeb): A batch of only solid quads samples nothing, but the shader still needs a texture bound.
         GpuTexture texture = current->Texture.Object ? current->Texture : Renderer2DData.WhiteTexture;
 
         if(pipeline != boundPipeline)

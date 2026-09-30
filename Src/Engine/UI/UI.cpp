@@ -54,10 +54,13 @@ static bool UIIsMouseOver(UIContext* ui, real32 x, real32 y, real32 width, real3
     return((ui->MouseX >= x && ui->MouseX < x + width) && (ui->MouseY >= y && ui->MouseY < y + height));
 }
 
-// NOTE(saeb): Drawn with the UI's font, not as plain quads, so rects and text share one texture and pipeline and the whole UI batches into a single draw call.
+// NOTE(saeb): Solid quads join any batch, so rects and the UI's text still draw in a single call.
 static void UIDrawRect(UIContext* ui, real32 x, real32 y, real32 width, real32 height, real32 r, real32 g, real32 b, real32 a)
 {
-    TextDrawRect(ui->Font, x, y, width, height, r, g, b, a);
+    Renderer2DQuad quad = {};
+    quad.X = x; quad.Y = y; quad.Width = width; quad.Height = height;
+    quad.R = r; quad.G = g; quad.B = b; quad.A = a;
+    Renderer2DPushQuad(&quad);
 }
 
 // NOTE(saeb): Text sized to the row and centred vertically in it; centred horizontally too, or left-aligned at x. TextDraw's y is the top of the text and TextMeasure's height is ascent + descent, so this centres exactly.

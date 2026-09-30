@@ -1,7 +1,6 @@
 #include "Engine/Platform/Windows/Win32Window.h"
 #include "Engine/Platform/Window.h"
 #include "Engine/Platform/Windows/Win32Time.h"
-#include "Engine/Asset/Asset.h"
 #include "Engine/Renderer/Internal/GpuInternal.h"
 #include "Engine/Renderer/Internal/RendererInternal.h"
 #include "Engine/Game.h"
@@ -12,8 +11,6 @@
 #define WIN32_LEAN_AND_MEAN
 #endif
 #include <windows.h>
-
-#define AG_TEXT_PIPELINE_PATH u8"Data/Engine/Text.aga"
 
 static StackAllocator EngineMemory;
 
@@ -76,52 +73,39 @@ int APIENTRY WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLi
             }
             else if(RendererInit(&EngineMemory, &rendererError))
             {
-                // NOTE(saeb): The text pipeline fonts draw with.
-                Renderer2DPipeline textPipeline = 0;
-                AssetLoadResult textPipelineResult = AssetLoadPipeline(&EngineMemory, SV8(AG_TEXT_PIPELINE_PATH), &textPipeline);
-
-                if(textPipelineResult == AssetLoadResult::Ok)
+                if(GameInit(&EngineMemory))
                 {
-                    TextSetPipeline(textPipeline);
+                    ShowWindow(Win32WindowGetHandle(), SW_SHOW);
 
-                    if(GameInit(&EngineMemory))
+                    Win32TimeInit();
+
+                    while(Win32WindowPumpEvents())
                     {
-                        ShowWindow(Win32WindowGetHandle(), SW_SHOW);
-
-                        Win32TimeInit();
-
-                        while(Win32WindowPumpEvents())
+                        // NOTE(saeb): Nothing to show while minimized; sleep until a message (restore, quit) arrives instead of spinning.
+                        if(WindowGetMinimized())
                         {
-                            // NOTE(saeb): Nothing to show while minimized; sleep until a message (restore, quit) arrives instead of spinning.
-                            if(WindowGetMinimized())
-                            {
-                                WaitMessage();
-                                continue;
-                            }
-
-                            Frame frameScratch = GetFrame(&EngineMemory, Heap::Upper);
-
-                            int32 windowClientAreaWidth, windowClientAreaHeight;
-                            WindowGetClientAreaDimensions(&windowClientAreaWidth, &windowClientAreaHeight);
-
-                            RendererBeginFrame(windowClientAreaWidth, windowClientAreaHeight);
-                            GameUpdate(&EngineMemory, Win32TimeTick());
-                            RendererEndFrame();
-
-                            ReleaseFrame(&EngineMemory, frameScratch);
+                            WaitMessage();
+                            continue;
                         }
 
-                        GameShutdown(&EngineMemory);
-                        exitCode = 0;
+                        Frame frameScratch = GetFrame(&EngineMemory, Heap::Upper);
+
+                        int32 windowClientAreaWidth, windowClientAreaHeight;
+                        WindowGetClientAreaDimensions(&windowClientAreaWidth, &windowClientAreaHeight);
+
+                        RendererBeginFrame(windowClientAreaWidth, windowClientAreaHeight);
+                        GameUpdate(&EngineMemory, Win32TimeTick());
+                        RendererEndFrame();
+
+                        ReleaseFrame(&EngineMemory, frameScratch);
                     }
-                    else
-                    {
-                        Win32ShowStartupError(&EngineMemory, SV8(u8"The game failed to initialize."), StringView8{ nullptr, 0 });
-                    }
+
+                    GameShutdown(&EngineMemory);
+                    exitCode = 0;
                 }
                 else
                 {
-                    Win32ShowStartupError(&EngineMemory, SV8(u8"Couldn't load the text shader (" AG_TEXT_PIPELINE_PATH u8")."), AssetDescribeResult(textPipelineResult));
+                    Win32ShowStartupError(&EngineMemory, SV8(u8"The game failed to initialize."), StringView8{ nullptr, 0 });
                 }
             }
             else
