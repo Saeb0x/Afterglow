@@ -2,6 +2,7 @@
 #include "Engine/Renderer/Internal/Renderer2DInternal.h"
 #include "Engine/Renderer/Gpu.h"
 #include "Engine/Renderer/Internal/GpuInternal.h"
+#include "Engine/Asset/Internal/AssetInternal.h"
 
 #include <SSTL/Core/Config.h>
 #include <SSTL/Core/Utility.h>
@@ -15,6 +16,8 @@
 SSTL_ASSERT_STATIC_MSG(AG_MAX_QUADS * 4 <= 65536, "Afterglow: Quad vertices must be addressable by 16-bit indices.");
 
 #define AG_MAX_PIPELINES 64
+
+#define AG_QUAD_SHADER_PATH u8"Data/Engine/Quad.aga"
 
 // NOTE(saeb): Every quad belongs to a view, the matrix that maps its units to the screen. View 0 is the screen; the rest are this frame's cameras, in the order they were set.
 #define AG_VIEW_SCREEN 0 // Screen pixels, y down
@@ -242,8 +245,43 @@ static uint32 Renderer2DFlushQuads()
     return(batchCount);
 }
 
-bool Renderer2DInit(StackAllocator* allocator)
+static bool Renderer2DCreateDefaultPipeline(StackAllocator* allocator, const uint8* vertexBytecode, usize vertexSize, const uint8* pixelBytecode, usize pixelSize)
 {
+    // NOTE(saeb): All or nothing: on failure the copy is given back.
+    Frame lowerFrame = GetFrame(allocator, Heap::Lower);
+
+    uint8* vertexCopy = (uint8*)Allocate(allocator, Heap::Lower, vertexSize, 16);
+    if(!vertexCopy)
+    {
+        return(false);
+    }
+
+    for(usize index = 0; index < vertexSize; ++index)
+    {
+        vertexCopy[index] = vertexBytecode[index];
+    }
+
+    Renderer2DData.QuadVertexShader = vertexCopy;
+    Renderer2DData.QuadVertexShaderSize = vertexSize;
+
+    GpuPipeline pipeline = Renderer2DCreateQuadPipeline(allocator, pixelBytecode, pixelSize, SV8(u8"QuadPipeline"));
+    if(!pipeline.Object)
+    {
+        Renderer2DData.QuadVertexShader = nullptr;
+        Renderer2DData.QuadVertexShaderSize = 0;
+        ReleaseFrame(allocator, lowerFrame);
+        return(false);
+    }
+
+    Renderer2DData.Pipelines[0] = pipeline;
+
+    return(true);
+}
+
+bool Renderer2DInit(StackAllocator* allocator, RendererInitError* error)
+{
+    *error = { SV8(u8"Couldn't create the 2D renderer's GPU resources."), StringView8{ nullptr, 0 } };
+
     GpuBufferDesc vertexBufferDesc = {};
     vertexBufferDesc.Type = GpuBufferType::Vertex;
     vertexBufferDesc.Usage = GpuUsage::Dynamic;
@@ -305,7 +343,7 @@ bool Renderer2DInit(StackAllocator* allocator)
         return(false);
     }
 
-    // NOTE(saeb): Slot 0 is reserved for the default pipeline, which Renderer2DSetDefaultPipeline fills from the cooked shader; created pipelines start at 1.
+    // NOTE(saeb): Slot 0 is reserved for the default pipeline, which Init fills from the quad shader; created pipelines start at 1.
     Renderer2DData.PipelineCount = 1;
 
     // NOTE(saeb): View 1 starts as the default camera: a zeroed one is centred on the origin, one metre per pixel, zoom 1.
@@ -341,14 +379,34 @@ bool Renderer2DInit(StackAllocator* allocator)
         return(false);
     }
 
+    // NOTE(saeb): The quad shader every pipeline 0 quad draws with; the driver keeps its own copy of the bytecode, so the file is scratch.
+    Frame scratch = GetFrame(allocator, Heap::Upper);
+
+    AssetShader shader;
+    AssetLoadResult shaderResult = AssetReadShader(allocator, SV8(AG_QUAD_SHADER_PATH), &shader);
+    if(shaderResult == AssetLoadResult::Ok && (!shader.Vertex || !shader.Pixel))
+    {
+        shaderResult = AssetLoadResult::MissingStage;
+    }
+
+    bool created = (shaderResult == AssetLoadResult::Ok) && Renderer2DCreateDefaultPipeline(allocator, shader.Vertex, shader.VertexSize, shader.Pixel, shader.PixelSize);
+
+    ReleaseFrame(allocator, scratch);
+
+    if(!created)
+    {
+        error->Message = SV8(u8"Couldn't load the quad shader (" AG_QUAD_SHADER_PATH u8").");
+        error->Reason = (shaderResult != AssetLoadResult::Ok) ? AssetDescribeResult(shaderResult) : AssetDescribeResult(AssetLoadResult::RendererFailed);
+        return(false);
+    }
+
     return(true);
 }
 
 void Renderer2DEndFrame(bool draw)
 {
-    // NOTE(saeb): Without the default pipeline (Renderer2DSetDefaultPipeline) there's nothing to draw quads with.
     uint32 drawCalls = 0;
-    if(draw && Renderer2DData.Pipelines[0].Object && Renderer2DData.QuadCount > 0)
+    if(draw && Renderer2DData.QuadCount > 0)
     {
         GpuBeginMarker(SV8(u8"Quads"));
         drawCalls = Renderer2DFlushQuads();
@@ -445,8 +503,8 @@ void Renderer2DPushQuad(const Renderer2DQuad* quad)
 
 Renderer2DPipeline Renderer2DCreatePipeline(StackAllocator* allocator, const uint8* pixelBytecode, usize size, StringView8 debugName)
 {
-    // NOTE(saeb): No default pipeline yet, table full, or creation failed: return the default pipeline, so the quad still draws instead of crashing.
-    if(!Renderer2DData.QuadVertexShader || Renderer2DData.PipelineCount >= AG_MAX_PIPELINES)
+    // NOTE(saeb): Table full or creation failed: return the default pipeline, so the quad still draws instead of crashing.
+    if(Renderer2DData.PipelineCount >= AG_MAX_PIPELINES)
     {
         return(0);
     }
@@ -460,45 +518,6 @@ Renderer2DPipeline Renderer2DCreatePipeline(StackAllocator* allocator, const uin
     Renderer2DData.Pipelines[Renderer2DData.PipelineCount] = pipeline;
 
     return(Renderer2DData.PipelineCount++);
-}
-
-bool Renderer2DSetDefaultPipeline(StackAllocator* allocator, const uint8* vertexBytecode, usize vertexSize, const uint8* pixelBytecode, usize pixelSize)
-{
-    // NOTE(saeb): Once only; replacing shaders at runtime (hot reload) would also need to release the old ones.
-    if(Renderer2DData.Pipelines[0].Object || !vertexBytecode || vertexSize == 0)
-    {
-        return(false);
-    }
-
-    // NOTE(saeb): All or nothing: on failure the copy is given back, and EndFrame keeps treating a missing pipeline 0 as "not ready".
-    Frame lowerFrame = GetFrame(allocator, Heap::Lower);
-
-    uint8* vertexCopy = (uint8*)Allocate(allocator, Heap::Lower, vertexSize, 16);
-    if(!vertexCopy)
-    {
-        return(false);
-    }
-
-    for(usize index = 0; index < vertexSize; ++index)
-    {
-        vertexCopy[index] = vertexBytecode[index];
-    }
-
-    Renderer2DData.QuadVertexShader = vertexCopy;
-    Renderer2DData.QuadVertexShaderSize = vertexSize;
-
-    GpuPipeline pipeline = Renderer2DCreateQuadPipeline(allocator, pixelBytecode, pixelSize, SV8(u8"QuadPipeline"));
-    if(!pipeline.Object)
-    {
-        Renderer2DData.QuadVertexShader = nullptr;
-        Renderer2DData.QuadVertexShaderSize = 0;
-        ReleaseFrame(allocator, lowerFrame);
-        return(false);
-    }
-
-    Renderer2DData.Pipelines[0] = pipeline;
-
-    return(true);
 }
 
 void Renderer2DSetCamera(const Camera* camera)

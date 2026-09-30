@@ -13,7 +13,6 @@
 #endif
 #include <windows.h>
 
-#define AG_DEFAULT_PIPELINE_PATH u8"Data/Engine/Quad.aga"
 #define AG_TEXT_PIPELINE_PATH u8"Data/Engine/Text.aga"
 
 static StackAllocator EngineMemory;
@@ -53,6 +52,7 @@ int APIENTRY WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLi
             GpuDesc gpuDesc = {};
             gpuDesc.WindowHandle = Win32WindowGetHandle();
             GpuInitResult gpuResult = GpuInit(&gpuDesc);
+            RendererInitError rendererError = {};
 
             if(gpuResult != GpuInitResult::Ok)
             {
@@ -74,14 +74,13 @@ int APIENTRY WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLi
                     } break;
                 }
             }
-            else if(RendererInit(&EngineMemory))
+            else if(RendererInit(&EngineMemory, &rendererError))
             {
-                // NOTE(saeb): The engine's own shaders: the quad pipeline everything draws with, then the text pipeline fonts draw with (only tried once the first loaded).
-                AssetLoadResult pipelineResult = AssetLoadDefaultPipeline(&EngineMemory, SV8(AG_DEFAULT_PIPELINE_PATH));
+                // NOTE(saeb): The text pipeline fonts draw with.
                 Renderer2DPipeline textPipeline = 0;
-                AssetLoadResult textPipelineResult = (pipelineResult == AssetLoadResult::Ok) ? AssetLoadPipeline(&EngineMemory, SV8(AG_TEXT_PIPELINE_PATH), &textPipeline) : AssetLoadResult::Ok;
+                AssetLoadResult textPipelineResult = AssetLoadPipeline(&EngineMemory, SV8(AG_TEXT_PIPELINE_PATH), &textPipeline);
 
-                if(pipelineResult == AssetLoadResult::Ok && textPipelineResult == AssetLoadResult::Ok)
+                if(textPipelineResult == AssetLoadResult::Ok)
                 {
                     TextSetPipeline(textPipeline);
 
@@ -120,10 +119,6 @@ int APIENTRY WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLi
                         Win32ShowStartupError(&EngineMemory, SV8(u8"The game failed to initialize."), StringView8{ nullptr, 0 });
                     }
                 }
-                else if(pipelineResult != AssetLoadResult::Ok)
-                {
-                    Win32ShowStartupError(&EngineMemory, SV8(u8"Couldn't load the default shader (" AG_DEFAULT_PIPELINE_PATH u8")."), AssetDescribeResult(pipelineResult));
-                }
                 else
                 {
                     Win32ShowStartupError(&EngineMemory, SV8(u8"Couldn't load the text shader (" AG_TEXT_PIPELINE_PATH u8")."), AssetDescribeResult(textPipelineResult));
@@ -131,7 +126,7 @@ int APIENTRY WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLi
             }
             else
             {
-                Win32ShowStartupError(&EngineMemory, SV8(u8"Couldn't create the renderer's GPU resources."), StringView8{ nullptr, 0 });
+                Win32ShowStartupError(&EngineMemory, rendererError.Message, rendererError.Reason);
             }
 
             RendererShutdown();

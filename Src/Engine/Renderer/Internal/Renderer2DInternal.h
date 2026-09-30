@@ -4,7 +4,9 @@
 #include <SSTL/Core/Types.h>
 #include <SSTL/Memory/StackAllocator.h>
 
-bool Renderer2DInit(StackAllocator* allocator);
+#include "Engine/Renderer/Internal/RendererInternal.h"
+
+bool Renderer2DInit(StackAllocator* allocator, RendererInitError* error);
 void Renderer2DShutdown();
 
 // NOTE(saeb): Draws this frame's quads when draw is true, then resets for the next frame either way.

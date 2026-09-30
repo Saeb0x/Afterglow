@@ -12,9 +12,9 @@ struct Renderer
 };
 static Renderer RendererData;
 
-bool RendererInit(StackAllocator* allocator)
+bool RendererInit(StackAllocator* allocator, RendererInitError* error)
 {
-    return(Renderer2DInit(allocator));
+    return(Renderer2DInit(allocator, error));
 }
 
 void RendererShutdown()

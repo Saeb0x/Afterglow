@@ -1,4 +1,5 @@
 #include "Engine/Asset/Asset.h"
+#include "Engine/Asset/Internal/AssetInternal.h"
 #include "Engine/Asset/Internal/AssetFormat.h"
 #include "Engine/Platform/File.h"
 
@@ -116,49 +117,36 @@ static AssetLoadResult AssetValidateShader(const uint8* payload, uint64 payloadS
     return(AssetLoadResult::Ok);
 }
 
-static AssetLoadResult AssetCreateDefaultPipeline(StackAllocator* allocator, const uint8* payload, uint64 payloadSize)
+AssetLoadResult AssetReadShader(StackAllocator* allocator, StringView8 path, AssetShader* shader)
 {
-    const AssetShaderHeader* shaderHeader = nullptr;
-    AssetLoadResult result = AssetValidateShader(payload, payloadSize, &shaderHeader);
+    *shader = {};
+
+    const uint8* payload = nullptr;
+    uint64 payloadSize = 0;
+    AssetLoadResult result = AssetReadPayload(allocator, path, AssetType::Shader, &payload, &payloadSize);
     if(result != AssetLoadResult::Ok)
     {
         return(result);
     }
 
-    if(shaderHeader->VertexSize == 0 || shaderHeader->PixelSize == 0)
-    {
-        return(AssetLoadResult::MissingStage);
-    }
-
-    if(!Renderer2DSetDefaultPipeline(allocator, payload + shaderHeader->VertexOffset, shaderHeader->VertexSize, payload + shaderHeader->PixelOffset, shaderHeader->PixelSize))
-    {
-        return(AssetLoadResult::RendererFailed);
-    }
-
-    return(AssetLoadResult::Ok);
-}
-
-static AssetLoadResult AssetCreatePipeline(StackAllocator* allocator, const uint8* payload, uint64 payloadSize, StringView8 path, Renderer2DPipeline* pipeline)
-{
     const AssetShaderHeader* shaderHeader = nullptr;
-    AssetLoadResult result = AssetValidateShader(payload, payloadSize, &shaderHeader);
+    result = AssetValidateShader(payload, payloadSize, &shaderHeader);
     if(result != AssetLoadResult::Ok)
     {
         return(result);
     }
 
-    if(shaderHeader->PixelSize == 0)
+    if(shaderHeader->VertexSize > 0)
     {
-        return(AssetLoadResult::MissingStage);
+        shader->Vertex = payload + shaderHeader->VertexOffset;
+        shader->VertexSize = shaderHeader->VertexSize;
     }
 
-    Renderer2DPipeline handle = Renderer2DCreatePipeline(allocator, payload + shaderHeader->PixelOffset, shaderHeader->PixelSize, path);
-    if(handle == 0)
+    if(shaderHeader->PixelSize > 0)
     {
-        return(AssetLoadResult::RendererFailed);
+        shader->Pixel = payload + shaderHeader->PixelOffset;
+        shader->PixelSize = shaderHeader->PixelSize;
     }
-
-    *pipeline = handle;
 
     return(AssetLoadResult::Ok);
 }
@@ -303,24 +291,6 @@ AssetLoadResult AssetLoadTexture(StackAllocator* allocator, StringView8 path, Gp
     return(result);
 }
 
-AssetLoadResult AssetLoadDefaultPipeline(StackAllocator* allocator, StringView8 path)
-{
-    // NOTE(saeb): The driver keeps its own copy of the bytecode, so the whole file is scratch.
-    Frame scratch = GetFrame(allocator, Heap::Upper);
-
-    const uint8* payload = nullptr;
-    uint64 payloadSize = 0;
-    AssetLoadResult result = AssetReadPayload(allocator, path, AssetType::Shader, &payload, &payloadSize);
-    if(result == AssetLoadResult::Ok)
-    {
-        result = AssetCreateDefaultPipeline(allocator, payload, payloadSize);
-    }
-
-    ReleaseFrame(allocator, scratch);
-
-    return(result);
-}
-
 AssetLoadResult AssetLoadPipeline(StackAllocator* allocator, StringView8 path, Renderer2DPipeline* pipeline)
 {
     *pipeline = 0;
@@ -328,12 +298,22 @@ AssetLoadResult AssetLoadPipeline(StackAllocator* allocator, StringView8 path, R
     // NOTE(saeb): The driver keeps its own copy of the bytecode, so the whole file is scratch.
     Frame scratch = GetFrame(allocator, Heap::Upper);
 
-    const uint8* payload = nullptr;
-    uint64 payloadSize = 0;
-    AssetLoadResult result = AssetReadPayload(allocator, path, AssetType::Shader, &payload, &payloadSize);
+    AssetShader shader;
+    AssetLoadResult result = AssetReadShader(allocator, path, &shader);
     if(result == AssetLoadResult::Ok)
     {
-        result = AssetCreatePipeline(allocator, payload, payloadSize, path, pipeline);
+        if(!shader.Pixel)
+        {
+            result = AssetLoadResult::MissingStage;
+        }
+        else
+        {
+            *pipeline = Renderer2DCreatePipeline(allocator, shader.Pixel, shader.PixelSize, path);
+            if(*pipeline == 0)
+            {
+                result = AssetLoadResult::RendererFailed;
+            }
+        }
     }
 
     ReleaseFrame(allocator, scratch);
