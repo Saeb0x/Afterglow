@@ -1,5 +1,5 @@
-#include "Asset.h"
-#include "AssetFormat.h"
+#include "Engine/Asset/Asset.h"
+#include "Engine/Asset/Internal/AssetFormat.h"
 #include "Engine/Platform/File.h"
 
 // NOTE(saeb): Reads the file into Upper heap scratch (the caller owns the frame) and checks the common header. On success, *payload points just past the header, 16-byte aligned, and *payloadSize is exact.

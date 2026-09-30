@@ -1,6 +1,6 @@
-#include "Cooker.h"
+#include "Cooker/Cooker.h"
 
-#include "Engine/Asset/AssetFormat.h"
+#include "Engine/Asset/Internal/AssetFormat.h"
 
 // NOTE(saeb): PNG only, and no stdio: files come in through FileRead (Unicode paths, proper error results), so stb never opens anything itself.
 #define STB_IMAGE_IMPLEMENTATION

@@ -1,7 +1,7 @@
 // NOTE(saeb): The D3D11 shader target: HLSL compiled to DXBC with D3DCompile, which only exists on Windows. This is about what the cooker produces, not where it runs; another graphics backend gets its own shader target next to this one.
-#include "Cooker.h"
+#include "Cooker/Cooker.h"
 
-#include "Engine/Asset/AssetFormat.h"
+#include "Engine/Asset/Internal/AssetFormat.h"
 
 #if !defined(WIN32_LEAN_AND_MEAN)
 #define WIN32_LEAN_AND_MEAN

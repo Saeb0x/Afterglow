@@ -1,6 +1,6 @@
-#include "Cooker.h"
+#include "Cooker/Cooker.h"
 
-#include "Engine/Asset/AssetFormat.h"
+#include "Engine/Asset/Internal/AssetFormat.h"
 
 #include <stdarg.h>
 #include <stdio.h>

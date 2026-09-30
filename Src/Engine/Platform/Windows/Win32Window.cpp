@@ -1,6 +1,6 @@
-#include "Win32Window.h"
+#include "Engine/Platform/Windows/Win32Window.h"
 #include "Engine/Platform/Window.h"
-#include "Win32Input.h"
+#include "Engine/Platform/Windows/Win32Input.h"
 
 struct Window
 {

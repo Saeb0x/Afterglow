@@ -1,5 +1,6 @@
-#include "D3D11Gpu.h"
+#include "Engine/Renderer/D3D11/D3D11Gpu.h"
 #include "Engine/Renderer/Gpu.h"
+#include "Engine/Renderer/Internal/GpuInternal.h"
 
 #include <SSTL/Core/Config.h>
 #include <SSTL/Core/Utility.h>

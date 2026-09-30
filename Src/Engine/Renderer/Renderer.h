@@ -4,7 +4,7 @@
 #include <SSTL/Core/Types.h>
 #include <SSTL/Core/String.h>
 
-#include "Camera.h"
+#include "Engine/Renderer/Camera.h"
 
 enum RendererFlags : uint32
 {

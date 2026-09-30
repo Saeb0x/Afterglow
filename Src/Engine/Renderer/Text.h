@@ -1,7 +1,7 @@
 #if !defined(AFTERGLOW_TEXT_H)
 #define AFTERGLOW_TEXT_H
 
-#include "Renderer.h"
+#include "Engine/Renderer/Renderer.h"
 
 #include <SSTL/Core/Types.h>
 #include <SSTL/Core/String.h>

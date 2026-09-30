@@ -1,8 +1,8 @@
-#include "Win32Window.h"
+#include "Engine/Platform/Windows/Win32Window.h"
 #include "Engine/Platform/Window.h"
-#include "Win32Time.h"
+#include "Engine/Platform/Windows/Win32Time.h"
 #include "Engine/Asset/Asset.h"
-#include "Engine/Renderer/Gpu.h"
+#include "Engine/Renderer/Internal/GpuInternal.h"
 #include "Engine/Renderer/D3D11/D3D11Renderer.h"
 #include "Engine/Game.h"
 
