@@ -1,5 +1,5 @@
-#include "Engine/Renderer/D3D11/D3D11Renderer.h"
-#include "Engine/Renderer/Renderer.h"
+#include "Engine/Renderer/Renderer2D.h"
+#include "Engine/Renderer/Internal/Renderer2DInternal.h"
 #include "Engine/Renderer/Gpu.h"
 #include "Engine/Renderer/Internal/GpuInternal.h"
 
@@ -29,7 +29,7 @@ struct QuadVertex
 
 struct QuadBatch
 {
-    RendererPipeline Pipeline;
+    Renderer2DPipeline Pipeline;
     GpuTexture Texture;
     uint32 View;
     uint32 FirstQuad;
@@ -42,21 +42,20 @@ struct QuadConstants
 };
 SSTL_ASSERT_STATIC_MSG(sizeof(QuadConstants) % 16 == 0, "Afterglow: Constant buffers must be a multiple of 16 bytes.");
 
-struct Renderer
+struct Renderer2D
 {
-    bool FrameActive;
-    RendererSpace Space;
+    Renderer2DSpace Space;
     Camera ViewCameras[AG_MAX_VIEWS]; // This frame's cameras by view; [0] is the screen, which needs none
     uint32 ViewCount;
     uint32 WorldView; // The view world quads are pushed under: the latest camera
     bool WorldViewUsed; // A world quad has been pushed under WorldView, so a new camera needs a new view
     GpuBuffer VertexBuffer;
     GpuBuffer IndexBuffer;
-    RendererQuad* Quads;
+    Renderer2DQuad* Quads;
     uint8* QuadViews; // Parallel to Quads: the view each one was pushed under
     uint32 QuadCount;
     uint32 DroppedQuadCount;
-    RendererStats LastFrameStats;
+    Renderer2DStats LastFrameStats;
     QuadBatch* Batches;
     GpuBuffer QuadConstantBuffer;
     const uint8* QuadVertexShader; // A copy in the Lower heap: every quad pipeline pairs it with its own pixel shader
@@ -64,15 +63,14 @@ struct Renderer
     GpuPipeline Pipelines[AG_MAX_PIPELINES];
     uint32 PipelineCount;
     GpuTexture WhiteTexture;
-    uint32 Flags;
 };
-static Renderer RendererData;
+static Renderer2D Renderer2DData;
 
-static GpuPipeline RendererCreateQuadPipeline(StackAllocator* allocator, const uint8* pixelBytecode, usize pixelSize, StringView8 debugName)
+static GpuPipeline Renderer2DCreateQuadPipeline(StackAllocator* allocator, const uint8* pixelBytecode, usize pixelSize, StringView8 debugName)
 {
     GpuPipelineDesc desc = {};
-    desc.VertexShader = RendererData.QuadVertexShader;
-    desc.VertexShaderSize = RendererData.QuadVertexShaderSize;
+    desc.VertexShader = Renderer2DData.QuadVertexShader;
+    desc.VertexShaderSize = Renderer2DData.QuadVertexShaderSize;
     desc.PixelShader = pixelBytecode;
     desc.PixelShaderSize = pixelSize;
     desc.Attributes[0] = { 0, GpuVertexFormat::Float2, offsetof(QuadVertex, X) };
@@ -87,9 +85,9 @@ static GpuPipeline RendererCreateQuadPipeline(StackAllocator* allocator, const u
     return(GpuCreatePipeline(allocator, &desc));
 }
 
-static uint32 D3D11FlushQuads()
+static uint32 Renderer2DFlushQuads()
 {
-    QuadVertex* vertices = (QuadVertex*)GpuMapBuffer(RendererData.VertexBuffer);
+    QuadVertex* vertices = (QuadVertex*)GpuMapBuffer(Renderer2DData.VertexBuffer);
     if(!vertices)
     {
         return(0);
@@ -101,23 +99,23 @@ static uint32 D3D11FlushQuads()
     // NOTE(saeb): Built at draw time from the final back buffer size. The screen maps pixels with y down (the larger y is "bottom"); each camera maps world metres with y up.
     DirectX::XMFLOAT4X4 views[AG_MAX_VIEWS];
     DirectX::XMStoreFloat4x4(&views[AG_VIEW_SCREEN], DirectX::XMMatrixOrthographicOffCenterLH(0.0f, (real32)backBufferWidth, (real32)backBufferHeight, 0.0f, 0.0f, 1.0f));
-    for(uint32 view = 1; view < RendererData.ViewCount; ++view)
+    for(uint32 view = 1; view < Renderer2DData.ViewCount; ++view)
     {
-        DirectX::XMStoreFloat4x4(&views[view], CameraGetViewProjection(&RendererData.ViewCameras[view], backBufferWidth, backBufferHeight));
+        DirectX::XMStoreFloat4x4(&views[view], CameraGetViewProjection(&Renderer2DData.ViewCameras[view], backBufferWidth, backBufferHeight));
     }
 
     QuadBatch* batch = nullptr;
     uint32 batchCount = 0;
 
-    for(uint32 quadIndex = 0; quadIndex < RendererData.QuadCount; ++quadIndex)
+    for(uint32 quadIndex = 0; quadIndex < Renderer2DData.QuadCount; ++quadIndex)
     {
-        const RendererQuad* quad = &RendererData.Quads[quadIndex];
-        uint32 view = RendererData.QuadViews[quadIndex];
+        const Renderer2DQuad* quad = &Renderer2DData.Quads[quadIndex];
+        uint32 view = Renderer2DData.QuadViews[quadIndex];
 
         // NOTE(saeb): Only consecutive quads merge; submission order is the layering order for alpha.
         if(!batch || batch->Pipeline != quad->Pipeline || batch->Texture.Object != quad->Texture.Object || batch->View != view)
         {
-            batch = &RendererData.Batches[batchCount++];
+            batch = &Renderer2DData.Batches[batchCount++];
             batch->Pipeline = quad->Pipeline;
             batch->Texture = quad->Texture;
             batch->View = view;
@@ -175,28 +173,28 @@ static uint32 D3D11FlushQuads()
         quadVertices[3] = { cornerX[3], cornerY[3], quad->U1, v1, r, g, b, quad->A };
     }
 
-    GpuUnmapBuffer(RendererData.VertexBuffer);
+    GpuUnmapBuffer(Renderer2DData.VertexBuffer);
 
-    GpuSetVertexBuffer(RendererData.VertexBuffer, sizeof(QuadVertex));
-    GpuSetIndexBuffer(RendererData.IndexBuffer, GpuIndexFormat::U16);
-    GpuSetConstantBuffer(0, RendererData.QuadConstantBuffer);
+    GpuSetVertexBuffer(Renderer2DData.VertexBuffer, sizeof(QuadVertex));
+    GpuSetIndexBuffer(Renderer2DData.IndexBuffer, GpuIndexFormat::U16);
+    GpuSetConstantBuffer(0, Renderer2DData.QuadConstantBuffer);
 
-    RendererPipeline boundPipeline = UINT32_MAX;
+    Renderer2DPipeline boundPipeline = UINT32_MAX;
     void* boundTexture = nullptr;
     uint32 boundView = UINT32_MAX;
     bool labeled = GpuMarkersEnabled();
 
     for(uint32 batchIndex = 0; batchIndex < batchCount; ++batchIndex)
     {
-        QuadBatch* current = &RendererData.Batches[batchIndex];
+        QuadBatch* current = &Renderer2DData.Batches[batchIndex];
 
         // NOTE(saeb): An invalid handle falls back to the defaults instead of binding garbage.
-        RendererPipeline pipeline = (current->Pipeline < RendererData.PipelineCount && RendererData.Pipelines[current->Pipeline].Object) ? current->Pipeline : 0;
-        GpuTexture texture = current->Texture.Object ? current->Texture : RendererData.WhiteTexture;
+        Renderer2DPipeline pipeline = (current->Pipeline < Renderer2DData.PipelineCount && Renderer2DData.Pipelines[current->Pipeline].Object) ? current->Pipeline : 0;
+        GpuTexture texture = current->Texture.Object ? current->Texture : Renderer2DData.WhiteTexture;
 
         if(pipeline != boundPipeline)
         {
-            GpuSetPipeline(RendererData.Pipelines[pipeline]);
+            GpuSetPipeline(Renderer2DData.Pipelines[pipeline]);
             boundPipeline = pipeline;
         }
 
@@ -208,11 +206,11 @@ static uint32 D3D11FlushQuads()
 
         if(current->View != boundView)
         {
-            QuadConstants* constants = (QuadConstants*)GpuMapBuffer(RendererData.QuadConstantBuffer);
+            QuadConstants* constants = (QuadConstants*)GpuMapBuffer(Renderer2DData.QuadConstantBuffer);
             if(constants)
             {
                 constants->ViewProjection = views[current->View];
-                GpuUnmapBuffer(RendererData.QuadConstantBuffer);
+                GpuUnmapBuffer(Renderer2DData.QuadConstantBuffer);
             }
             boundView = current->View;
         }
@@ -244,7 +242,7 @@ static uint32 D3D11FlushQuads()
     return(batchCount);
 }
 
-bool D3D11RendererInit(StackAllocator* allocator)
+bool Renderer2DInit(StackAllocator* allocator)
 {
     GpuBufferDesc vertexBufferDesc = {};
     vertexBufferDesc.Type = GpuBufferType::Vertex;
@@ -252,8 +250,8 @@ bool D3D11RendererInit(StackAllocator* allocator)
     vertexBufferDesc.Size = AG_MAX_QUADS * 4 * sizeof(QuadVertex);
     vertexBufferDesc.DebugName = SV8(u8"QuadVertices");
 
-    RendererData.VertexBuffer = GpuCreateBuffer(&vertexBufferDesc);
-    if(!RendererData.VertexBuffer.Object)
+    Renderer2DData.VertexBuffer = GpuCreateBuffer(&vertexBufferDesc);
+    if(!Renderer2DData.VertexBuffer.Object)
     {
         return(false);
     }
@@ -289,32 +287,32 @@ bool D3D11RendererInit(StackAllocator* allocator)
     indexBufferDesc.Data = indices;
     indexBufferDesc.DebugName = SV8(u8"QuadIndices");
 
-    RendererData.IndexBuffer = GpuCreateBuffer(&indexBufferDesc);
+    Renderer2DData.IndexBuffer = GpuCreateBuffer(&indexBufferDesc);
 
     ReleaseFrame(allocator, frameScratch);
 
-    if(!RendererData.IndexBuffer.Object)
+    if(!Renderer2DData.IndexBuffer.Object)
     {
         return(false);
     }
 
     // NOTE(saeb): AG_MAX_QUADS (16384) * 60 bytes = 960 KiB for the quads, 16384 bytes = 16 KiB for their views and 16384 * 20 bytes = 320 KiB for the batches. Sizing the batch array for the worst case (every quad changes state) means no check for running out of batches.
-    RendererData.Quads = (RendererQuad*)Allocate(allocator, Heap::Lower, AG_MAX_QUADS * sizeof(RendererQuad), alignof(RendererQuad));
-    RendererData.QuadViews = (uint8*)Allocate(allocator, Heap::Lower, AG_MAX_QUADS * sizeof(uint8), alignof(uint8));
-    RendererData.Batches = (QuadBatch*)Allocate(allocator, Heap::Lower, AG_MAX_QUADS * sizeof(QuadBatch), alignof(QuadBatch));
-    if(!RendererData.Quads || !RendererData.QuadViews || !RendererData.Batches)
+    Renderer2DData.Quads = (Renderer2DQuad*)Allocate(allocator, Heap::Lower, AG_MAX_QUADS * sizeof(Renderer2DQuad), alignof(Renderer2DQuad));
+    Renderer2DData.QuadViews = (uint8*)Allocate(allocator, Heap::Lower, AG_MAX_QUADS * sizeof(uint8), alignof(uint8));
+    Renderer2DData.Batches = (QuadBatch*)Allocate(allocator, Heap::Lower, AG_MAX_QUADS * sizeof(QuadBatch), alignof(QuadBatch));
+    if(!Renderer2DData.Quads || !Renderer2DData.QuadViews || !Renderer2DData.Batches)
     {
         return(false);
     }
 
-    // NOTE(saeb): Slot 0 is reserved for the default pipeline, which RendererSetDefaultPipeline fills from the cooked shader; created pipelines start at 1.
-    RendererData.PipelineCount = 1;
+    // NOTE(saeb): Slot 0 is reserved for the default pipeline, which Renderer2DSetDefaultPipeline fills from the cooked shader; created pipelines start at 1.
+    Renderer2DData.PipelineCount = 1;
 
     // NOTE(saeb): View 1 starts as the default camera: a zeroed one is centred on the origin, one metre per pixel, zoom 1.
-    RendererData.ViewCameras[1] = {};
-    RendererData.ViewCount = 2;
-    RendererData.WorldView = 1;
-    RendererData.WorldViewUsed = false;
+    Renderer2DData.ViewCameras[1] = {};
+    Renderer2DData.ViewCount = 2;
+    Renderer2DData.WorldView = 1;
+    Renderer2DData.WorldViewUsed = false;
 
     GpuBufferDesc constantBufferDesc = {};
     constantBufferDesc.Type = GpuBufferType::Constant;
@@ -322,8 +320,8 @@ bool D3D11RendererInit(StackAllocator* allocator)
     constantBufferDesc.Size = sizeof(QuadConstants);
     constantBufferDesc.DebugName = SV8(u8"QuadConstants");
 
-    RendererData.QuadConstantBuffer = GpuCreateBuffer(&constantBufferDesc);
-    if(!RendererData.QuadConstantBuffer.Object)
+    Renderer2DData.QuadConstantBuffer = GpuCreateBuffer(&constantBufferDesc);
+    if(!Renderer2DData.QuadConstantBuffer.Object)
     {
         return(false);
     }
@@ -337,8 +335,8 @@ bool D3D11RendererInit(StackAllocator* allocator)
     whiteDesc.Data = &whitePixel;
     whiteDesc.DebugName = SV8(u8"WhiteTexture");
 
-    RendererData.WhiteTexture = GpuCreateTexture(&whiteDesc);
-    if(!RendererData.WhiteTexture.Object)
+    Renderer2DData.WhiteTexture = GpuCreateTexture(&whiteDesc);
+    if(!Renderer2DData.WhiteTexture.Object)
     {
         return(false);
     }
@@ -346,150 +344,128 @@ bool D3D11RendererInit(StackAllocator* allocator)
     return(true);
 }
 
-void D3D11RendererBeginFrame(int32 width, int32 height)
+void Renderer2DEndFrame(bool draw)
 {
-    RendererData.FrameActive = GpuBeginFrame(width, height);
-    if(RendererData.FrameActive)
-    {
-        GpuPassDesc pass = { { 0.529f, 0.808f, 0.922f, 1.0f } };
-        GpuBeginPass(&pass);
-    }
-}
-
-void D3D11RendererEndFrame()
-{
-    // NOTE(saeb): Without the default pipeline (RendererSetDefaultPipeline) there's nothing to draw quads with.
+    // NOTE(saeb): Without the default pipeline (Renderer2DSetDefaultPipeline) there's nothing to draw quads with.
     uint32 drawCalls = 0;
-    if(RendererData.FrameActive && RendererData.Pipelines[0].Object && RendererData.QuadCount > 0)
+    if(draw && Renderer2DData.Pipelines[0].Object && Renderer2DData.QuadCount > 0)
     {
         GpuBeginMarker(SV8(u8"Quads"));
-        drawCalls = D3D11FlushQuads();
+        drawCalls = Renderer2DFlushQuads();
         GpuEndMarker();
     }
 
-    if(RendererData.FrameActive)
-    {
-        GpuEndPass();
-    }
-
-    RendererData.LastFrameStats.Quads = RendererData.QuadCount;
-    RendererData.LastFrameStats.DrawCalls = drawCalls;
-    RendererData.LastFrameStats.DroppedQuads = RendererData.DroppedQuadCount;
+    Renderer2DData.LastFrameStats.Quads = Renderer2DData.QuadCount;
+    Renderer2DData.LastFrameStats.DrawCalls = drawCalls;
+    Renderer2DData.LastFrameStats.DroppedQuads = Renderer2DData.DroppedQuadCount;
 
     // NOTE(saeb): Reset here, not in BeginFrame; BeginFrame can early-out and would leave stale quads behind.
-    RendererData.QuadCount = 0;
-    RendererData.DroppedQuadCount = 0;
-    RendererData.Space = RendererSpace::World;
+    Renderer2DData.QuadCount = 0;
+    Renderer2DData.DroppedQuadCount = 0;
+    Renderer2DData.Space = Renderer2DSpace::World;
 
     // NOTE(saeb): The camera in use at the end of the frame carries over as the next frame's view 1, so a camera set once keeps applying.
-    RendererData.ViewCameras[1] = RendererData.ViewCameras[RendererData.WorldView];
-    RendererData.ViewCount = 2;
-    RendererData.WorldView = 1;
-    RendererData.WorldViewUsed = false;
-
-    GpuPresent((RendererData.Flags & RendererFlags_VSync) != 0);
+    Renderer2DData.ViewCameras[1] = Renderer2DData.ViewCameras[Renderer2DData.WorldView];
+    Renderer2DData.ViewCount = 2;
+    Renderer2DData.WorldView = 1;
+    Renderer2DData.WorldViewUsed = false;
 }
 
-void D3D11RendererShutdown()
+void Renderer2DShutdown()
 {
-    GpuDestroyTexture(RendererData.WhiteTexture);
-    RendererData.WhiteTexture = {};
+    GpuDestroyTexture(Renderer2DData.WhiteTexture);
+    Renderer2DData.WhiteTexture = {};
 
     // NOTE(saeb): Walk the full array, not just up to the count; slot 0 is filled after Init.
     for(uint32 pipelineIndex = 0; pipelineIndex < AG_MAX_PIPELINES; ++pipelineIndex)
     {
-        GpuDestroyPipeline(RendererData.Pipelines[pipelineIndex]);
-        RendererData.Pipelines[pipelineIndex] = {};
+        GpuDestroyPipeline(Renderer2DData.Pipelines[pipelineIndex]);
+        Renderer2DData.Pipelines[pipelineIndex] = {};
     }
-    RendererData.PipelineCount = 0;
+    Renderer2DData.PipelineCount = 0;
 
     // NOTE(saeb): The copy lives in the engine's Lower heap, like the pipeline records.
-    RendererData.QuadVertexShader = nullptr;
-    RendererData.QuadVertexShaderSize = 0;
+    Renderer2DData.QuadVertexShader = nullptr;
+    Renderer2DData.QuadVertexShaderSize = 0;
 
-    GpuDestroyBuffer(RendererData.QuadConstantBuffer);
-    GpuDestroyBuffer(RendererData.IndexBuffer);
-    GpuDestroyBuffer(RendererData.VertexBuffer);
-    RendererData.QuadConstantBuffer = {};
-    RendererData.IndexBuffer = {};
-    RendererData.VertexBuffer = {};
+    GpuDestroyBuffer(Renderer2DData.QuadConstantBuffer);
+    GpuDestroyBuffer(Renderer2DData.IndexBuffer);
+    GpuDestroyBuffer(Renderer2DData.VertexBuffer);
+    Renderer2DData.QuadConstantBuffer = {};
+    Renderer2DData.IndexBuffer = {};
+    Renderer2DData.VertexBuffer = {};
 
     // NOTE(saeb): The quad, view and batch arrays live in the engine's Lower heap; ShutdownStackAllocator frees them.
-    RendererData.Quads = nullptr;
-    RendererData.QuadViews = nullptr;
-    RendererData.Batches = nullptr;
-    RendererData.QuadCount = 0;
+    Renderer2DData.Quads = nullptr;
+    Renderer2DData.QuadViews = nullptr;
+    Renderer2DData.Batches = nullptr;
+    Renderer2DData.QuadCount = 0;
 }
 
-void RendererSetFlags(uint32 rendererFlags)
+void Renderer2DGetStats(Renderer2DStats* stats)
 {
-    RendererData.Flags = rendererFlags;
-}
-
-void RendererGetStats(RendererStats* stats)
-{
-    *stats = RendererData.LastFrameStats;
-    stats->Pipelines = RendererData.PipelineCount;
+    *stats = Renderer2DData.LastFrameStats;
+    stats->Pipelines = Renderer2DData.PipelineCount;
     stats->MaxPipelines = AG_MAX_PIPELINES;
     stats->MaxQuads = AG_MAX_QUADS;
 }
 
-void RendererSetSpace(RendererSpace space)
+void Renderer2DSetSpace(Renderer2DSpace space)
 {
-    RendererData.Space = space;
+    Renderer2DData.Space = space;
 }
 
-RendererSpace RendererGetSpace()
+Renderer2DSpace Renderer2DGetSpace()
 {
-    return(RendererData.Space);
+    return(Renderer2DData.Space);
 }
 
-void RendererPushQuad(const RendererQuad* quad)
+void Renderer2DPushQuad(const Renderer2DQuad* quad)
 {
     // NOTE(saeb): Full; drop the quad rather than overflow. The vertex buffer can't hold more anyway. Counted, so the stats show it.
-    if(RendererData.QuadCount >= AG_MAX_QUADS)
+    if(Renderer2DData.QuadCount >= AG_MAX_QUADS)
     {
-        ++RendererData.DroppedQuadCount;
+        ++Renderer2DData.DroppedQuadCount;
         return;
     }
 
     // NOTE(saeb): Stored as given, in its own units; the view's matrix maps it to the screen at draw time.
-    uint32 index = RendererData.QuadCount++;
-    RendererData.Quads[index] = *quad;
-    if(RendererData.Space == RendererSpace::Screen)
+    uint32 index = Renderer2DData.QuadCount++;
+    Renderer2DData.Quads[index] = *quad;
+    if(Renderer2DData.Space == Renderer2DSpace::Screen)
     {
-        RendererData.QuadViews[index] = AG_VIEW_SCREEN;
+        Renderer2DData.QuadViews[index] = AG_VIEW_SCREEN;
     }
     else
     {
-        RendererData.QuadViews[index] = (uint8)RendererData.WorldView;
-        RendererData.WorldViewUsed = true;
+        Renderer2DData.QuadViews[index] = (uint8)Renderer2DData.WorldView;
+        Renderer2DData.WorldViewUsed = true;
     }
 }
 
-RendererPipeline RendererCreatePipeline(StackAllocator* allocator, const uint8* pixelBytecode, usize size, StringView8 debugName)
+Renderer2DPipeline Renderer2DCreatePipeline(StackAllocator* allocator, const uint8* pixelBytecode, usize size, StringView8 debugName)
 {
     // NOTE(saeb): No default pipeline yet, table full, or creation failed: return the default pipeline, so the quad still draws instead of crashing.
-    if(!RendererData.QuadVertexShader || RendererData.PipelineCount >= AG_MAX_PIPELINES)
+    if(!Renderer2DData.QuadVertexShader || Renderer2DData.PipelineCount >= AG_MAX_PIPELINES)
     {
         return(0);
     }
 
-    GpuPipeline pipeline = RendererCreateQuadPipeline(allocator, pixelBytecode, size, debugName);
+    GpuPipeline pipeline = Renderer2DCreateQuadPipeline(allocator, pixelBytecode, size, debugName);
     if(!pipeline.Object)
     {
         return(0);
     }
 
-    RendererData.Pipelines[RendererData.PipelineCount] = pipeline;
+    Renderer2DData.Pipelines[Renderer2DData.PipelineCount] = pipeline;
 
-    return(RendererData.PipelineCount++);
+    return(Renderer2DData.PipelineCount++);
 }
 
-bool RendererSetDefaultPipeline(StackAllocator* allocator, const uint8* vertexBytecode, usize vertexSize, const uint8* pixelBytecode, usize pixelSize)
+bool Renderer2DSetDefaultPipeline(StackAllocator* allocator, const uint8* vertexBytecode, usize vertexSize, const uint8* pixelBytecode, usize pixelSize)
 {
     // NOTE(saeb): Once only; replacing shaders at runtime (hot reload) would also need to release the old ones.
-    if(RendererData.Pipelines[0].Object || !vertexBytecode || vertexSize == 0)
+    if(Renderer2DData.Pipelines[0].Object || !vertexBytecode || vertexSize == 0)
     {
         return(false);
     }
@@ -508,39 +484,39 @@ bool RendererSetDefaultPipeline(StackAllocator* allocator, const uint8* vertexBy
         vertexCopy[index] = vertexBytecode[index];
     }
 
-    RendererData.QuadVertexShader = vertexCopy;
-    RendererData.QuadVertexShaderSize = vertexSize;
+    Renderer2DData.QuadVertexShader = vertexCopy;
+    Renderer2DData.QuadVertexShaderSize = vertexSize;
 
-    GpuPipeline pipeline = RendererCreateQuadPipeline(allocator, pixelBytecode, pixelSize, SV8(u8"QuadPipeline"));
+    GpuPipeline pipeline = Renderer2DCreateQuadPipeline(allocator, pixelBytecode, pixelSize, SV8(u8"QuadPipeline"));
     if(!pipeline.Object)
     {
-        RendererData.QuadVertexShader = nullptr;
-        RendererData.QuadVertexShaderSize = 0;
+        Renderer2DData.QuadVertexShader = nullptr;
+        Renderer2DData.QuadVertexShaderSize = 0;
         ReleaseFrame(allocator, lowerFrame);
         return(false);
     }
 
-    RendererData.Pipelines[0] = pipeline;
+    Renderer2DData.Pipelines[0] = pipeline;
 
     return(true);
 }
 
-void RendererSetCamera(const Camera* camera)
+void Renderer2DSetCamera(const Camera* camera)
 {
     // NOTE(saeb): Nothing has been drawn with the current camera yet, so replace it rather than add a view: a camera set every frame keeps reusing view 1, and setting one several times before drawing can't fill the table.
-    if(!RendererData.WorldViewUsed)
+    if(!Renderer2DData.WorldViewUsed)
     {
-        RendererData.ViewCameras[RendererData.WorldView] = *camera;
+        Renderer2DData.ViewCameras[Renderer2DData.WorldView] = *camera;
         return;
     }
 
     // NOTE(saeb): Full: keep drawing with the last camera rather than overflow. Sixteen cameras in one frame means something is setting one per object.
-    if(RendererData.ViewCount >= AG_MAX_VIEWS)
+    if(Renderer2DData.ViewCount >= AG_MAX_VIEWS)
     {
         return;
     }
 
-    RendererData.ViewCameras[RendererData.ViewCount] = *camera;
-    RendererData.WorldView = RendererData.ViewCount++;
-    RendererData.WorldViewUsed = false;
+    Renderer2DData.ViewCameras[Renderer2DData.ViewCount] = *camera;
+    Renderer2DData.WorldView = Renderer2DData.ViewCount++;
+    Renderer2DData.WorldViewUsed = false;
 }

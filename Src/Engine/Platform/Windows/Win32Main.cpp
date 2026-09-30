@@ -3,7 +3,7 @@
 #include "Engine/Platform/Windows/Win32Time.h"
 #include "Engine/Asset/Asset.h"
 #include "Engine/Renderer/Internal/GpuInternal.h"
-#include "Engine/Renderer/D3D11/D3D11Renderer.h"
+#include "Engine/Renderer/Internal/RendererInternal.h"
 #include "Engine/Game.h"
 
 #include <SSTL/Core/Utility.h>
@@ -74,11 +74,11 @@ int APIENTRY WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLi
                     } break;
                 }
             }
-            else if(D3D11RendererInit(&EngineMemory))
+            else if(RendererInit(&EngineMemory))
             {
                 // NOTE(saeb): The engine's own shaders: the quad pipeline everything draws with, then the text pipeline fonts draw with (only tried once the first loaded).
                 AssetLoadResult pipelineResult = AssetLoadDefaultPipeline(&EngineMemory, SV8(AG_DEFAULT_PIPELINE_PATH));
-                RendererPipeline textPipeline = 0;
+                Renderer2DPipeline textPipeline = 0;
                 AssetLoadResult textPipelineResult = (pipelineResult == AssetLoadResult::Ok) ? AssetLoadPipeline(&EngineMemory, SV8(AG_TEXT_PIPELINE_PATH), &textPipeline) : AssetLoadResult::Ok;
 
                 if(pipelineResult == AssetLoadResult::Ok && textPipelineResult == AssetLoadResult::Ok)
@@ -105,9 +105,9 @@ int APIENTRY WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLi
                             int32 windowClientAreaWidth, windowClientAreaHeight;
                             WindowGetClientAreaDimensions(&windowClientAreaWidth, &windowClientAreaHeight);
 
-                            D3D11RendererBeginFrame(windowClientAreaWidth, windowClientAreaHeight);
+                            RendererBeginFrame(windowClientAreaWidth, windowClientAreaHeight);
                             GameUpdate(&EngineMemory, Win32TimeTick());
-                            D3D11RendererEndFrame();
+                            RendererEndFrame();
 
                             ReleaseFrame(&EngineMemory, frameScratch);
                         }
@@ -134,7 +134,7 @@ int APIENTRY WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLi
                 Win32ShowStartupError(&EngineMemory, SV8(u8"Couldn't create the renderer's GPU resources."), StringView8{ nullptr, 0 });
             }
 
-            D3D11RendererShutdown();
+            RendererShutdown();
             GpuShutdown();
             Win32WindowShutdown();
         }

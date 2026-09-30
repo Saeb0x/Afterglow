@@ -2,7 +2,7 @@
 
 #include "Engine/Platform/Window.h"
 #include "Engine/Platform/Input.h"
-#include "Engine/Renderer/Renderer.h"
+#include "Engine/Renderer/Renderer2D.h"
 
 #define UI_TITLE_HEIGHT 30.0f
 #define UI_PANEL_MIN_WIDTH 150.0f
@@ -122,7 +122,7 @@ void UIBegin(UIContext* ui, const Font* font)
     ui->ScreenWidth = (real32)windowClientAreaWidth;
     ui->ScreenHeight = (real32)windowClientAreaHeight;
 
-    RendererSetSpace(RendererSpace::Screen); // UI lives in screen pixels, like the mouse
+    Renderer2DSetSpace(Renderer2DSpace::Screen); // UI lives in screen pixels, like the mouse
 }
 
 void UIEnd(UIContext* ui)
@@ -135,7 +135,7 @@ void UIEnd(UIContext* ui)
         ui->Active = 0;
     }
 
-    RendererSetSpace(RendererSpace::World);
+    Renderer2DSetSpace(Renderer2DSpace::World);
 }
 
 void UIPanelBegin(UIContext* ui, UIPanel* panel, StringView8 title)

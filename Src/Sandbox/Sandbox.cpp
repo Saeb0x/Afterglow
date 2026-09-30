@@ -3,6 +3,7 @@
 #include "Engine/Platform/Window.h"
 #include "Engine/Platform/Input.h"
 #include "Engine/Renderer/Renderer.h"
+#include "Engine/Renderer/Renderer2D.h"
 #include "Engine/Renderer/Text.h"
 #include "Engine/Renderer/Camera.h"
 #include "Engine/UI/UI.h"
@@ -27,7 +28,7 @@ bool GameInit(StackAllocator* allocator)
 
 void GameUpdate(StackAllocator* allocator, real64 deltaTime)
 {
-    RendererSetCamera(&WorldCamera);
+    Renderer2DSetCamera(&WorldCamera);
 }
 
 void GameShutdown(StackAllocator* allocator)

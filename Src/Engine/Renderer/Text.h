@@ -1,7 +1,7 @@
 #if !defined(AFTERGLOW_TEXT_H)
 #define AFTERGLOW_TEXT_H
 
-#include "Engine/Renderer/Renderer.h"
+#include "Engine/Renderer/Renderer2D.h"
 
 #include <SSTL/Core/Types.h>
 #include <SSTL/Core/String.h>
@@ -30,7 +30,7 @@ struct Font
 };
 
 // NOTE(saeb): Engine startup only: the signed distance field pipeline every font draws with.
-void TextSetPipeline(RendererPipeline pipeline);
+void TextSetPipeline(Renderer2DPipeline pipeline);
 
 // NOTE(saeb): Draws UTF-8 text with its top-left at (x, y). size is the height of a line's letters (ascent plus descent), in the same units as x and y, so text follows the current space (world or screen) like everything else. '\n' starts a new line; characters the font doesn't have draw as its fallback glyph.
 void TextDraw(const Font* font, real32 x, real32 y, real32 size, real32 r, real32 g, real32 b, real32 a, StringView8 text);

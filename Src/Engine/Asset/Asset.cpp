@@ -130,7 +130,7 @@ static AssetLoadResult AssetCreateDefaultPipeline(StackAllocator* allocator, con
         return(AssetLoadResult::MissingStage);
     }
 
-    if(!RendererSetDefaultPipeline(allocator, payload + shaderHeader->VertexOffset, shaderHeader->VertexSize, payload + shaderHeader->PixelOffset, shaderHeader->PixelSize))
+    if(!Renderer2DSetDefaultPipeline(allocator, payload + shaderHeader->VertexOffset, shaderHeader->VertexSize, payload + shaderHeader->PixelOffset, shaderHeader->PixelSize))
     {
         return(AssetLoadResult::RendererFailed);
     }
@@ -138,7 +138,7 @@ static AssetLoadResult AssetCreateDefaultPipeline(StackAllocator* allocator, con
     return(AssetLoadResult::Ok);
 }
 
-static AssetLoadResult AssetCreatePipeline(StackAllocator* allocator, const uint8* payload, uint64 payloadSize, StringView8 path, RendererPipeline* pipeline)
+static AssetLoadResult AssetCreatePipeline(StackAllocator* allocator, const uint8* payload, uint64 payloadSize, StringView8 path, Renderer2DPipeline* pipeline)
 {
     const AssetShaderHeader* shaderHeader = nullptr;
     AssetLoadResult result = AssetValidateShader(payload, payloadSize, &shaderHeader);
@@ -152,7 +152,7 @@ static AssetLoadResult AssetCreatePipeline(StackAllocator* allocator, const uint
         return(AssetLoadResult::MissingStage);
     }
 
-    RendererPipeline handle = RendererCreatePipeline(allocator, payload + shaderHeader->PixelOffset, shaderHeader->PixelSize, path);
+    Renderer2DPipeline handle = Renderer2DCreatePipeline(allocator, payload + shaderHeader->PixelOffset, shaderHeader->PixelSize, path);
     if(handle == 0)
     {
         return(AssetLoadResult::RendererFailed);
@@ -321,7 +321,7 @@ AssetLoadResult AssetLoadDefaultPipeline(StackAllocator* allocator, StringView8 
     return(result);
 }
 
-AssetLoadResult AssetLoadPipeline(StackAllocator* allocator, StringView8 path, RendererPipeline* pipeline)
+AssetLoadResult AssetLoadPipeline(StackAllocator* allocator, StringView8 path, Renderer2DPipeline* pipeline)
 {
     *pipeline = 0;
 

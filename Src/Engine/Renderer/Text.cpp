@@ -1,8 +1,8 @@
 #include "Engine/Renderer/Text.h"
 
-static RendererPipeline TextPipeline;
+static Renderer2DPipeline TextPipeline;
 
-void TextSetPipeline(RendererPipeline pipeline)
+void TextSetPipeline(Renderer2DPipeline pipeline)
 {
     TextPipeline = pipeline;
 }
@@ -65,7 +65,7 @@ void TextDraw(const Font* font, real32 x, real32 y, real32 size, real32 r, real3
     real32 baseline = y + font->Ascent * scale;
 
     // NOTE(saeb): In screen space one unit is one pixel, so small text is snapped to the pixel grid: each glyph starts on a whole pixel horizontally, which keeps stems crisp, and each line's baseline is snapped once, so every glyph on the line sits on the same pixel row. Rounding each glyph's top instead would scatter the baseline, since glyph tops sit at different fractions of a pixel. World space isn't snapped, so moving game text stays smooth.
-    bool snap = (RendererGetSpace() == RendererSpace::Screen);
+    bool snap = (Renderer2DGetSpace() == Renderer2DSpace::Screen);
 
     for(usize index = 0; index < text.Length;)
     {
@@ -92,7 +92,7 @@ void TextDraw(const Font* font, real32 x, real32 y, real32 size, real32 r, real3
                 glyphBaseline = TextRoundToPixel(baseline);
             }
 
-            RendererQuad quad = {};
+            Renderer2DQuad quad = {};
             quad.X = glyphX;
             quad.Y = glyphBaseline + glyph->OffsetY * scale;
             quad.Width = glyph->Width * scale;
@@ -102,7 +102,7 @@ void TextDraw(const Font* font, real32 x, real32 y, real32 size, real32 r, real3
             quad.R = r; quad.G = g; quad.B = b; quad.A = a;
             quad.Texture = font->Atlas;
             quad.Pipeline = TextPipeline;
-            RendererPushQuad(&quad);
+            Renderer2DPushQuad(&quad);
         }
 
         penX += glyph->Advance * scale;
@@ -117,14 +117,14 @@ void TextDrawRect(const Font* font, real32 x, real32 y, real32 width, real32 hei
     }
 
     // NOTE(saeb): All four corners sample the same fully-inside point, so the shader's coverage is 1 everywhere and the rect is just its colour.
-    RendererQuad quad = {};
+    Renderer2DQuad quad = {};
     quad.X = x; quad.Y = y; quad.Width = width; quad.Height = height;
     quad.U0 = font->SolidU; quad.V0 = font->SolidV;
     quad.U1 = font->SolidU; quad.V1 = font->SolidV;
     quad.R = r; quad.G = g; quad.B = b; quad.A = a;
     quad.Texture = font->Atlas;
     quad.Pipeline = TextPipeline;
-    RendererPushQuad(&quad);
+    Renderer2DPushQuad(&quad);
 }
 
 void TextMeasure(const Font* font, real32 size, StringView8 text, real32* width, real32* height)

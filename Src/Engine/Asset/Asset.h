@@ -5,7 +5,7 @@
 #include <SSTL/Core/String.h>
 #include <SSTL/Memory/StackAllocator.h>
 
-#include "Engine/Renderer/Renderer.h"
+#include "Engine/Renderer/Renderer2D.h"
 #include "Engine/Renderer/Text.h"
 
 enum class AssetLoadResult : uint8
@@ -28,7 +28,7 @@ AssetLoadResult AssetLoadTexture(StackAllocator* allocator, StringView8 path, Gp
 AssetLoadResult AssetLoadDefaultPipeline(StackAllocator* allocator, StringView8 path);
 
 // NOTE(saeb): Loads a cooked .aga shader and creates a quad pipeline from its PSMain, which (for now) must take the default quad vertex shader's outputs (SV_Position, TEXCOORD, COLOR). A VSMain in the file is validated but not used yet; all quads share the renderer's vertex shader. On any failure, *pipeline is 0 (the default pipeline). Same memory rules as AssetLoadTexture.
-AssetLoadResult AssetLoadPipeline(StackAllocator* allocator, StringView8 path, RendererPipeline* pipeline);
+AssetLoadResult AssetLoadPipeline(StackAllocator* allocator, StringView8 path, Renderer2DPipeline* pipeline);
 
 // NOTE(saeb): Loads a cooked .aga font: its atlas becomes a GPU texture, and its glyph table is copied into the Lower heap, where it stays for the rest of the game (take a Lower frame first to free it with a level). On any failure, *font is zeroed, which TextDraw treats as "draw nothing", and the allocator is left exactly as it was. The file itself is read into Upper heap scratch and released before returning.
 AssetLoadResult AssetLoadFont(StackAllocator* allocator, StringView8 path, Font* font);
