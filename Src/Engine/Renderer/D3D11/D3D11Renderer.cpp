@@ -1,5 +1,7 @@
 #include "D3D11Renderer.h"
+#include "D3D11Gpu.h"
 #include "Engine/Renderer/Renderer.h"
+#include "Engine/Renderer/Gpu.h"
 
 #include <SSTL/Core/Config.h>
 #include <SSTL/Core/Utility.h>
@@ -8,7 +10,6 @@
 
 #include <d3d11.h>
 #include <d3d11_1.h>
-#include <dxgi1_6.h>
 
 #include <DirectXMath.h>
 
@@ -52,20 +53,12 @@ SSTL_ASSERT_STATIC_MSG(sizeof(QuadConstants) % 16 == 0, "Afterglow: Constant buf
 
 struct Renderer
 {
-    IDXGIFactory2* Factory;
-    IDXGIAdapter1* Adapter;
-    ID3D11Device* Device;
-    ID3D11DeviceContext* Context;
-    ID3DUserDefinedAnnotation* Annotation;
-    IDXGISwapChain1* SwapChain;
-    int32 BackBufferWidth, BackBufferHeight;
+    bool FrameActive;
     RendererSpace Space;
     Camera ViewCameras[AG_MAX_VIEWS]; // This frame's cameras by view; [0] is the screen, which needs none
     uint32 ViewCount;
     uint32 WorldView; // The view world quads are pushed under: the latest camera
     bool WorldViewUsed; // A world quad has been pushed under WorldView, so a new camera needs a new view
-    bool TearingSupported;
-    ID3D11RenderTargetView* RenderTargetView;
     ID3D11Buffer* VertexBuffer;
     ID3D11Buffer* IndexBuffer;
     RendererQuad* Quads;
@@ -87,33 +80,6 @@ struct Renderer
     uint32 Flags;    
 };
 static Renderer RendererData;
-
-// NOTE(saeb): Shows up in RenderDoc / PIX and in debug-layer messages, including the live-object report at shutdown.
-static void D3D11SetName(ID3D11DeviceChild* object, StringView8 name)
-{
-    if(!object || !name.Data || name.Length == 0)
-    {
-        return;
-    }
-
-    object->SetPrivateData(WKPDID_D3DDebugObjectName, (UINT)name.Length, name.Data);
-}
-
-static void D3D11BeginEvent(const wchar_t* name)
-{
-    if(RendererData.Annotation)
-    {
-        RendererData.Annotation->BeginEvent(name);
-    }
-}
-
-static void D3D11EndEvent()
-{
-    if(RendererData.Annotation)
-    {
-        RendererData.Annotation->EndEvent();
-    }
-}
 
 // NOTE(saeb): Every D3D11 shader is a DXBC container: "DXBC", a 16-byte checksum, a version, then its total size at byte 24. Checking the magic and size rejects truncated or garbage bytecode quietly; with the debug layer set to break on errors, passing it to D3D would stop the program instead. A flipped bit inside otherwise valid bytecode still reaches D3D's checksum.
 static bool D3D11IsBytecodeValid(const uint8* bytecode, usize size)
@@ -176,13 +142,15 @@ static bool D3D11CreateTexture(uint32 width, uint32 height, RendererTextureForma
     textureData.pSysMem = pixels;
     textureData.SysMemPitch = width * bytesPerPixel;
 
+    ID3D11Device* device = D3D11GpuGetDevice();
+
     ID3D11Texture2D* texture = nullptr;
-    if(FAILED(RendererData.Device->CreateTexture2D(&textureDesc, &textureData, &texture)))
+    if(FAILED(device->CreateTexture2D(&textureDesc, &textureData, &texture)))
     {
         return(false);
     }
 
-    HRESULT viewResult = RendererData.Device->CreateShaderResourceView(texture, nullptr, view);
+    HRESULT viewResult = device->CreateShaderResourceView(texture, nullptr, view);
 
     D3D11SetName(texture, name);
     if(SUCCEEDED(viewResult))
@@ -197,18 +165,24 @@ static bool D3D11CreateTexture(uint32 width, uint32 height, RendererTextureForma
 
 static uint32 D3D11FlushQuads()
 {
+    ID3D11DeviceContext* context = D3D11GpuGetContext();
+    ID3DUserDefinedAnnotation* annotation = D3D11GpuGetAnnotation();
+
     D3D11_MAPPED_SUBRESOURCE mapped;
-    if(FAILED(RendererData.Context->Map(RendererData.VertexBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped)))
+    if(FAILED(context->Map(RendererData.VertexBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped)))
     {
         return(0);
     }
 
+    int32 backBufferWidth, backBufferHeight;
+    GpuGetBackBufferSize(&backBufferWidth, &backBufferHeight);
+
     // NOTE(saeb): Built at draw time from the final back buffer size. The screen maps pixels with y down (the larger y is "bottom"); each camera maps world metres with y up.
     DirectX::XMFLOAT4X4 views[AG_MAX_VIEWS];
-    DirectX::XMStoreFloat4x4(&views[AG_VIEW_SCREEN], DirectX::XMMatrixOrthographicOffCenterLH(0.0f, (real32)RendererData.BackBufferWidth, (real32)RendererData.BackBufferHeight, 0.0f, 0.0f, 1.0f));
+    DirectX::XMStoreFloat4x4(&views[AG_VIEW_SCREEN], DirectX::XMMatrixOrthographicOffCenterLH(0.0f, (real32)backBufferWidth, (real32)backBufferHeight, 0.0f, 0.0f, 1.0f));
     for(uint32 view = 1; view < RendererData.ViewCount; ++view)
     {
-        DirectX::XMStoreFloat4x4(&views[view], CameraGetViewProjection(&RendererData.ViewCameras[view], RendererData.BackBufferWidth, RendererData.BackBufferHeight));
+        DirectX::XMStoreFloat4x4(&views[view], CameraGetViewProjection(&RendererData.ViewCameras[view], backBufferWidth, backBufferHeight));
     }
 
     QuadVertex* vertices = (QuadVertex*)mapped.pData;
@@ -281,20 +255,20 @@ static uint32 D3D11FlushQuads()
         quadVertices[3] = { cornerX[3], cornerY[3], quad->U1, v1, r, g, b, quad->A };
     }
 
-    RendererData.Context->Unmap(RendererData.VertexBuffer, 0);
+    context->Unmap(RendererData.VertexBuffer, 0);
 
     UINT stride = sizeof(QuadVertex);
     UINT offset = 0;
-    RendererData.Context->IASetVertexBuffers(0, 1, &RendererData.VertexBuffer, &stride, &offset);
-    RendererData.Context->IASetIndexBuffer(RendererData.IndexBuffer, DXGI_FORMAT_R16_UINT, 0);
-    RendererData.Context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    context->IASetVertexBuffers(0, 1, &RendererData.VertexBuffer, &stride, &offset);
+    context->IASetIndexBuffer(RendererData.IndexBuffer, DXGI_FORMAT_R16_UINT, 0);
+    context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-    RendererData.Context->IASetInputLayout(RendererData.QuadInputLayout);
-    RendererData.Context->VSSetShader(RendererData.QuadVertexShader, nullptr, 0);
-    RendererData.Context->VSSetConstantBuffers(0, 1, &RendererData.QuadConstantBuffer);
-    RendererData.Context->RSSetState(RendererData.RasterizerState);
-    RendererData.Context->PSSetSamplers(0, 1, &RendererData.SamplerState);
-    RendererData.Context->OMSetBlendState(RendererData.BlendState, nullptr, 0xFFFFFFFF);
+    context->IASetInputLayout(RendererData.QuadInputLayout);
+    context->VSSetShader(RendererData.QuadVertexShader, nullptr, 0);
+    context->VSSetConstantBuffers(0, 1, &RendererData.QuadConstantBuffer);
+    context->RSSetState(RendererData.RasterizerState);
+    context->PSSetSamplers(0, 1, &RendererData.SamplerState);
+    context->OMSetBlendState(RendererData.BlendState, nullptr, 0xFFFFFFFF);
 
     RendererPipeline boundPipeline = UINT32_MAX;
     RendererTexture boundTexture = UINT32_MAX;
@@ -310,13 +284,13 @@ static uint32 D3D11FlushQuads()
 
         if(pipeline != boundPipeline)
         {
-            RendererData.Context->PSSetShader(RendererData.Pipelines[pipeline].PixelShader, nullptr, 0);
+            context->PSSetShader(RendererData.Pipelines[pipeline].PixelShader, nullptr, 0);
             boundPipeline = pipeline;
         }
 
         if(texture != boundTexture)
         {
-            RendererData.Context->PSSetShaderResources(0, 1, &RendererData.Textures[texture]);
+            context->PSSetShaderResources(0, 1, &RendererData.Textures[texture]);
             boundTexture = texture;
         }
 
@@ -324,154 +298,33 @@ static uint32 D3D11FlushQuads()
         {
             QuadConstants constants;
             constants.ViewProjection = views[current->View];
-            RendererData.Context->UpdateSubresource(RendererData.QuadConstantBuffer, 0, nullptr, &constants, 0, 0);
+            context->UpdateSubresource(RendererData.QuadConstantBuffer, 0, nullptr, &constants, 0, 0);
             boundView = current->View;
         }
 
         // NOTE(saeb): One event per batch, so RenderDoc / PIX show why batches split. GetStatus() is TRUE only while a capture tool is attached, so normal runs never format the label.
-        bool labeled = RendererData.Annotation && RendererData.Annotation->GetStatus();
+        bool labeled = annotation && annotation->GetStatus();
         if(labeled)
         {
             wchar_t label[128];
             wsprintfW(label, L"Batch %u: %u quads, texture %u, pipeline %u, view %u", batchIndex, current->QuadCount, texture, pipeline, current->View);
-            RendererData.Annotation->BeginEvent(label);
+            annotation->BeginEvent(label);
         }
 
-        RendererData.Context->DrawIndexed(current->QuadCount * 6, current->FirstQuad * 6, 0);
+        context->DrawIndexed(current->QuadCount * 6, current->FirstQuad * 6, 0);
 
         if(labeled)
         {
-            RendererData.Annotation->EndEvent();
+            annotation->EndEvent();
         }
     }
 
     return(batchCount);
 }
 
-bool D3D11RendererInit(StackAllocator* allocator, HWND windowHandle)
+bool D3D11RendererInit(StackAllocator* allocator)
 {
-    // NOTE(saeb): Factory first, so we choose the adapter; the swap chain later comes from this same factory, which is the adapter's parent (a mismatched factory fails).
-    UINT factoryFlags = 0;
-#if SSTL_DEBUG
-    factoryFlags |= DXGI_CREATE_FACTORY_DEBUG;
-#endif
-
-    if(FAILED(CreateDXGIFactory2(factoryFlags, IID_PPV_ARGS(&RendererData.Factory))))
-    {
-        // NOTE(saeb): The debug factory needs the optional "Graphics Tools" Windows feature; fall back to a normal one.
-        if(FAILED(CreateDXGIFactory2(0, IID_PPV_ARGS(&RendererData.Factory))))
-        {
-            return(false);
-        }
-    }
-
-    // NOTE(saeb): IDXGIFactory6 (minimum Windows 10, version 1803) can order adapters so the high-performance GPU comes first; older systems fall back to plain enumeration order.
-    IDXGIFactory6* factory6 = nullptr;
-    RendererData.Factory->QueryInterface(IID_PPV_ARGS(&factory6));
-
-    for(UINT adapterIndex = 0; ; ++adapterIndex)
-    {
-        HRESULT result;
-        if(factory6)
-        {
-            result = factory6->EnumAdapterByGpuPreference(adapterIndex, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE, IID_PPV_ARGS(&RendererData.Adapter));
-        }
-        else
-        {
-            result = RendererData.Factory->EnumAdapters1(adapterIndex, &RendererData.Adapter);
-        }
-
-        if(FAILED(result))
-        {
-            RendererData.Adapter = nullptr;
-            break;
-        }
-
-        // NOTE(saeb): Skip the Microsoft Basic Render Driver (CPU rasterizer); it's always enumerated but never what we want.
-        DXGI_ADAPTER_DESC1 adapterDesc;
-        RendererData.Adapter->GetDesc1(&adapterDesc);
-
-        if(!(adapterDesc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE))
-        {
-            OutputDebugStringW(L"[Afterglow] GPU: ");
-            OutputDebugStringW(adapterDesc.Description);
-            OutputDebugStringW(L"\n");
-            break;
-        }
-
-        RendererData.Adapter->Release();
-        RendererData.Adapter = nullptr;
-    }
-
-    if(factory6)
-    {
-        factory6->Release();
-    }
-
-    if(!RendererData.Adapter)
-    {
-        return(false);
-    }
-
-    UINT deviceFlags = 0;
-#if SSTL_DEBUG
-    deviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
-#endif
-
-    D3D_FEATURE_LEVEL featureLevels[] = { D3D_FEATURE_LEVEL_11_0 };
-
-    // NOTE(saeb): Driver type must be UNKNOWN when passing an explicit adapter; HARDWARE is only for a null adapter.
-    HRESULT result = D3D11CreateDevice(RendererData.Adapter,
-                                       D3D_DRIVER_TYPE_UNKNOWN,
-                                       nullptr,
-                                       deviceFlags,
-                                       featureLevels,
-                                       SSTL_ARRAYCOUNT(featureLevels),
-                                       D3D11_SDK_VERSION,
-                                       &RendererData.Device,
-                                       nullptr,
-                                       &RendererData.Context);
-#if SSTL_DEBUG
-    // NOTE(saeb): The debug layer ships with the optional "Graphics Tools" Windows feature; run without it rather than fail.
-    if(result == DXGI_ERROR_SDK_COMPONENT_MISSING)
-    {
-        OutputDebugStringW(L"[Afterglow] D3D11 debug layer not installed (Settings > Optional features > Graphics Tools).\n");
-        deviceFlags &= ~D3D11_CREATE_DEVICE_DEBUG;
-        result = D3D11CreateDevice(RendererData.Adapter,
-                                   D3D_DRIVER_TYPE_UNKNOWN,
-                                   nullptr,
-                                   deviceFlags,
-                                   featureLevels,
-                                   SSTL_ARRAYCOUNT(featureLevels),
-                                   D3D11_SDK_VERSION,
-                                   &RendererData.Device,
-                                   nullptr,
-                                   &RendererData.Context);
-    }
-#endif
-
-    if(FAILED(result))
-    {
-        return(false);
-    }
-
-    // NOTE(saeb): Optional; groups calls in RenderDoc / PIX. A failure just means no markers.
-    RendererData.Context->QueryInterface(IID_PPV_ARGS(&RendererData.Annotation));
-
-#if SSTL_DEBUG
-    // NOTE(saeb): Stop in the debugger on the exact API call that misuses D3D, instead of finding out from a black screen.
-    ID3D11InfoQueue* infoQueue = nullptr;
-    if(SUCCEEDED(RendererData.Device->QueryInterface(IID_PPV_ARGS(&infoQueue))))
-    {
-        if(IsDebuggerPresent())
-        {
-            infoQueue->SetBreakOnSeverity(D3D11_MESSAGE_SEVERITY_CORRUPTION, TRUE);
-            infoQueue->SetBreakOnSeverity(D3D11_MESSAGE_SEVERITY_ERROR, TRUE);
-        }
-
-        infoQueue->Release();
-    }
-#endif
+    ID3D11Device* device = D3D11GpuGetDevice();
 
     D3D11_BUFFER_DESC vertexBufferDesc = {};
     vertexBufferDesc.ByteWidth = AG_MAX_QUADS * 4 * sizeof(QuadVertex);
@@ -479,7 +332,7 @@ bool D3D11RendererInit(StackAllocator* allocator, HWND windowHandle)
     vertexBufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
     vertexBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 
-    if(FAILED(RendererData.Device->CreateBuffer(&vertexBufferDesc, nullptr, &RendererData.VertexBuffer)))
+    if(FAILED(device->CreateBuffer(&vertexBufferDesc, nullptr, &RendererData.VertexBuffer)))
     {
         return(false);
     }
@@ -518,7 +371,7 @@ bool D3D11RendererInit(StackAllocator* allocator, HWND windowHandle)
     D3D11_SUBRESOURCE_DATA indexData = {};
     indexData.pSysMem = indices;
 
-    HRESULT indexResult = RendererData.Device->CreateBuffer(&indexBufferDesc, &indexData, &RendererData.IndexBuffer);
+    HRESULT indexResult = device->CreateBuffer(&indexBufferDesc, &indexData, &RendererData.IndexBuffer);
 
     ReleaseFrame(allocator, frameScratch);
 
@@ -552,7 +405,7 @@ bool D3D11RendererInit(StackAllocator* allocator, HWND windowHandle)
     constantBufferDesc.Usage = D3D11_USAGE_DEFAULT;
     constantBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
 
-    if(FAILED(RendererData.Device->CreateBuffer(&constantBufferDesc, nullptr, &RendererData.QuadConstantBuffer)))
+    if(FAILED(device->CreateBuffer(&constantBufferDesc, nullptr, &RendererData.QuadConstantBuffer)))
     {
         return(false);
     }
@@ -570,7 +423,7 @@ bool D3D11RendererInit(StackAllocator* allocator, HWND windowHandle)
     blendDesc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
     blendDesc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
 
-    if(FAILED(RendererData.Device->CreateBlendState(&blendDesc, &RendererData.BlendState)))
+    if(FAILED(device->CreateBlendState(&blendDesc, &RendererData.BlendState)))
     {
         return(false);
     }
@@ -582,7 +435,7 @@ bool D3D11RendererInit(StackAllocator* allocator, HWND windowHandle)
     rasterizerDesc.CullMode = D3D11_CULL_NONE; // A negative width/height flips winding; still draw it
     rasterizerDesc.DepthClipEnable = TRUE; // D3D11's default is TRUE, but a zeroed desc makes it FALSE
 
-    if(FAILED(RendererData.Device->CreateRasterizerState(&rasterizerDesc, &RendererData.RasterizerState)))
+    if(FAILED(device->CreateRasterizerState(&rasterizerDesc, &RendererData.RasterizerState)))
     {
         return(false);
     }
@@ -597,7 +450,7 @@ bool D3D11RendererInit(StackAllocator* allocator, HWND windowHandle)
     samplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
     samplerDesc.MaxLOD = D3D11_FLOAT32_MAX; // Zeroed would lock every texture to mip 0
 
-    if(FAILED(RendererData.Device->CreateSamplerState(&samplerDesc, &RendererData.SamplerState)))
+    if(FAILED(device->CreateSamplerState(&samplerDesc, &RendererData.SamplerState)))
     {
         return(false);
     }
@@ -612,128 +465,33 @@ bool D3D11RendererInit(StackAllocator* allocator, HWND windowHandle)
     }
     RendererData.TextureCount = 1;
 
-    // NOTE(saeb): Tearing is what lets VSync-off actually present immediately on flip-model swap chains (needs Windows 10 + driver support).
-    IDXGIFactory5* factory5 = nullptr;
-    if(SUCCEEDED(RendererData.Factory->QueryInterface(IID_PPV_ARGS(&factory5))))
-    {
-        BOOL allowTearing = FALSE;
-
-        if(SUCCEEDED(factory5->CheckFeatureSupport(DXGI_FEATURE_PRESENT_ALLOW_TEARING, &allowTearing, sizeof(allowTearing))))
-        {
-            RendererData.TearingSupported = (allowTearing == TRUE);
-        }
-
-        factory5->Release();
-    }
-
-    DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
-    swapChainDesc.Width = 0;
-    swapChainDesc.Height = 0;
-    swapChainDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
-    swapChainDesc.SampleDesc.Count = 1; // Flip model can't be multisampled; MSAA would be a separate target resolved into this one
-    swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-    swapChainDesc.BufferCount = 2; // Flip model minimum
-    swapChainDesc.Scaling = DXGI_SCALING_STRETCH;
-    swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
-    swapChainDesc.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
-    swapChainDesc.Flags = RendererData.TearingSupported ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0;
-
-    if(FAILED(RendererData.Factory->CreateSwapChainForHwnd(RendererData.Device, windowHandle, &swapChainDesc, nullptr, nullptr, &RendererData.SwapChain)))
-    {
-        return(false);
-    }
-
-    // NOTE(saeb): Fullscreen is the window layer's job (WindowFlags_Fullscreen); stop DXGI from hijacking Alt+Enter.
-    RendererData.Factory->MakeWindowAssociation(windowHandle, DXGI_MWA_NO_ALT_ENTER);
-
-    RendererData.SwapChain->GetDesc1(&swapChainDesc);
-    RendererData.BackBufferWidth = (int32)swapChainDesc.Width;
-    RendererData.BackBufferHeight = (int32)swapChainDesc.Height;
-
-    ID3D11Texture2D* backBuffer = nullptr;
-    if(FAILED(RendererData.SwapChain->GetBuffer(0, IID_PPV_ARGS(&backBuffer))))
-    {
-        return(false);
-    }
-
-    if(FAILED(RendererData.Device->CreateRenderTargetView(backBuffer, nullptr, &RendererData.RenderTargetView)))
-    {
-        backBuffer->Release();
-        return(false);
-    }
-
-    D3D11SetName(backBuffer, SV8(u8"BackBuffer"));
-    D3D11SetName(RendererData.RenderTargetView, SV8(u8"BackBufferRTV"));
-
-    backBuffer->Release();
-
     return(true);
 }
 
 void D3D11RendererBeginFrame(int32 width, int32 height)
 {
-    if((width != RendererData.BackBufferWidth || height != RendererData.BackBufferHeight) && width > 0 && height > 0)
+    RendererData.FrameActive = GpuBeginFrame(width, height);
+    if(RendererData.FrameActive)
     {
-        // NOTE(saeb): ResizeBuffers fails while anything still references the old back buffer, so unbind and release the view first.
-        RendererData.Context->OMSetRenderTargets(0, nullptr, nullptr);
-        RendererData.RenderTargetView->Release();
-        RendererData.RenderTargetView = nullptr;
-
-        RendererData.SwapChain->ResizeBuffers(0, (UINT)width, (UINT)height, DXGI_FORMAT_UNKNOWN, RendererData.TearingSupported ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0);
-
-        ID3D11Texture2D* backBuffer = nullptr;
-        if(FAILED(RendererData.SwapChain->GetBuffer(0, IID_PPV_ARGS(&backBuffer))))
-        {
-            return;
-        }
-
-        if(FAILED(RendererData.Device->CreateRenderTargetView(backBuffer, nullptr, &RendererData.RenderTargetView)))
-        {
-            backBuffer->Release();
-            return;
-        }
-
-        D3D11SetName(backBuffer, SV8(u8"BackBuffer"));
-        D3D11SetName(RendererData.RenderTargetView, SV8(u8"BackBufferRTV"));
-
-        backBuffer->Release();
-
-        RendererData.BackBufferWidth = width;
-        RendererData.BackBufferHeight = height;
-        }
-
-    // NOTE(saeb): A failed resize leaves no view to draw into; skip the frame until device-loss handling exists.
-    if(!RendererData.RenderTargetView)
-    {
-        return;
+        GpuPassDesc pass = { { 0.529f, 0.808f, 0.922f, 1.0f } };
+        GpuBeginPass(&pass);
     }
-
-    // NOTE(saeb): Flip model unbinds the render target on every Present, so bind it every frame.
-    RendererData.Context->OMSetRenderTargets(1, &RendererData.RenderTargetView, nullptr);
-
-    D3D11_VIEWPORT viewport = {};
-    viewport.Width = (real32)RendererData.BackBufferWidth;
-    viewport.Height = (real32)RendererData.BackBufferHeight;
-    viewport.MaxDepth = 1.0f;
-
-    RendererData.Context->RSSetViewports(1, &viewport);
-
-    real32 clearColor[4] = { 0.529f, 0.808f, 0.922f, 1.0f };
-
-    D3D11BeginEvent(L"Clear");
-    RendererData.Context->ClearRenderTargetView(RendererData.RenderTargetView, clearColor);
-    D3D11EndEvent();
 }
 
 void D3D11RendererEndFrame()
 {
     // NOTE(saeb): The input layout is the last object RendererSetDefaultPipeline creates; without it there's nothing to draw quads with.
     uint32 drawCalls = 0;
-    if(RendererData.RenderTargetView && RendererData.QuadInputLayout && RendererData.QuadCount > 0)
+    if(RendererData.FrameActive && RendererData.QuadInputLayout && RendererData.QuadCount > 0)
     {
-        D3D11BeginEvent(L"Quads");
+        GpuBeginMarker(SV8(u8"Quads"));
         drawCalls = D3D11FlushQuads();
-        D3D11EndEvent();
+        GpuEndMarker();
+    }
+
+    if(RendererData.FrameActive)
+    {
+        GpuEndPass();
     }
 
     RendererData.LastFrameStats.Quads = RendererData.QuadCount;
@@ -751,30 +509,11 @@ void D3D11RendererEndFrame()
     RendererData.WorldView = 1;
     RendererData.WorldViewUsed = false;
 
-    if(RendererData.Flags & RendererFlags_VSync)
-    {
-        RendererData.SwapChain->Present(1, 0);
-    }
-    else
-    {
-        RendererData.SwapChain->Present(0, RendererData.TearingSupported ? DXGI_PRESENT_ALLOW_TEARING : 0);
-    }
+    GpuPresent((RendererData.Flags & RendererFlags_VSync) != 0);
 }
 
 void D3D11RendererShutdown()
 {
-    if(RendererData.Context)
-    {
-        RendererData.Context->ClearState();
-        RendererData.Context->Flush();
-    }
-
-    if(RendererData.RenderTargetView)
-    {
-        RendererData.RenderTargetView->Release();
-        RendererData.RenderTargetView = nullptr;
-    }
-
     // NOTE(saeb): Walk the full arrays, not just up to the counts; a failed Init can create an object before its count is set.
     for(uint32 textureIndex = 0; textureIndex < AG_MAX_TEXTURES; ++textureIndex)
     {
@@ -849,52 +588,6 @@ void D3D11RendererShutdown()
     RendererData.QuadViews = nullptr;
     RendererData.Batches = nullptr;
     RendererData.QuadCount = 0;
-
-    if(RendererData.SwapChain)
-    {
-        RendererData.SwapChain->Release();
-        RendererData.SwapChain = nullptr;
-    }
-
-    if(RendererData.Annotation)
-    {
-        RendererData.Annotation->Release();
-        RendererData.Annotation = nullptr;
-    }
-
-    if(RendererData.Context)
-    {
-        RendererData.Context->Release();
-        RendererData.Context = nullptr;
-    }
-
-#if SSTL_DEBUG
-    // NOTE(saeb): Anything listed here besides the device itself is a leaked COM reference.
-    ID3D11Debug* debug = nullptr;
-    if(RendererData.Device && SUCCEEDED(RendererData.Device->QueryInterface(IID_PPV_ARGS(&debug))))
-    {
-        debug->ReportLiveDeviceObjects(D3D11_RLDO_DETAIL | D3D11_RLDO_IGNORE_INTERNAL);
-        debug->Release();
-    }
-#endif
-
-    if(RendererData.Device)
-    {
-        RendererData.Device->Release();
-        RendererData.Device = nullptr;
-    }
-
-    if(RendererData.Adapter)
-    {
-        RendererData.Adapter->Release();
-        RendererData.Adapter = nullptr;
-    }
-
-    if(RendererData.Factory)
-    {
-        RendererData.Factory->Release();
-        RendererData.Factory = nullptr;
-    }
 }
 
 void RendererSetFlags(uint32 rendererFlags)
@@ -948,7 +641,7 @@ void RendererPushQuad(const RendererQuad* quad)
 RendererTexture RendererCreateTexture(uint32 width, uint32 height, RendererTextureFormat format, const uint8* pixels, StringView8 debugName)
 {
     // NOTE(saeb): Not initialized, table full, or creation failed: return the white texture, so the quad still draws instead of crashing.
-    if(!RendererData.Device || RendererData.TextureCount >= AG_MAX_TEXTURES)
+    if(!D3D11GpuGetDevice() || RendererData.TextureCount >= AG_MAX_TEXTURES)
     {
         return(0);
     }
@@ -964,14 +657,15 @@ RendererTexture RendererCreateTexture(uint32 width, uint32 height, RendererTextu
 RendererPipeline RendererCreatePipeline(const uint8* pixelBytecode, usize size, StringView8 debugName)
 {
     // NOTE(saeb): Not initialized, table full, or creation failed: return the default pipeline, so the quad still draws instead of crashing.
-    if(!RendererData.Device || !D3D11IsBytecodeValid(pixelBytecode, size) || RendererData.PipelineCount >= AG_MAX_PIPELINES)
+    ID3D11Device* device = D3D11GpuGetDevice();
+    if(!device || !D3D11IsBytecodeValid(pixelBytecode, size) || RendererData.PipelineCount >= AG_MAX_PIPELINES)
     {
         return(0);
     }
 
     // NOTE(saeb): D3D11 checks the bytecode's own checksum here; with the debug layer set to break on errors, damaged bytecode stops in the debugger.
     ID3D11PixelShader** pixelShader = &RendererData.Pipelines[RendererData.PipelineCount].PixelShader;
-    if(FAILED(RendererData.Device->CreatePixelShader(pixelBytecode, size, nullptr, pixelShader)))
+    if(FAILED(device->CreatePixelShader(pixelBytecode, size, nullptr, pixelShader)))
     {
         *pixelShader = nullptr;
         return(0);
@@ -985,7 +679,8 @@ RendererPipeline RendererCreatePipeline(const uint8* pixelBytecode, usize size, 
 bool RendererSetDefaultPipeline(const uint8* vertexBytecode, usize vertexSize, const uint8* pixelBytecode, usize pixelSize)
 {
     // NOTE(saeb): Once only; replacing shaders at runtime (hot reload) would also need to release the old ones.
-    if(!RendererData.Device || RendererData.QuadVertexShader || !D3D11IsBytecodeValid(vertexBytecode, vertexSize) || !D3D11IsBytecodeValid(pixelBytecode, pixelSize))
+    ID3D11Device* device = D3D11GpuGetDevice();
+    if(!device || RendererData.QuadVertexShader || !D3D11IsBytecodeValid(vertexBytecode, vertexSize) || !D3D11IsBytecodeValid(pixelBytecode, pixelSize))
     {
         return(false);
     }
@@ -998,9 +693,9 @@ bool RendererSetDefaultPipeline(const uint8* vertexBytecode, usize vertexSize, c
             { "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, offsetof(QuadVertex, R), D3D11_INPUT_PER_VERTEX_DATA, 0 },
         };
 
-    bool created = SUCCEEDED(RendererData.Device->CreateVertexShader(vertexBytecode, vertexSize, nullptr, &RendererData.QuadVertexShader)) &&
-        SUCCEEDED(RendererData.Device->CreatePixelShader(pixelBytecode, pixelSize, nullptr, &RendererData.Pipelines[0].PixelShader)) &&
-        SUCCEEDED(RendererData.Device->CreateInputLayout(inputElements, SSTL_ARRAYCOUNT(inputElements), vertexBytecode, vertexSize, &RendererData.QuadInputLayout));
+    bool created = SUCCEEDED(device->CreateVertexShader(vertexBytecode, vertexSize, nullptr, &RendererData.QuadVertexShader)) &&
+        SUCCEEDED(device->CreatePixelShader(pixelBytecode, pixelSize, nullptr, &RendererData.Pipelines[0].PixelShader)) &&
+        SUCCEEDED(device->CreateInputLayout(inputElements, SSTL_ARRAYCOUNT(inputElements), vertexBytecode, vertexSize, &RendererData.QuadInputLayout));
 
     if(created)
     {

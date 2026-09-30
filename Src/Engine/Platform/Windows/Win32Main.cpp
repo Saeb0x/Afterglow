@@ -2,6 +2,7 @@
 #include "Engine/Platform/Window.h"
 #include "Win32Time.h"
 #include "Engine/Asset/Asset.h"
+#include "Engine/Renderer/Gpu.h"
 #include "Engine/Renderer/D3D11/D3D11Renderer.h"
 #include "Engine/Game.h"
 
@@ -49,7 +50,31 @@ int APIENTRY WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLi
 
         if(Win32WindowCreate(&EngineMemory))
         {
-            if(D3D11RendererInit(&EngineMemory, Win32WindowGetHandle()))
+            GpuDesc gpuDesc = {};
+            gpuDesc.WindowHandle = Win32WindowGetHandle();
+            GpuInitResult gpuResult = GpuInit(&gpuDesc);
+
+            if(gpuResult != GpuInitResult::Ok)
+            {
+                switch(gpuResult)
+                {
+                    case GpuInitResult::NoGpu:
+                    {
+                        Win32ShowStartupError(&EngineMemory, SV8(u8"Couldn't find a GPU. Afterglow needs a hardware GPU with Direct3D 11 support."), StringView8{ nullptr, 0 });
+                    } break;
+
+                    case GpuInitResult::Unsupported:
+                    {
+                        Win32ShowStartupError(&EngineMemory, SV8(u8"Your GPU isn't supported. Afterglow needs Windows 10 or later and a GPU with Direct3D feature level 11.0."), StringView8{ nullptr, 0 });
+                    } break;
+
+                    default:
+                    {
+                        Win32ShowStartupError(&EngineMemory, SV8(u8"Couldn't create the swap chain for the window."), StringView8{ nullptr, 0 });
+                    } break;
+                }
+            }
+            else if(D3D11RendererInit(&EngineMemory))
             {
                 // NOTE(saeb): The engine's own shaders: the quad pipeline everything draws with, then the text pipeline fonts draw with (only tried once the first loaded).
                 AssetLoadResult pipelineResult = AssetLoadDefaultPipeline(&EngineMemory, SV8(AG_DEFAULT_PIPELINE_PATH));
@@ -106,10 +131,11 @@ int APIENTRY WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLi
             }
             else
             {
-                Win32ShowStartupError(&EngineMemory, SV8(u8"Couldn't initialize Direct3D 11. Afterglow needs Windows 10 or later and a GPU with Direct3D feature level 11.0."), StringView8{ nullptr, 0 });
+                Win32ShowStartupError(&EngineMemory, SV8(u8"Couldn't create the renderer's GPU resources."), StringView8{ nullptr, 0 });
             }
 
             D3D11RendererShutdown();
+            GpuShutdown();
             Win32WindowShutdown();
         }
         else
