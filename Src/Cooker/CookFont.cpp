@@ -13,7 +13,6 @@
 #define COOK_FONT_FIRST_CODEPOINT 32 // Printable ASCII: space ...
 #define COOK_FONT_LAST_CODEPOINT 126 // ... through '~'
 #define COOK_FONT_MAX_GLYPHS (COOK_FONT_LAST_CODEPOINT - COOK_FONT_FIRST_CODEPOINT + 1)
-#define COOK_FONT_SOLID_SIZE 4 // Side of the solid block; linear filtering at its centre only reads the middle texels, so the edges give slack
 
 struct CookGlyph
 {
@@ -37,23 +36,22 @@ static void CookFontFreeGlyphs(stbtt_fontinfo* info, CookGlyph* glyphs, uint32 c
 
 static bool CookFontWrite(CookerContext* context, StringView8 sourcePath, StringView8 outputPath, stbtt_fontinfo* info, real32 scale, CookGlyph* glyphs, uint32 glyphCount)
 {
-    // NOTE(saeb): Every glyph gets the same cell, sized to the largest one, laid out as a grid as close to square as possible. Simple and deterministic; a monospaced font wastes almost nothing. One extra cell after the glyphs holds the solid block.
-    int cellWidth = COOK_FONT_SOLID_SIZE;
-    int cellHeight = COOK_FONT_SOLID_SIZE;
+    // NOTE(saeb): Every glyph gets the same cell, sized to the largest one, laid out as a grid as close to square as possible. Simple and deterministic; a monospaced font wastes almost nothing. At least one pixel, so a font with no ink still makes a valid atlas.
+    int cellWidth = 1;
+    int cellHeight = 1;
     for(uint32 index = 0; index < glyphCount; ++index)
     {
         cellWidth = (glyphs[index].Width > cellWidth) ? glyphs[index].Width : cellWidth;
         cellHeight = (glyphs[index].Height > cellHeight) ? glyphs[index].Height : cellHeight;
     }
 
-    uint32 cellCount = glyphCount + 1;
     uint32 columns = 1;
-    while(columns * columns < cellCount)
+    while(columns * columns < glyphCount)
     {
         ++columns;
     }
 
-    uint32 rows = (cellCount + columns - 1) / columns;
+    uint32 rows = (glyphCount + columns - 1) / columns;
     uint32 atlasWidth = columns * (uint32)cellWidth;
     uint32 atlasHeight = rows * (uint32)cellHeight;
     if(atlasWidth > AG_ASSET_MAX_TEXTURE_DIMENSION || atlasHeight > AG_ASSET_MAX_TEXTURE_DIMENSION)
@@ -120,17 +118,6 @@ static bool CookFontWrite(CookerContext* context, StringView8 sourcePath, String
             memcpy(atlas + (cellY + (uint32)row) * atlasWidth + cellX, source->Distances + row * source->Width, (usize)source->Width);
         }
     }
-
-    // NOTE(saeb): The solid block, in the cell after the last glyph: 255 is as far inside as a distance goes, so the text shader draws it fully covered. Rects sample its centre, which is well inside the block.
-    uint32 solidCellX = (glyphCount % columns) * (uint32)cellWidth;
-    uint32 solidCellY = (glyphCount / columns) * (uint32)cellHeight;
-    for(uint32 row = 0; row < COOK_FONT_SOLID_SIZE; ++row)
-    {
-        memset(atlas + (solidCellY + row) * atlasWidth + solidCellX, 255, COOK_FONT_SOLID_SIZE);
-    }
-
-    fontHeader->SolidX = (uint16)(solidCellX + COOK_FONT_SOLID_SIZE / 2);
-    fontHeader->SolidY = (uint16)(solidCellY + COOK_FONT_SOLID_SIZE / 2);
 
     FileWriteResult writeResult = FileWrite(context->Memory, outputPath, output, outputSize);
     if(writeResult != FileWriteResult::Ok)

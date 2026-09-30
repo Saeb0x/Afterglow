@@ -7,7 +7,7 @@
 // NOTE(saeb): The .aga (Afterglow asset) file format, shared by the engine and cooker so the two can never disagree. Little-endian only. The layout is AssetHeader, then a type-specific header, then the data. Every struct is a multiple of 16 bytes, so the data after them stays 16-byte aligned in FileRead's buffer and can be used in place.
 
 #define AG_ASSET_MAGIC ((uint32)'A' | ((uint32)'G' << 8) | ((uint32)'A' << 16)) // "AGA\0" when viewed in a hex editor
-#define AG_ASSET_VERSION 3 // Bump on any change to this file; the engine rejects other versions, so everything gets recooked
+#define AG_ASSET_VERSION 4 // Bump on any change to this file; the engine rejects other versions, so everything gets recooked
 #define AG_ASSET_ALIGNMENT 16 // Alignment of every blob inside a payload
 #define AG_ASSET_MAX_TEXTURE_DIMENSION 16384 // D3D11's limit; the cooker refuses larger images, the loader rejects them
 
@@ -62,8 +62,7 @@ struct AssetFontHeader
     real32 Descent; // Below the baseline, positive
     real32 LineHeight; // Baseline to baseline
     real32 DistanceRange; // Pixels from the edge to where the stored distance reaches 0 or 255
-    uint16 SolidX, SolidY; // The centre of a small block of 255 (fully inside) in the atlas; solid rects sample it, so they draw with the font's texture and pipeline and batch with its text
-    uint32 Reserved[3];
+    uint32 Reserved[4];
 };
 SSTL_ASSERT_STATIC_MSG(sizeof(AssetFontHeader) == 48, "Afterglow: AssetFontHeader must stay 48 bytes.");
 
