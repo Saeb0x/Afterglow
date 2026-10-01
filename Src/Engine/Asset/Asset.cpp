@@ -274,44 +274,6 @@ AssetLoadResult AssetLoadTexture(StackAllocator* allocator, StringView8 path, Gp
     return(result);
 }
 
-AssetLoadResult AssetLoadPipeline(StackAllocator* allocator, StringView8 path, Renderer2DBlend blend, Renderer2DPipeline* pipeline)
-{
-    *pipeline = 0;
-
-    // NOTE(saeb): The driver keeps its own copy of the bytecode, so the whole file is scratch.
-    Frame scratch = GetFrame(allocator, Heap::Upper);
-
-    AssetShader shader;
-    AssetLoadResult result = AssetReadShader(allocator, path, &shader);
-    if(result == AssetLoadResult::Ok)
-    {
-        if(!shader.Pixel)
-        {
-            result = AssetLoadResult::MissingStage;
-        }
-        else
-        {
-            Renderer2DPipelineDesc desc = {};
-            desc.VertexShader = shader.Vertex;
-            desc.VertexShaderSize = shader.VertexSize;
-            desc.PixelShader = shader.Pixel;
-            desc.PixelShaderSize = shader.PixelSize;
-            desc.Blend = blend;
-            desc.DebugName = path;
-
-            *pipeline = Renderer2DCreatePipeline(allocator, &desc);
-            if(*pipeline == 0)
-            {
-                result = AssetLoadResult::RendererFailed;
-            }
-        }
-    }
-
-    ReleaseFrame(allocator, scratch);
-
-    return(result);
-}
-
 AssetLoadResult AssetLoadFont(StackAllocator* allocator, StringView8 path, Font* font)
 {
     *font = {};

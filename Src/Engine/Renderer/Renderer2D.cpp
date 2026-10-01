@@ -75,7 +75,18 @@ struct Renderer2D
 };
 static Renderer2D Renderer2DData;
 
-static GpuPipeline Renderer2DCreateQuadPipeline(StackAllocator* allocator, const Renderer2DPipelineDesc* quadDesc)
+// NOTE(saeb): What may differ between quad pipelines; the vertex format and triangles never do.
+struct QuadPipelineDesc
+{
+    const uint8* VertexShader; // Null uses the quad vertex shader
+    usize VertexShaderSize;
+    const uint8* PixelShader;
+    usize PixelShaderSize;
+    Renderer2DBlend Blend;
+    StringView8 DebugName;
+};
+
+static GpuPipeline Renderer2DCreateQuadPipeline(StackAllocator* allocator, const QuadPipelineDesc* quadDesc)
 {
     GpuPipelineDesc desc = {};
     desc.VertexShader = quadDesc->VertexShader ? quadDesc->VertexShader : Renderer2DData.QuadVertexShader;
@@ -285,7 +296,7 @@ static bool Renderer2DCreateDefaultPipeline(StackAllocator* allocator, const uin
     Renderer2DData.QuadVertexShader = vertexCopy;
     Renderer2DData.QuadVertexShaderSize = vertexSize;
 
-    Renderer2DPipelineDesc desc = {};
+    QuadPipelineDesc desc = {};
     desc.PixelShader = pixelBytecode;
     desc.PixelShaderSize = pixelSize;
     desc.DebugName = SV8(u8"QuadPipeline");
@@ -527,23 +538,52 @@ void Renderer2DPushQuad(const Renderer2DQuad* quad)
     }
 }
 
-Renderer2DPipeline Renderer2DCreatePipeline(StackAllocator* allocator, const Renderer2DPipelineDesc* desc)
+AssetLoadResult Renderer2DLoadPipeline(StackAllocator* allocator, StringView8 path, Renderer2DBlend blend, Renderer2DPipeline* pipeline)
 {
-    // NOTE(saeb): Table full or creation failed: return the default pipeline, so the quad still draws instead of crashing.
+    *pipeline = 0;
+
     if(Renderer2DData.PipelineCount >= AG_MAX_PIPELINES)
     {
-        return(0);
+        return(AssetLoadResult::RendererFailed);
     }
 
-    GpuPipeline pipeline = Renderer2DCreateQuadPipeline(allocator, desc);
-    if(!pipeline.Object)
+    // NOTE(saeb): The driver keeps its own copy of the bytecode, so the whole file is scratch.
+    Frame scratch = GetFrame(allocator, Heap::Upper);
+
+    AssetShader shader;
+    AssetLoadResult result = AssetReadShader(allocator, path, &shader);
+    if(result == AssetLoadResult::Ok)
     {
-        return(0);
+        if(!shader.Pixel)
+        {
+            result = AssetLoadResult::MissingStage;
+        }
+        else
+        {
+            QuadPipelineDesc desc = {};
+            desc.VertexShader = shader.Vertex;
+            desc.VertexShaderSize = shader.VertexSize;
+            desc.PixelShader = shader.Pixel;
+            desc.PixelShaderSize = shader.PixelSize;
+            desc.Blend = blend;
+            desc.DebugName = path;
+
+            GpuPipeline created = Renderer2DCreateQuadPipeline(allocator, &desc);
+            if(created.Object)
+            {
+                Renderer2DData.Pipelines[Renderer2DData.PipelineCount] = created;
+                *pipeline = Renderer2DData.PipelineCount++;
+            }
+            else
+            {
+                result = AssetLoadResult::RendererFailed;
+            }
+        }
     }
 
-    Renderer2DData.Pipelines[Renderer2DData.PipelineCount] = pipeline;
+    ReleaseFrame(allocator, scratch);
 
-    return(Renderer2DData.PipelineCount++);
+    return(result);
 }
 
 void Renderer2DSetCamera(const Camera* camera)

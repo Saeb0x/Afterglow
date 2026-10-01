@@ -1,4 +1,5 @@
 #include "Engine/Renderer/Text.h"
+#include "Engine/Renderer/Renderer2D.h"
 
 // NOTE(saeb): Glyphs are sorted by codepoint, so a binary search; anything missing gets the fallback glyph.
 static const TextGlyph* TextFindGlyph(const Font* font, uint32 codepoint)
