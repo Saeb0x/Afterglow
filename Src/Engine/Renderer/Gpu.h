@@ -81,7 +81,8 @@ struct GpuVertexAttribute
 enum class GpuBlend : uint8
 {
     Opaque,
-    Premultiplied
+    Premultiplied, // Colours carry their alpha: result = source + destination * (1 - source alpha)
+    Additive // result = source + destination
 };
 
 enum class GpuCull : uint8

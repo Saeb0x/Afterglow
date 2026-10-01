@@ -274,7 +274,7 @@ AssetLoadResult AssetLoadTexture(StackAllocator* allocator, StringView8 path, Gp
     return(result);
 }
 
-AssetLoadResult AssetLoadPipeline(StackAllocator* allocator, StringView8 path, Renderer2DPipeline* pipeline)
+AssetLoadResult AssetLoadPipeline(StackAllocator* allocator, StringView8 path, Renderer2DBlend blend, Renderer2DPipeline* pipeline)
 {
     *pipeline = 0;
 
@@ -291,7 +291,15 @@ AssetLoadResult AssetLoadPipeline(StackAllocator* allocator, StringView8 path, R
         }
         else
         {
-            *pipeline = Renderer2DCreatePipeline(allocator, shader.Pixel, shader.PixelSize, path);
+            Renderer2DPipelineDesc desc = {};
+            desc.VertexShader = shader.Vertex;
+            desc.VertexShaderSize = shader.VertexSize;
+            desc.PixelShader = shader.Pixel;
+            desc.PixelShaderSize = shader.PixelSize;
+            desc.Blend = blend;
+            desc.DebugName = path;
+
+            *pipeline = Renderer2DCreatePipeline(allocator, &desc);
             if(*pipeline == 0)
             {
                 result = AssetLoadResult::RendererFailed;

@@ -24,8 +24,8 @@ enum class AssetLoadResult : uint8
 // NOTE(saeb): Loads a cooked .aga texture and creates it on the GPU. Relative paths resolve against the exe's folder. On any failure, *texture is 0 (the white texture), so callers can ignore the result and still draw. The file is read into Upper heap scratch and released before returning; the allocator is left exactly as it was.
 AssetLoadResult AssetLoadTexture(StackAllocator* allocator, StringView8 path, GpuTexture* texture);
 
-// NOTE(saeb): Loads a cooked .aga shader and creates a quad pipeline from its PSMain, which (for now) must take the default quad vertex shader's outputs (SV_Position, TEXCOORD, COLOR). A VSMain in the file is validated but not used yet; all quads share the renderer's vertex shader. On any failure, *pipeline is 0 (the default pipeline). Same memory rules as AssetLoadTexture.
-AssetLoadResult AssetLoadPipeline(StackAllocator* allocator, StringView8 path, Renderer2DPipeline* pipeline);
+// NOTE(saeb): Loads a cooked .aga shader and creates a quad pipeline from it: its PSMain, and its VSMain if it has one (otherwise the quad vertex shader). On any failure, *pipeline is 0 (the default pipeline). The file is scratch; the pipeline's record stays in the Lower heap.
+AssetLoadResult AssetLoadPipeline(StackAllocator* allocator, StringView8 path, Renderer2DBlend blend, Renderer2DPipeline* pipeline);
 
 // NOTE(saeb): Loads a cooked .aga font: its atlas becomes a GPU texture, and its glyph table is copied into the Lower heap, where it stays for the rest of the game (take a Lower frame first to free it with a level). On any failure, *font is zeroed, which TextDraw treats as "draw nothing", and the allocator is left exactly as it was. The file itself is read into Upper heap scratch and released before returning.
 AssetLoadResult AssetLoadFont(StackAllocator* allocator, StringView8 path, Font* font);

@@ -67,7 +67,7 @@ struct Renderer2D
     Renderer2DStats LastFrameStats;
     QuadBatch* Batches;
     GpuBuffer QuadConstantBuffer;
-    const uint8* QuadVertexShader; // A copy in the Lower heap: every quad pipeline pairs it with its own pixel shader
+    const uint8* QuadVertexShader; // A copy in the Lower heap, for pipelines that don't bring their own
     usize QuadVertexShaderSize;
     GpuPipeline Pipelines[AG_MAX_PIPELINES];
     uint32 PipelineCount;
@@ -75,22 +75,22 @@ struct Renderer2D
 };
 static Renderer2D Renderer2DData;
 
-static GpuPipeline Renderer2DCreateQuadPipeline(StackAllocator* allocator, const uint8* pixelBytecode, usize pixelSize, StringView8 debugName)
+static GpuPipeline Renderer2DCreateQuadPipeline(StackAllocator* allocator, const Renderer2DPipelineDesc* quadDesc)
 {
     GpuPipelineDesc desc = {};
-    desc.VertexShader = Renderer2DData.QuadVertexShader;
-    desc.VertexShaderSize = Renderer2DData.QuadVertexShaderSize;
-    desc.PixelShader = pixelBytecode;
-    desc.PixelShaderSize = pixelSize;
+    desc.VertexShader = quadDesc->VertexShader ? quadDesc->VertexShader : Renderer2DData.QuadVertexShader;
+    desc.VertexShaderSize = quadDesc->VertexShader ? quadDesc->VertexShaderSize : Renderer2DData.QuadVertexShaderSize;
+    desc.PixelShader = quadDesc->PixelShader;
+    desc.PixelShaderSize = quadDesc->PixelShaderSize;
     desc.Attributes[0] = { 0, GpuVertexFormat::Float2, offsetof(QuadVertex, X) };
     desc.Attributes[1] = { 1, GpuVertexFormat::Float2, offsetof(QuadVertex, U) };
     desc.Attributes[2] = { 2, GpuVertexFormat::Float4, offsetof(QuadVertex, R) };
     desc.Attributes[3] = { 3, GpuVertexFormat::Float, offsetof(QuadVertex, Mode) };
     desc.AttributeCount = 4;
-    desc.Blend = GpuBlend::Premultiplied;
+    desc.Blend = (quadDesc->Blend == Renderer2DBlend::Additive) ? GpuBlend::Additive : GpuBlend::Premultiplied;
     desc.Cull = GpuCull::None; // A negative width/height flips winding; still draw it
     desc.Primitive = GpuPrimitive::Triangles;
-    desc.DebugName = debugName;
+    desc.DebugName = quadDesc->DebugName;
 
     return(GpuCreatePipeline(allocator, &desc));
 }
@@ -285,7 +285,12 @@ static bool Renderer2DCreateDefaultPipeline(StackAllocator* allocator, const uin
     Renderer2DData.QuadVertexShader = vertexCopy;
     Renderer2DData.QuadVertexShaderSize = vertexSize;
 
-    GpuPipeline pipeline = Renderer2DCreateQuadPipeline(allocator, pixelBytecode, pixelSize, SV8(u8"QuadPipeline"));
+    Renderer2DPipelineDesc desc = {};
+    desc.PixelShader = pixelBytecode;
+    desc.PixelShaderSize = pixelSize;
+    desc.DebugName = SV8(u8"QuadPipeline");
+
+    GpuPipeline pipeline = Renderer2DCreateQuadPipeline(allocator, &desc);
     if(!pipeline.Object)
     {
         Renderer2DData.QuadVertexShader = nullptr;
@@ -522,7 +527,7 @@ void Renderer2DPushQuad(const Renderer2DQuad* quad)
     }
 }
 
-Renderer2DPipeline Renderer2DCreatePipeline(StackAllocator* allocator, const uint8* pixelBytecode, usize size, StringView8 debugName)
+Renderer2DPipeline Renderer2DCreatePipeline(StackAllocator* allocator, const Renderer2DPipelineDesc* desc)
 {
     // NOTE(saeb): Table full or creation failed: return the default pipeline, so the quad still draws instead of crashing.
     if(Renderer2DData.PipelineCount >= AG_MAX_PIPELINES)
@@ -530,7 +535,7 @@ Renderer2DPipeline Renderer2DCreatePipeline(StackAllocator* allocator, const uin
         return(0);
     }
 
-    GpuPipeline pipeline = Renderer2DCreateQuadPipeline(allocator, pixelBytecode, size, debugName);
+    GpuPipeline pipeline = Renderer2DCreateQuadPipeline(allocator, desc);
     if(!pipeline.Object)
     {
         return(0);

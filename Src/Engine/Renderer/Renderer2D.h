@@ -15,6 +15,23 @@ enum class Renderer2DSpace : uint8
 
 using Renderer2DPipeline = uint32; // 0 = default quad pipeline
 
+enum class Renderer2DBlend : uint8
+{
+    Normal, // Alpha blending: the quad covers what's behind it by its alpha
+    Additive // Adds light to what's behind it: glows, sparks; black adds nothing
+};
+
+// NOTE(saeb): Every quad pipeline takes the quad vertex and draws triangles; the shaders and blend are its own. A custom vertex shader must read the quad vertex's inputs (ATTRIB0 to ATTRIB3) and pass on what its pixel shader reads.
+struct Renderer2DPipelineDesc
+{
+    const uint8* VertexShader; // Null uses the quad vertex shader
+    usize VertexShaderSize;
+    const uint8* PixelShader;
+    usize PixelShaderSize;
+    Renderer2DBlend Blend;
+    StringView8 DebugName;
+};
+
 enum class Renderer2DMode : uint8
 {
     Sprite, // The texture times the colour; with no texture, the colour alone
@@ -52,7 +69,7 @@ void Renderer2DPushQuad(const Renderer2DQuad* quad);
 // NOTE(saeb): World-space quads pushed after this use this camera, until another is set; it persists across frames. The camera is copied, so it can change right after. Until the first call, one metre is one pixel, with the world's origin at the window's centre.
 void Renderer2DSetCamera(const Camera* camera);
 
-// NOTE(saeb): Bytecode is a compiled pixel shader (DXBC for D3D11) that (for now) takes the default quad vertex shader's outputs. Returns 0 (the default pipeline) on failure.
-Renderer2DPipeline Renderer2DCreatePipeline(StackAllocator* allocator, const uint8* pixelBytecode, usize size, StringView8 debugName);
+// NOTE(saeb): Shaders are compiled bytecode (DXBC for D3D11). Returns 0 (the default pipeline) on failure.
+Renderer2DPipeline Renderer2DCreatePipeline(StackAllocator* allocator, const Renderer2DPipelineDesc* desc);
 
 #endif

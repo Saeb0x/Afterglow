@@ -3,13 +3,6 @@
 #include "Engine/Platform/Window.h"
 #include "Engine/Platform/Input.h"
 #include "Engine/Renderer/Renderer.h"
-#include "Engine/Renderer/Renderer2D.h"
-#include "Engine/Renderer/Text.h"
-#include "Engine/Renderer/Camera.h"
-#include "Engine/UI/UI.h"
-#include "Engine/Asset/Asset.h"
-
-static Camera WorldCamera = { { 0.0f, 0.0f }, { 20.0f, 20.0f }, 1.0f, 0.0f };
 
 void GameConfigure()
 {
@@ -28,7 +21,6 @@ bool GameInit(StackAllocator* allocator)
 
 void GameUpdate(StackAllocator* allocator, real64 deltaTime)
 {
-    Renderer2DSetCamera(&WorldCamera);
 }
 
 void GameShutdown(StackAllocator* allocator)
