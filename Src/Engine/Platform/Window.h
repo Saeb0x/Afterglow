@@ -16,5 +16,6 @@ void WindowSetClientAreaDimensions(int32 width, int32 height);
 void WindowSetMinClientAreaDimensions(int32 width, int32 height);
 void WindowGetClientAreaDimensions(int32* width, int32* height);
 bool WindowGetMinimized();
+void WindowRequestClose();
 
 #endif

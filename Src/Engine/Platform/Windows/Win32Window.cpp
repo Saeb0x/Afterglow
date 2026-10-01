@@ -214,3 +214,8 @@ bool WindowGetMinimized()
 {
     return(WindowData.Minimized);
 }
+
+void WindowRequestClose()
+{
+    WindowData.CloseRequested = true;
+}
