@@ -12,6 +12,9 @@
 #endif
 #include <windows.h>
 
+#define AG_FIXED_STEP (1.0 / 60.0)
+#define AG_MAX_STEPS_PER_FRAME 4
+
 static StackAllocator EngineMemory;
 
 static void Win32ShowStartupError(StackAllocator* allocator, StringView8 message, StringView8 reason)
@@ -79,6 +82,8 @@ int APIENTRY WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLi
 
                     Win32TimeInit();
                     GameTime time = {};
+                    time.Step = AG_FIXED_STEP;
+                    real64 accumulator = 0.0;
 
                     while(Win32WindowPumpEvents())
                     {
@@ -92,6 +97,7 @@ int APIENTRY WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLi
 
                         time.Delta = Win32TimeTick();
                         time.Total += time.Delta;
+                        accumulator += time.Delta;
 
                         Frame frameScratch = GetFrame(&EngineMemory, Heap::Upper);
 
@@ -99,6 +105,24 @@ int APIENTRY WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLi
                         WindowGetClientAreaDimensions(&windowClientAreaWidth, &windowClientAreaHeight);
 
                         RendererBeginFrame(windowClientAreaWidth, windowClientAreaHeight);
+
+                        time.Steps = 0;
+                        while(accumulator >= time.Step && time.Steps < AG_MAX_STEPS_PER_FRAME)
+                        {
+                            GameFixedUpdate(&EngineMemory, &time);
+                            accumulator -= time.Step;
+                            ++time.StepIndex;
+                            ++time.Steps;
+                        }
+
+                        // Still a step or more behind after the cap (a hitch, a window drag): drop the backlog, so the world slows down instead of jumping ahead.
+                        if(accumulator >= time.Step)
+                        {
+                            accumulator = 0.0;
+                        }
+
+                        time.Alpha = accumulator / time.Step;
+
                         GameUpdate(&EngineMemory, &time);
                         RendererEndFrame();
 

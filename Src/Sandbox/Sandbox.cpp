@@ -19,6 +19,10 @@ bool GameInit(StackAllocator* allocator)
     return(true);
 }
 
+void GameFixedUpdate(StackAllocator* allocator, const GameTime* time)
+{
+}
+
 void GameUpdate(StackAllocator* allocator, const GameTime* time)
 {
 }
