@@ -19,7 +19,7 @@ bool GameInit(StackAllocator* allocator)
     return(true);
 }
 
-void GameUpdate(StackAllocator* allocator, real64 deltaTime)
+void GameUpdate(StackAllocator* allocator, const GameTime* time)
 {
 }
 

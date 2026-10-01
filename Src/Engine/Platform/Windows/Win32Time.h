@@ -4,6 +4,7 @@
 #include <SSTL/Core/Types.h>
 
 void Win32TimeInit();
-real64 Win32TimeTick();
+real64 Win32TimeTick(); // Seconds since the previous tick or reset, unclamped
+void Win32TimeReset(); // The next tick measures from now
 
 #endif

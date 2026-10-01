@@ -5,8 +5,6 @@
 #endif
 #include <windows.h>
 
-static const real64 MaxDeltaSeconds = 1.0 / 15.0;
-
 struct Time
 {
     LARGE_INTEGER Frequency;
@@ -28,10 +26,10 @@ real64 Win32TimeTick()
     real64 deltaSeconds = (real64)(currentCounter.QuadPart - TimeData.LastCounter.QuadPart) / (real64)TimeData.Frequency.QuadPart;
     TimeData.LastCounter = currentCounter;
 
-    if(deltaSeconds > MaxDeltaSeconds)
-    {
-        deltaSeconds = MaxDeltaSeconds;
-    }
-
     return(deltaSeconds);
+}
+
+void Win32TimeReset()
+{
+    QueryPerformanceCounter(&TimeData.LastCounter);
 }

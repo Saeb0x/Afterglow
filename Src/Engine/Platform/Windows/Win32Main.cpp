@@ -78,6 +78,7 @@ int APIENTRY WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLi
                     ShowWindow(Win32WindowGetHandle(), SW_SHOW);
 
                     Win32TimeInit();
+                    GameTime time = {};
 
                     while(Win32WindowPumpEvents())
                     {
@@ -85,8 +86,12 @@ int APIENTRY WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLi
                         if(WindowGetMinimized())
                         {
                             WaitMessage();
+                            Win32TimeReset(); // Time spent minimized doesn't count
                             continue;
                         }
+
+                        time.Delta = Win32TimeTick();
+                        time.Total += time.Delta;
 
                         Frame frameScratch = GetFrame(&EngineMemory, Heap::Upper);
 
@@ -94,10 +99,11 @@ int APIENTRY WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLi
                         WindowGetClientAreaDimensions(&windowClientAreaWidth, &windowClientAreaHeight);
 
                         RendererBeginFrame(windowClientAreaWidth, windowClientAreaHeight);
-                        GameUpdate(&EngineMemory, Win32TimeTick());
+                        GameUpdate(&EngineMemory, &time);
                         RendererEndFrame();
 
                         ReleaseFrame(&EngineMemory, frameScratch);
+                        ++time.Frame;
                     }
 
                     GameShutdown(&EngineMemory);
