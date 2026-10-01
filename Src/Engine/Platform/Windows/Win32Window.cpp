@@ -12,6 +12,7 @@ struct Window
     int32 MinWidth, MinHeight;
     bool Minimized;
     bool CloseRequested;
+    bool CursorHidden;
     uint32 Flags;
 };
 static Window WindowData;
@@ -51,6 +52,18 @@ static LRESULT CALLBACK Win32WindowProcedure(HWND windowHandle, UINT message, WP
                 }
             }
         } break;
+
+        case WM_SETCURSOR:
+        {
+            // NOTE(saeb): Only hidden over the client area, so the borders keep their resize cursors.
+            if(WindowData.CursorHidden && LOWORD(lParam) == HTCLIENT)
+            {
+                SetCursor(nullptr);
+                return(TRUE);
+            }
+
+            return(DefWindowProcW(windowHandle, message, wParam, lParam));
+        }
 
         case WM_SIZE:
         {
@@ -218,4 +231,22 @@ bool WindowGetMinimized()
 void WindowRequestClose()
 {
     WindowData.CloseRequested = true;
+}
+
+void WindowSetCursorVisible(bool visible)
+{
+    if(WindowData.CursorHidden == !visible)
+    {
+        return;
+    }
+
+    WindowData.CursorHidden = !visible;
+
+    // NOTE(saeb): Windows only asks for the cursor again when the mouse moves, so ask now if it's over the window.
+    POINT cursor;
+    if(WindowData.Handle && GetCursorPos(&cursor) && WindowFromPoint(cursor) == WindowData.Handle)
+    {
+        LRESULT hit = SendMessageW(WindowData.Handle, WM_NCHITTEST, 0, MAKELPARAM(cursor.x, cursor.y));
+        SendMessageW(WindowData.Handle, WM_SETCURSOR, (WPARAM)WindowData.Handle, MAKELPARAM(hit, WM_MOUSEMOVE));
+    }
 }

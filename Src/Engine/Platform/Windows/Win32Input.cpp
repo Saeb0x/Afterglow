@@ -34,6 +34,8 @@ struct InputMouse
 {
     int32 X;
     int32 Y;
+    int32 WheelNotches; // Whole notches this frame; positive is away from the user
+    int32 WheelRemainder; // Delta short of a whole notch, kept across frames for smooth wheels and touchpads
     InputButtonState Buttons[static_cast<usize>(InputMouseButton::Count)];
 };
 
@@ -204,6 +206,8 @@ void Win32InputBegin()
         {
             InputData.Mouse.Buttons[mouseButtonIndex].TransitionCount = 0;
         }
+
+        InputData.Mouse.WheelNotches = 0;
     }
 }
 
@@ -239,6 +243,18 @@ void Win32InputProcess(HWND windowHandle, UINT message, WPARAM wParam, LPARAM lP
 
             InputData.Mouse.X = (int32)(int16)LOWORD(lParam);
             InputData.Mouse.Y = (int32)(int16)HIWORD(lParam);
+        } break;
+
+        case WM_MOUSEWHEEL:
+        {
+            if(!(InputData.Flags & InputFlags_Mouse))
+            {
+                break;
+            }
+
+            InputData.Mouse.WheelRemainder += GET_WHEEL_DELTA_WPARAM(wParam);
+            InputData.Mouse.WheelNotches += InputData.Mouse.WheelRemainder / WHEEL_DELTA;
+            InputData.Mouse.WheelRemainder %= WHEEL_DELTA;
         } break;
 
         case WM_LBUTTONDOWN:
@@ -293,6 +309,7 @@ void Win32InputProcess(HWND windowHandle, UINT message, WPARAM wParam, LPARAM lP
                 if(InputData.Flags & InputFlags_Mouse)
                 {
                     InputReleaseAllMouseButtons();
+                    InputData.Mouse.WheelRemainder = 0;
                 }
             }
         } break;
@@ -387,5 +404,17 @@ void InputGetMouseXY(int32* x, int32* y)
     {
         *x = 0;
         *y = 0;
+    }
+}
+
+int32 InputGetMouseWheel()
+{
+    if(InputData.Flags & InputFlags_Mouse)
+    {
+        return(InputData.Mouse.WheelNotches);
+    }
+    else
+    {
+        return(0);
     }
 }
