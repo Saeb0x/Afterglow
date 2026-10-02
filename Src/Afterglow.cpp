@@ -13,6 +13,7 @@
 #include "Engine/Renderer/Renderer.cpp"
 #include "Engine/Renderer/Text.cpp"
 #include "Engine/Renderer/Camera.cpp"
+#include "Engine/Renderer/Camera3D.cpp"
 
 // UI.
 #include "Engine/UI/UI.cpp"
