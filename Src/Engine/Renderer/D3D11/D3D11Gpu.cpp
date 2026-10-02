@@ -17,6 +17,7 @@ struct D3D11Pipeline
     ID3D11InputLayout* InputLayout; // Null for a pipeline with no vertex attributes
     ID3D11BlendState* BlendState;
     ID3D11RasterizerState* RasterizerState;
+    ID3D11DepthStencilState* DepthState;
     D3D11_PRIMITIVE_TOPOLOGY Topology;
 };
 
@@ -29,6 +30,7 @@ struct Gpu
     ID3DUserDefinedAnnotation* Annotation;
     IDXGISwapChain1* SwapChain;
     ID3D11RenderTargetView* RenderTargetView;
+    ID3D11DepthStencilView* DepthView;
     int32 BackBufferWidth, BackBufferHeight;
     ID3D11SamplerState* Samplers[(uint32)GpuSampler::Count];
     GpuStats Stats;
@@ -95,6 +97,42 @@ static bool D3D11CreateBackBufferView()
     D3D11SetName(GpuData.RenderTargetView, SV8(u8"BackBufferRTV"));
 
     backBuffer->Release();
+
+    return(true);
+}
+
+// NOTE(saeb): One depth value per pixel, the same size as the back buffer. 32-bit float, because reversed depth (near 1, far 0) only gains precision with floats.
+static bool D3D11CreateDepthView(int32 width, int32 height)
+{
+    D3D11_TEXTURE2D_DESC depthDesc = {};
+    depthDesc.Width = (UINT)width;
+    depthDesc.Height = (UINT)height;
+    depthDesc.MipLevels = 1;
+    depthDesc.ArraySize = 1;
+    depthDesc.Format = DXGI_FORMAT_D32_FLOAT;
+    depthDesc.SampleDesc.Count = 1;
+    depthDesc.Usage = D3D11_USAGE_DEFAULT;
+    depthDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+
+    ID3D11Texture2D* depthTexture = nullptr;
+    if(FAILED(GpuData.Device->CreateTexture2D(&depthDesc, nullptr, &depthTexture)))
+    {
+        return(false);
+    }
+
+    if(FAILED(GpuData.Device->CreateDepthStencilView(depthTexture, nullptr, &GpuData.DepthView)))
+    {
+        GpuData.DepthView = nullptr;
+        depthTexture->Release();
+
+        return(false);
+    }
+
+    D3D11SetName(depthTexture, SV8(u8"DepthBuffer"));
+    D3D11SetName(GpuData.DepthView, SV8(u8"DepthBufferDSV"));
+
+    // NOTE(saeb): The view keeps the texture alive, like the back buffer's view does.
+    depthTexture->Release();
 
     return(true);
 }
@@ -299,7 +337,7 @@ GpuInitResult GpuInit(const GpuDesc* desc)
     GpuData.BackBufferWidth = (int32)swapChainDesc.Width;
     GpuData.BackBufferHeight = (int32)swapChainDesc.Height;
 
-    if(!D3D11CreateBackBufferView())
+    if(!D3D11CreateBackBufferView() || !D3D11CreateDepthView(GpuData.BackBufferWidth, GpuData.BackBufferHeight))
     {
         return(GpuInitResult::SwapChainFailed);
     }
@@ -322,6 +360,12 @@ void GpuShutdown()
             GpuData.Samplers[index]->Release();
             GpuData.Samplers[index] = nullptr;
         }
+    }
+
+    if(GpuData.DepthView)
+    {
+        GpuData.DepthView->Release();
+        GpuData.DepthView = nullptr;
     }
 
     if(GpuData.RenderTargetView)
@@ -577,9 +621,16 @@ bool GpuBeginFrame(int32 width, int32 height)
             GpuData.RenderTargetView = nullptr;
         }
 
+        // NOTE(saeb): The depth buffer must match the back buffer's size, so it's rebuilt with it.
+        if(GpuData.DepthView)
+        {
+            GpuData.DepthView->Release();
+            GpuData.DepthView = nullptr;
+        }
+
         GpuData.SwapChain->ResizeBuffers(0, (UINT)width, (UINT)height, DXGI_FORMAT_UNKNOWN, GpuData.Caps.Tearing ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0);
 
-        if(D3D11CreateBackBufferView())
+        if(D3D11CreateBackBufferView() && D3D11CreateDepthView(width, height))
         {
             GpuData.BackBufferWidth = width;
             GpuData.BackBufferHeight = height;
@@ -587,13 +638,13 @@ bool GpuBeginFrame(int32 width, int32 height)
     }
 
     // NOTE(saeb): A failed resize leaves no view to draw into; skip the frame until device-loss handling exists.
-    return(GpuData.RenderTargetView != nullptr);
+    return(GpuData.RenderTargetView != nullptr && GpuData.DepthView != nullptr);
 }
 
 void GpuBeginPass(const GpuPassDesc* desc)
 {
     // NOTE(saeb): Flip model unbinds the render target on every Present, so bind it every pass.
-    GpuData.Context->OMSetRenderTargets(1, &GpuData.RenderTargetView, nullptr);
+    GpuData.Context->OMSetRenderTargets(1, &GpuData.RenderTargetView, GpuData.DepthView);
 
     D3D11_VIEWPORT viewport = {};
     viewport.Width = (real32)GpuData.BackBufferWidth;
@@ -603,7 +654,12 @@ void GpuBeginPass(const GpuPassDesc* desc)
     GpuData.Context->RSSetViewports(1, &viewport);
 
     GpuBeginMarker(SV8(u8"Clear"));
+
     GpuData.Context->ClearRenderTargetView(GpuData.RenderTargetView, desc->ClearColor);
+
+    // NOTE(saeb): Reversed depth: 0 is the far plane, so clearing to 0 means "nothing drawn yet, everything is nearer".
+    GpuData.Context->ClearDepthStencilView(GpuData.DepthView, D3D11_CLEAR_DEPTH, 0.0f, 0);
+
     GpuEndMarker();
 }
 
@@ -680,6 +736,11 @@ static void D3D11ReleasePipeline(D3D11Pipeline* pipeline)
     if(pipeline->RasterizerState)
     {
         pipeline->RasterizerState->Release();
+    }
+
+    if(pipeline->DepthState)
+    {
+        pipeline->DepthState->Release();
     }
 
     *pipeline = {};
@@ -762,6 +823,12 @@ GpuPipeline GpuCreatePipeline(StackAllocator* allocator, const GpuPipelineDesc* 
     rasterizerDesc.CullMode = (desc->Cull == GpuCull::Back) ? D3D11_CULL_BACK : D3D11_CULL_NONE;
     rasterizerDesc.DepthClipEnable = TRUE; // D3D11's default is TRUE, but a zeroed desc makes it FALSE
 
+    // NOTE(saeb): Reversed depth: nearer is larger (near plane 1, far plane 0), so a pixel passes when it's greater than what's stored.
+    D3D11_DEPTH_STENCIL_DESC depthDesc = {};
+    depthDesc.DepthEnable = (desc->Depth != GpuDepth::Off);
+    depthDesc.DepthWriteMask = (desc->Depth == GpuDepth::TestWrite) ? D3D11_DEPTH_WRITE_MASK_ALL : D3D11_DEPTH_WRITE_MASK_ZERO;
+    depthDesc.DepthFunc = D3D11_COMPARISON_GREATER;
+
     // NOTE(saeb): Identical blend and rasterizer descs return the same shared object, so pipelines with the same states cost nothing extra.
     D3D11Pipeline pipeline = {};
     pipeline.Topology = (desc->Primitive == GpuPrimitive::Lines) ? D3D11_PRIMITIVE_TOPOLOGY_LINELIST : D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
@@ -770,7 +837,8 @@ GpuPipeline GpuCreatePipeline(StackAllocator* allocator, const GpuPipelineDesc* 
         SUCCEEDED(GpuData.Device->CreatePixelShader(desc->PixelShader, desc->PixelShaderSize, nullptr, &pipeline.PixelShader)) &&
         (desc->AttributeCount == 0 || SUCCEEDED(GpuData.Device->CreateInputLayout(inputElements, desc->AttributeCount, desc->VertexShader, desc->VertexShaderSize, &pipeline.InputLayout))) &&
         SUCCEEDED(GpuData.Device->CreateBlendState(&blendDesc, &pipeline.BlendState)) &&
-        SUCCEEDED(GpuData.Device->CreateRasterizerState(&rasterizerDesc, &pipeline.RasterizerState));
+        SUCCEEDED(GpuData.Device->CreateRasterizerState(&rasterizerDesc, &pipeline.RasterizerState)) &&
+        SUCCEEDED(GpuData.Device->CreateDepthStencilState(&depthDesc, &pipeline.DepthState));
 
     D3D11Pipeline* record = created ? (D3D11Pipeline*)Allocate(allocator, Heap::Lower, sizeof(D3D11Pipeline), alignof(D3D11Pipeline)) : nullptr;
     if(!record)
@@ -814,6 +882,7 @@ void GpuSetPipeline(GpuPipeline pipeline)
     GpuData.Context->PSSetShader(record->PixelShader, nullptr, 0);
     GpuData.Context->RSSetState(record->RasterizerState);
     GpuData.Context->OMSetBlendState(record->BlendState, nullptr, 0xFFFFFFFF);
+    GpuData.Context->OMSetDepthStencilState(record->DepthState, 0);
 }
 
 void GpuSetVertexBuffer(GpuBuffer buffer, uint32 stride)

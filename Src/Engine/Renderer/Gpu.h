@@ -91,6 +91,13 @@ enum class GpuCull : uint8
     Back
 };
 
+enum class GpuDepth : uint8
+{
+    Off, // Ignores depth: draws over whatever is there and leaves no depth behind (2D, UI)
+    Test, // Hidden behind nearer things, but leaves no depth behind (see-through 3D: glass, water)
+    TestWrite // Hidden behind nearer things, and hides farther things drawn after it (solid 3D)
+};
+
 enum class GpuPrimitive : uint8
 {
     Triangles,
@@ -109,6 +116,7 @@ struct GpuPipelineDesc
     uint32 AttributeCount;
     GpuBlend Blend;
     GpuCull Cull;
+    GpuDepth Depth;
     GpuPrimitive Primitive;
     StringView8 DebugName;
 };
