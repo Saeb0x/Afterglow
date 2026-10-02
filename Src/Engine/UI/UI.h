@@ -29,10 +29,19 @@ struct UIContext
     real32 LayoutX, LayoutY, LayoutWidth; // Where the next row goes, and how wide rows are
 };
 
+enum UIPanelFlags : uint32
+{
+    UIPanelFlags_None = 0,
+    UIPanelFlags_NoTitle = 1 << 0,
+    UIPanelFlags_NoMove = 1 << 1,
+    UIPanelFlags_NoResize = 1 << 2
+};
+
 struct UIPanel
 {
     real32 X, Y, Width, Height; // Screen pixels; the game sets the start, dragging and resizing change them
     real32 BaseWidth, BaseHeight; // The size its contents are designed for; at this size they draw at scale 1
+    uint32 Flags;
 };
 
 void UIBegin(UIContext* ui, const Font* font);

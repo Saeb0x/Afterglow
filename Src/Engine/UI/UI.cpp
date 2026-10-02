@@ -147,6 +147,12 @@ void UIPanelBegin(UIContext* ui, UIPanel* panel, StringView8 title)
     UIID gripId = UIHashSeeded(id, SV8(u8"#Resize"));
     UIID bodyId = UIHashSeeded(id, SV8(u8"#Body"));
 
+    // NOTE(saeb): Without a title bar there's nothing to grab, so it can't move either. The title string still names the panel's ID.
+    bool hasTitle = !(panel->Flags & UIPanelFlags_NoTitle);
+    bool movable = hasTitle && !(panel->Flags & UIPanelFlags_NoMove);
+    bool resizable = !(panel->Flags & UIPanelFlags_NoResize);
+    real32 titleHeight = hasTitle ? UI_TITLE_HEIGHT : 0.0f;
+
     // NOTE(saeb): The body catches the mouse first; the title bar, grip and widgets come later and override it. Nothing behind the panel lights up, and UIWantsMouse sees it. The body never becomes Active, so pressing on it does nothing.
     bool overBody = (ui->MouseX >= panel->X && ui->MouseX < panel->X + panel->Width) && (ui->MouseY >= panel->Y && ui->MouseY < panel->Y + panel->Height);
     if(overBody && (ui->Active == 0 || ui->Active == bodyId))
@@ -154,20 +160,26 @@ void UIPanelBegin(UIContext* ui, UIPanel* panel, StringView8 title)
         ui->NextHot = bodyId;
     }
 
-    // Hot: title bar and grip, both tested against last frame's rect.
-    bool overTitle = (ui->MouseX >= panel->X && ui->MouseX < panel->X + panel->Width) && (ui->MouseY >= panel->Y && ui->MouseY < panel->Y + UI_TITLE_HEIGHT);
-    if(overTitle && (ui->Active == 0 || ui->Active == id))
+    // Hot: title bar and grip, both tested against last frame's rect. A part that never becomes hot can't be pressed or held either.
+    if(movable)
     {
-        ui->NextHot = id;
+        bool overTitle = (ui->MouseX >= panel->X && ui->MouseX < panel->X + panel->Width) && (ui->MouseY >= panel->Y && ui->MouseY < panel->Y + UI_TITLE_HEIGHT);
+        if(overTitle && (ui->Active == 0 || ui->Active == id))
+        {
+            ui->NextHot = id;
+        }
     }
 
     // The grip is a small square in the bottom-right corner.
-    real32 gripX = panel->X + panel->Width - UI_GRIP_SIZE;
-    real32 gripY = panel->Y + panel->Height - UI_GRIP_SIZE;
-    bool overGrip = (ui->MouseX >= gripX && ui->MouseX < gripX + UI_GRIP_SIZE) && (ui->MouseY >= gripY && ui->MouseY < gripY + UI_GRIP_SIZE);
-    if(overGrip && (ui->Active == 0 || ui->Active == gripId))
+    if(resizable)
     {
-        ui->NextHot = gripId;
+        real32 gripX = panel->X + panel->Width - UI_GRIP_SIZE;
+        real32 gripY = panel->Y + panel->Height - UI_GRIP_SIZE;
+        bool overGrip = (ui->MouseX >= gripX && ui->MouseX < gripX + UI_GRIP_SIZE) && (ui->MouseY >= gripY && ui->MouseY < gripY + UI_GRIP_SIZE);
+        if(overGrip && (ui->Active == 0 || ui->Active == gripId))
+        {
+            ui->NextHot = gripId;
+        }
     }
 
     // Press: grab it, and remember where on the panel it was grabbed.
@@ -221,28 +233,10 @@ void UIPanelBegin(UIContext* ui, UIPanel* panel, StringView8 title)
         panel->BaseHeight = panel->Height;
     }
 
-    // The smallest a panel may get: UI_PANEL_MIN_SCALE of its base size, but never below the fixed minimum.
-    real32 minWidth = panel->BaseWidth * UI_PANEL_MIN_SCALE;
-    real32 minHeight = panel->BaseHeight * UI_PANEL_MIN_SCALE;
-    if(minWidth < UI_PANEL_MIN_WIDTH)
-    {
-        minWidth = UI_PANEL_MIN_WIDTH;
-    }
-
-    if(minHeight < UI_PANEL_MIN_HEIGHT)
-    {
-        minHeight = UI_PANEL_MIN_HEIGHT;
-    }
-
     // Size limits, every frame. Not larger than the window first, then not smaller than the minimum, so the minimum wins if the window is ever smaller.
     if(panel->Width > ui->ScreenWidth)
     {
         panel->Width = ui->ScreenWidth;
-    }
-
-    if(panel->Width < minWidth)
-    {
-        panel->Width = minWidth;
     }
 
     if(panel->Height > ui->ScreenHeight)
@@ -250,9 +244,31 @@ void UIPanelBegin(UIContext* ui, UIPanel* panel, StringView8 title)
         panel->Height = ui->ScreenHeight;
     }
 
-    if(panel->Height < minHeight)
+    // NOTE(saeb): The minimum only stops the player shrinking a panel too far; a panel that can't be resized keeps the size the game gave it.
+    if(resizable)
     {
-        panel->Height = minHeight;
+        // The smallest a panel may get: UI_PANEL_MIN_SCALE of its base size, but never below the fixed minimum.
+        real32 minWidth = panel->BaseWidth * UI_PANEL_MIN_SCALE;
+        real32 minHeight = panel->BaseHeight * UI_PANEL_MIN_SCALE;
+        if(minWidth < UI_PANEL_MIN_WIDTH)
+        {
+            minWidth = UI_PANEL_MIN_WIDTH;
+        }
+
+        if(minHeight < UI_PANEL_MIN_HEIGHT)
+        {
+            minHeight = UI_PANEL_MIN_HEIGHT;
+        }
+
+        if(panel->Width < minWidth)
+        {
+            panel->Width = minWidth;
+        }
+
+        if(panel->Height < minHeight)
+        {
+            panel->Height = minHeight;
+        }
     }
 
     // Keep it inside the window. Every frame, so shrinking the window pushes it back in too. The "< 0" check comes last, so a panel wider than the window pins to the left edge.
@@ -276,27 +292,34 @@ void UIPanelBegin(UIContext* ui, UIPanel* panel, StringView8 title)
     // Draw: body, then title bar on top, then the title text.
     UIDrawRect(panel->X, panel->Y, panel->Width, panel->Height, 0.08f, 0.08f, 0.08f, 0.9f);
 
-    real32 shade = (ui->Active == id) ? 0.35f : (ui->Hot == id) ? 0.25f : 0.18f;
-    UIDrawRect(panel->X, panel->Y, panel->Width, UI_TITLE_HEIGHT, shade, shade, shade, 1.0f);
+    if(hasTitle)
+    {
+        // A fixed title bar never lights up, so it doesn't look like something to grab.
+        real32 shade = (ui->Active == id) ? 0.35f : (ui->Hot == id) ? 0.25f : 0.18f;
+        UIDrawRect(panel->X, panel->Y, panel->Width, UI_TITLE_HEIGHT, shade, shade, shade, 1.0f);
 
-    real32 textSize = UI_TITLE_HEIGHT * UI_TEXT_SIZE;
-    real32 textWidth, textHeight;
-    TextMeasure(ui->Font, textSize, title, &textWidth, &textHeight);
-    TextDraw(ui->Font, panel->X + 8.0f, panel->Y + (UI_TITLE_HEIGHT - textHeight) * 0.5f, textSize, 1.0f, 1.0f, 1.0f, 1.0f, title);
+        real32 textSize = UI_TITLE_HEIGHT * UI_TEXT_SIZE;
+        real32 textWidth, textHeight;
+        TextMeasure(ui->Font, textSize, title, &textWidth, &textHeight);
+        TextDraw(ui->Font, panel->X + 8.0f, panel->Y + (UI_TITLE_HEIGHT - textHeight) * 0.5f, textSize, 1.0f, 1.0f, 1.0f, 1.0f, title);
+    }
 
     // Draw the grip, after the body so it's visible.
-    real32 gripShade = (ui->Active == gripId) ? 0.6f : (ui->Hot == gripId) ? 0.45f : 0.3f;
-    UIDrawRect(panel->X + panel->Width - UI_GRIP_SIZE, panel->Y + panel->Height - UI_GRIP_SIZE, UI_GRIP_SIZE, UI_GRIP_SIZE, gripShade, gripShade, gripShade, 1.0f);
+    if(resizable)
+    {
+        real32 gripShade = (ui->Active == gripId) ? 0.6f : (ui->Hot == gripId) ? 0.45f : 0.3f;
+        UIDrawRect(panel->X + panel->Width - UI_GRIP_SIZE, panel->Y + panel->Height - UI_GRIP_SIZE, UI_GRIP_SIZE, UI_GRIP_SIZE, gripShade, gripShade, gripShade, 1.0f);
+    }
 
     // NOTE(saeb): The same fit rule as a camera's extent: contents designed for the base size always fit, whatever shape the panel is.
     real32 scaleX = panel->Width / panel->BaseWidth;
     real32 scaleY = panel->Height / panel->BaseHeight;
     ui->Scale = (scaleX < scaleY) ? scaleX : scaleY;
 
-    // Layout: rows start below the title bar, inset by the padding on both sides.
+    // Layout: rows start below the title bar (or at the top without one), inset by the padding on both sides.
     real32 padding = UI_PADDING * ui->Scale;
     ui->LayoutX = panel->X + padding;
-    ui->LayoutY = panel->Y + UI_TITLE_HEIGHT + padding;
+    ui->LayoutY = panel->Y + titleHeight + padding;
     ui->LayoutWidth = panel->Width - 2.0f * padding;
 
     ui->Seed = id;
