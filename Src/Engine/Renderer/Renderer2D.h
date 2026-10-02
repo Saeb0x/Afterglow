@@ -4,7 +4,7 @@
 #include <SSTL/Core/Types.h>
 #include <SSTL/Core/String.h>
 
-#include "Engine/Renderer/Camera.h"
+#include "Engine/Renderer/Camera2D.h"
 #include "Engine/Renderer/Gpu.h"
 #include "Engine/Asset/Asset.h"
 
@@ -57,7 +57,7 @@ Renderer2DSpace Renderer2DGetSpace();
 void Renderer2DPushQuad(const Renderer2DQuad* quad);
 
 // NOTE(saeb): World-space quads pushed after this use this camera, until another is set; it persists across frames. The camera is copied, so it can change right after. Until the first call, one metre is one pixel, with the world's origin at the window's centre.
-void Renderer2DSetCamera(const Camera* camera);
+void Renderer2DSetCamera(const Camera2D* camera);
 
 // NOTE(saeb): Loads a cooked .aga shader and creates a quad pipeline from it: its PSMain, and its VSMain if it has one (otherwise the quad vertex shader). Every quad pipeline takes the quad vertex and draws triangles, so a custom VSMain must read the quad vertex's inputs (ATTRIB0 to ATTRIB3) and pass on what its PSMain reads. On any failure, *pipeline is 0 (the default pipeline). The file is scratch; the pipeline's record stays in the Lower heap.
 AssetLoadResult Renderer2DLoadPipeline(StackAllocator* allocator, StringView8 path, Renderer2DBlend blend, Renderer2DPipeline* pipeline);

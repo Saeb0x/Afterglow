@@ -54,7 +54,7 @@ SSTL_ASSERT_STATIC_MSG(sizeof(QuadConstants) % 16 == 0, "Afterglow: Constant buf
 struct Renderer2D
 {
     Renderer2DSpace Space;
-    Camera ViewCameras[AG_MAX_VIEWS]; // This frame's cameras by view; [0] is the screen, which needs none
+    Camera2D ViewCameras[AG_MAX_VIEWS]; // This frame's cameras by view; [0] is the screen, which needs none
     uint32 ViewCount;
     uint32 WorldView; // The view world quads are pushed under: the latest camera
     bool WorldViewUsed; // A world quad has been pushed under WorldView, so a new camera needs a new view
@@ -122,7 +122,7 @@ static uint32 Renderer2DFlushQuads()
     DirectX::XMStoreFloat4x4(&views[AG_VIEW_SCREEN], DirectX::XMMatrixOrthographicOffCenterLH(0.0f, (real32)backBufferWidth, (real32)backBufferHeight, 0.0f, 0.0f, 1.0f));
     for(uint32 view = 1; view < Renderer2DData.ViewCount; ++view)
     {
-        DirectX::XMStoreFloat4x4(&views[view], CameraGetViewProjection(&Renderer2DData.ViewCameras[view], backBufferWidth, backBufferHeight));
+        DirectX::XMStoreFloat4x4(&views[view], Camera2DGetViewProjection(&Renderer2DData.ViewCameras[view], backBufferWidth, backBufferHeight));
     }
 
     QuadBatch* batch = nullptr;
@@ -586,7 +586,7 @@ AssetLoadResult Renderer2DLoadPipeline(StackAllocator* allocator, StringView8 pa
     return(result);
 }
 
-void Renderer2DSetCamera(const Camera* camera)
+void Renderer2DSetCamera(const Camera2D* camera)
 {
     // NOTE(saeb): Nothing has been drawn with the current camera yet, so replace it rather than add a view: a camera set every frame keeps reusing view 1, and setting one several times before drawing can't fill the table.
     if(!Renderer2DData.WorldViewUsed)

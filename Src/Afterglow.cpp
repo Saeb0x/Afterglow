@@ -12,7 +12,7 @@
 #include "Engine/Renderer/Renderer2D.cpp"
 #include "Engine/Renderer/Renderer.cpp"
 #include "Engine/Renderer/Text.cpp"
-#include "Engine/Renderer/Camera.cpp"
+#include "Engine/Renderer/Camera2D.cpp"
 #include "Engine/Renderer/Camera3D.cpp"
 
 // UI.
