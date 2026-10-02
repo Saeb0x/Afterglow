@@ -9,8 +9,9 @@
 
 // Renderer.
 #include "Engine/Renderer/D3D11/D3D11Gpu.cpp"
-#include "Engine/Renderer/Renderer2D.cpp"
 #include "Engine/Renderer/Renderer.cpp"
+#include "Engine/Renderer/Renderer2D.cpp"
+#include "Engine/Renderer/Renderer3D.cpp"
 #include "Engine/Renderer/Text.cpp"
 #include "Engine/Renderer/Camera2D.cpp"
 #include "Engine/Renderer/Camera3D.cpp"

@@ -68,6 +68,7 @@ enum class GpuVertexFormat : uint8
 {
     Float,
     Float2,
+    Float3,
     Float4
 };
 

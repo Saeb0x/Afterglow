@@ -776,6 +776,11 @@ GpuPipeline GpuCreatePipeline(StackAllocator* allocator, const GpuPipelineDesc* 
                 format = DXGI_FORMAT_R32G32_FLOAT;
             } break;
 
+            case GpuVertexFormat::Float3:
+            {
+                format = DXGI_FORMAT_R32G32B32_FLOAT;
+            } break;
+
             case GpuVertexFormat::Float4:
             {
                 format = DXGI_FORMAT_R32G32B32A32_FLOAT;
