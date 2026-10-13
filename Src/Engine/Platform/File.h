@@ -1,9 +1,9 @@
 #if !defined(AFTERGLOW_FILE_H)
 #define AFTERGLOW_FILE_H
 
-#include <SSTL/Core/Types.h>
-#include <SSTL/Core/String.h>
-#include <SSTL/Memory/StackAllocator.h>
+#include <Creuse/Core/Types.h>
+#include <Creuse/Core/String.h>
+#include <Creuse/Memory/StackAllocator.h>
 
 struct FileContents
 {
@@ -31,10 +31,10 @@ enum class FileWriteResult : uint8
 };
 
 // NOTE(saeb): Reads the whole file into heap, 16-byte aligned. The caller owns the data and frees it by releasing a frame taken on heap before the call. Relative paths resolve against the exe's folder. Always borrows temporary space on the Upper heap for the path (freed before returning), even when heap is Lower. On failure, zeroes contents and leaves the allocator exactly as it was.
-FileReadResult FileRead(StackAllocator* allocator, Heap heap, StringView8 path, FileContents* contents);
+FileReadResult FileRead(StackAllocator* allocator, Heap heap, StringView path, FileContents* contents);
 
 // NOTE(saeb): Writes the whole buffer to path, replacing any existing file, and creates missing parent directories. Relative paths resolve against the exe's folder. Writes "<path>.tmp" first, then renames it over the target, so a failed or interrupted write never leaves a partial file behind; on failure, the target is untouched. Borrows temporary space on the Upper heap for the path (freed before returning); the allocator is left exactly as it was.
-FileWriteResult FileWrite(StackAllocator* allocator, StringView8 path, const void* data, usize size);
+FileWriteResult FileWrite(StackAllocator* allocator, StringView path, const void* data, usize size);
 
 struct FileInfo
 {
@@ -45,7 +45,7 @@ struct FileInfo
 
 struct FileDirectoryEntry
 {
-    StringView8 Name;
+    StringView Name;
     FileInfo Info;
 };
 
@@ -53,12 +53,12 @@ struct FileDirectoryEntry
 typedef bool FileDirectoryCallback(const FileDirectoryEntry* entry, void* userData);
 
 // NOTE(saeb): Size, last write time and kind of a file or directory. Same path rules as FileRead. Borrows temporary space on the Upper heap for the path; the allocator is left exactly as it was.
-FileReadResult FileGetInfo(StackAllocator* allocator, StringView8 path, FileInfo* info);
+FileReadResult FileGetInfo(StackAllocator* allocator, StringView path, FileInfo* info);
 
 // NOTE(saeb): Reads exactly size bytes, starting at offset, into destination (the caller's memory; nothing is allocated for the data). A file that ends before offset + size is ReadFailed, and destination's contents are then undefined. Same path rules and memory rules as FileGetInfo.
-FileReadResult FileReadRange(StackAllocator* allocator, StringView8 path, uint64 offset, void* destination, usize size);
+FileReadResult FileReadRange(StackAllocator* allocator, StringView path, uint64 offset, void* destination, usize size);
 
 // NOTE(saeb): Calls callback once per entry directly inside the directory path: not recursive, "." and ".." skipped, order unspecified. Each entry's name lives on the Upper heap only during its callback. The callback may allocate freely and may list other directories itself; anything it leaves on the Upper heap is released when it returns, Lower heap allocations are its own. Returns NotFound if path doesn't exist or isn't a directory. Otherwise the allocator is left as it was.
-FileReadResult FileListDirectory(StackAllocator* allocator, StringView8 path, FileDirectoryCallback* callback, void* userData);
+FileReadResult FileListDirectory(StackAllocator* allocator, StringView path, FileDirectoryCallback* callback, void* userData);
 
 #endif

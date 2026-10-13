@@ -3,8 +3,8 @@
 
 #include "Engine/Renderer/Gpu.h"
 
-#include <SSTL/Core/Types.h>
-#include <SSTL/Core/String.h>
+#include <Creuse/Core/Types.h>
+#include <Creuse/Core/String.h>
 
 // NOTE(saeb): One glyph, ready to draw: where it sits in the atlas (UVs) and how it's placed relative to the pen on the baseline. Sizes are in pixels at the font's PixelHeight and are scaled when drawing.
 struct TextGlyph
@@ -28,10 +28,10 @@ struct Font
     real32 LineHeight; // Baseline to baseline
 };
 
-// NOTE(saeb): Draws UTF-8 text with its top-left at (x, y). size is the height of a line's letters (ascent plus descent), in the same units as x and y, so text follows the current space (world or screen) like everything else. '\n' starts a new line; characters the font doesn't have draw as its fallback glyph.
-void TextDraw(const Font* font, real32 x, real32 y, real32 size, real32 r, real32 g, real32 b, real32 a, StringView8 text);
+// NOTE(saeb): Draws ASCII text with its top-left at (x, y). size is the height of a line's letters (ascent plus descent), in the same units as x and y, so text follows the current space (world or screen) like everything else. '\n' starts a new line; characters the font doesn't have draw as its fallback glyph.
+void TextDraw(const Font* font, real32 x, real32 y, real32 size, real32 r, real32 g, real32 b, real32 a, StringView text);
 
 // NOTE(saeb): The size TextDraw would cover: the widest line, and every line's height (the first line's letters plus a line height for each line after it).
-void TextMeasure(const Font* font, real32 size, StringView8 text, real32* width, real32* height);
+void TextMeasure(const Font* font, real32 size, StringView text, real32* width, real32* height);
 
 #endif

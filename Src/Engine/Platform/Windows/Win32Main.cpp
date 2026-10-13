@@ -5,7 +5,7 @@
 #include "Engine/Renderer/Internal/RendererInternal.h"
 #include "Engine/Game.h"
 
-#include <SSTL/Core/Utility.h>
+#include <Creuse/Core/Utility.h>
 
 #if !defined(WIN32_LEAN_AND_MEAN)
 #define WIN32_LEAN_AND_MEAN
@@ -17,33 +17,31 @@
 
 static StackAllocator EngineMemory;
 
-static void Win32ShowStartupError(StackAllocator* allocator, StringView8 message, StringView8 reason)
+static void Win32ShowStartupError(StackAllocator* allocator, StringView message, StringView reason)
 {
-    Frame lowerScratch = GetFrame(allocator, Heap::Lower);
-    Frame upperScratch = GetFrame(allocator, Heap::Upper);
+    Frame lowerScratch = StackAllocatorGetFrame(allocator, Heap::Lower);
 
-    StringView8 separator = SV8(u8"\n\nReason: ");
-    String8 text = String8Reserve(allocator, message.Length + separator.Length + reason.Length + 1);
-    String8Append(&text, message);
+    StringView separator = StringViewFromCString("\n\nReason: ");
+    String text = StringReserve(allocator, message.Length + separator.Length + reason.Length + 1);
+    StringAppend(&text, message);
     if(reason.Length > 0)
     {
-        String8Append(&text, separator);
-        String8Append(&text, reason);
+        StringAppend(&text, separator);
+        StringAppend(&text, reason);
     }
 
-    StringView16 wideText = SV8ToSV16(allocator, StringView8{ text.Data, text.Length });
-    const wchar_t* shownText = (wideText.Data && wideText.Length > 0) ? (const wchar_t*)wideText.Data : L"Afterglow failed to start.";
-    MessageBoxW(nullptr, shownText, L"Afterglow", MB_OK | MB_ICONERROR);
+    // NOTE(saeb): StringAppend keeps the text null-terminated; with nothing appended there's no text at all.
+    const char* shownText = (text.Data && text.Length > 0) ? text.Data : "Afterglow failed to start.";
+    MessageBoxA(nullptr, shownText, "Afterglow", MB_OK | MB_ICONERROR);
 
-    ReleaseFrame(allocator, upperScratch);
-    ReleaseFrame(allocator, lowerScratch);
+    StackAllocatorReleaseFrame(allocator, lowerScratch);
 }
 
 int APIENTRY WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, int showCommand)
 {
     int exitCode = 1;
 
-    if(InitStackAllocator(&EngineMemory, SSTL_MIB(64)))
+    if(StackAllocatorInit(&EngineMemory, CREUSE_MIB(64)))
     {
         GameConfigure();
 
@@ -60,17 +58,17 @@ int APIENTRY WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLi
                 {
                     case GpuInitResult::NoGpu:
                     {
-                        Win32ShowStartupError(&EngineMemory, SV8(u8"Couldn't find a GPU. Afterglow needs a hardware GPU with Direct3D 11 support."), StringView8{ nullptr, 0 });
+                        Win32ShowStartupError(&EngineMemory, StringViewFromCString("Couldn't find a GPU. Afterglow needs a hardware GPU with Direct3D 11 support."), StringView{ nullptr, 0 });
                     } break;
 
                     case GpuInitResult::Unsupported:
                     {
-                        Win32ShowStartupError(&EngineMemory, SV8(u8"Your GPU isn't supported. Afterglow needs Windows 10 or later and a GPU with Direct3D feature level 11.0."), StringView8{ nullptr, 0 });
+                        Win32ShowStartupError(&EngineMemory, StringViewFromCString("Your GPU isn't supported. Afterglow needs Windows 10 or later and a GPU with Direct3D feature level 11.0."), StringView{ nullptr, 0 });
                     } break;
 
                     default:
                     {
-                        Win32ShowStartupError(&EngineMemory, SV8(u8"Couldn't create the swap chain for the window."), StringView8{ nullptr, 0 });
+                        Win32ShowStartupError(&EngineMemory, StringViewFromCString("Couldn't create the swap chain for the window."), StringView{ nullptr, 0 });
                     } break;
                 }
             }
@@ -99,7 +97,7 @@ int APIENTRY WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLi
                         time.Total += time.Delta;
                         accumulator += time.Delta;
 
-                        Frame frameScratch = GetFrame(&EngineMemory, Heap::Upper);
+                        Frame frameScratch = StackAllocatorGetFrame(&EngineMemory, Heap::Upper);
 
                         int32 windowClientAreaWidth, windowClientAreaHeight;
                         WindowGetClientAreaDimensions(&windowClientAreaWidth, &windowClientAreaHeight);
@@ -126,7 +124,7 @@ int APIENTRY WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLi
                         GameUpdate(&EngineMemory, &time);
                         RendererEndFrame();
 
-                        ReleaseFrame(&EngineMemory, frameScratch);
+                        StackAllocatorReleaseFrame(&EngineMemory, frameScratch);
                         ++time.Frame;
                     }
 
@@ -135,7 +133,7 @@ int APIENTRY WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLi
                 }
                 else
                 {
-                    Win32ShowStartupError(&EngineMemory, SV8(u8"The game failed to initialize."), StringView8{ nullptr, 0 });
+                    Win32ShowStartupError(&EngineMemory, StringViewFromCString("The game failed to initialize."), StringView{ nullptr, 0 });
                 }
             }
             else
@@ -149,14 +147,14 @@ int APIENTRY WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLi
         }
         else
         {
-            Win32ShowStartupError(&EngineMemory, SV8(u8"Couldn't create the window."), StringView8{ nullptr, 0 });
+            Win32ShowStartupError(&EngineMemory, StringViewFromCString("Couldn't create the window."), StringView{ nullptr, 0 });
         }
 
-        ShutdownStackAllocator(&EngineMemory);
+        StackAllocatorShutdown(&EngineMemory);
     }
     else
     {
-        MessageBoxW(nullptr, L"Couldn't reserve memory to start.", L"Afterglow", MB_OK | MB_ICONERROR);
+        MessageBoxA(nullptr, "Couldn't reserve memory to start.", "Afterglow", MB_OK | MB_ICONERROR);
     }
 
     return(exitCode);

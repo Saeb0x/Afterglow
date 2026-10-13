@@ -3,9 +3,9 @@
 
 #include "Engine/Asset/Asset.h"
 
-#include <SSTL/Core/Types.h>
-#include <SSTL/Core/String.h>
-#include <SSTL/Memory/StackAllocator.h>
+#include <Creuse/Core/Types.h>
+#include <Creuse/Core/String.h>
+#include <Creuse/Memory/StackAllocator.h>
 
 struct AssetShader
 {
@@ -16,6 +16,6 @@ struct AssetShader
 };
 
 // NOTE(saeb): Reads and validates a cooked .aga shader without creating anything. The bytes live in the allocator's Upper heap: take an Upper frame before, and release it once they're used.
-AssetLoadResult AssetReadShader(StackAllocator* allocator, StringView8 path, AssetShader* shader);
+AssetLoadResult AssetReadShader(StackAllocator* allocator, StringView path, AssetShader* shader);
 
 #endif

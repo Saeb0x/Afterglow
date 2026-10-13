@@ -4,7 +4,7 @@
 #include "Engine/Platform/File.h"
 
 // NOTE(saeb): Reads the file into Upper heap scratch (the caller owns the frame) and checks the common header. On success, *payload points just past the header, 16-byte aligned, and *payloadSize is exact.
-static AssetLoadResult AssetReadPayload(StackAllocator* allocator, StringView8 path, AssetType type, const uint8** payload, uint64* payloadSize)
+static AssetLoadResult AssetReadPayload(StackAllocator* allocator, StringView path, AssetType type, const uint8** payload, uint64* payloadSize)
 {
     FileContents file;
     if(FileRead(allocator, Heap::Upper, path, &file) != FileReadResult::Ok)
@@ -45,7 +45,7 @@ static AssetLoadResult AssetReadPayload(StackAllocator* allocator, StringView8 p
     return(AssetLoadResult::Ok);
 }
 
-static AssetLoadResult AssetCreateTexture(const uint8* payload, uint64 payloadSize, StringView8 path, GpuTexture* texture)
+static AssetLoadResult AssetCreateTexture(const uint8* payload, uint64 payloadSize, StringView path, GpuTexture* texture)
 {
     if(payloadSize < sizeof(AssetTextureHeader))
     {
@@ -117,7 +117,7 @@ static AssetLoadResult AssetValidateShader(const uint8* payload, uint64 payloadS
     return(AssetLoadResult::Ok);
 }
 
-AssetLoadResult AssetReadShader(StackAllocator* allocator, StringView8 path, AssetShader* shader)
+AssetLoadResult AssetReadShader(StackAllocator* allocator, StringView path, AssetShader* shader)
 {
     *shader = {};
 
@@ -151,7 +151,7 @@ AssetLoadResult AssetReadShader(StackAllocator* allocator, StringView8 path, Ass
     return(AssetLoadResult::Ok);
 }
 
-static AssetLoadResult AssetCreateFont(StackAllocator* allocator, const uint8* payload, uint64 payloadSize, StringView8 path, Font* font)
+static AssetLoadResult AssetCreateFont(StackAllocator* allocator, const uint8* payload, uint64 payloadSize, StringView path, Font* font)
 {
     if(payloadSize < sizeof(AssetFontHeader))
     {
@@ -201,9 +201,9 @@ static AssetLoadResult AssetCreateFont(StackAllocator* allocator, const uint8* p
         }
     }
 
-    Frame lowerFrame = GetFrame(allocator, Heap::Lower);
+    Frame lowerFrame = StackAllocatorGetFrame(allocator, Heap::Lower);
 
-    TextGlyph* textGlyphs = (TextGlyph*)Allocate(allocator, Heap::Lower, glyphCount * sizeof(TextGlyph), alignof(TextGlyph));
+    TextGlyph* textGlyphs = (TextGlyph*)StackAllocatorAllocate(allocator, Heap::Lower, glyphCount * sizeof(TextGlyph), alignof(TextGlyph));
     if(!textGlyphs)
     {
         return(AssetLoadResult::OutOfMemory);
@@ -238,7 +238,7 @@ static AssetLoadResult AssetCreateFont(StackAllocator* allocator, const uint8* p
     if(!atlasTexture.Object)
     {
         // NOTE(saeb): Give the glyph table back, so a failed load leaves the allocator exactly as it was.
-        ReleaseFrame(allocator, lowerFrame);
+        StackAllocatorReleaseFrame(allocator, lowerFrame);
         return(AssetLoadResult::RendererFailed);
     }
 
@@ -254,12 +254,12 @@ static AssetLoadResult AssetCreateFont(StackAllocator* allocator, const uint8* p
     return(AssetLoadResult::Ok);
 }
 
-AssetLoadResult AssetLoadTexture(StackAllocator* allocator, StringView8 path, GpuTexture* texture)
+AssetLoadResult AssetLoadTexture(StackAllocator* allocator, StringView path, GpuTexture* texture)
 {
     *texture = {};
 
     // NOTE(saeb): The GPU copies the pixels at creation, so the whole file is scratch.
-    Frame scratch = GetFrame(allocator, Heap::Upper);
+    Frame scratch = StackAllocatorGetFrame(allocator, Heap::Upper);
 
     const uint8* payload = nullptr;
     uint64 payloadSize = 0;
@@ -269,17 +269,17 @@ AssetLoadResult AssetLoadTexture(StackAllocator* allocator, StringView8 path, Gp
         result = AssetCreateTexture(payload, payloadSize, path, texture);
     }
 
-    ReleaseFrame(allocator, scratch);
+    StackAllocatorReleaseFrame(allocator, scratch);
 
     return(result);
 }
 
-AssetLoadResult AssetLoadFont(StackAllocator* allocator, StringView8 path, Font* font)
+AssetLoadResult AssetLoadFont(StackAllocator* allocator, StringView path, Font* font)
 {
     *font = {};
 
     // NOTE(saeb): Like textures, the file is scratch: the GPU copies the atlas, and only the glyph table is kept, in the Lower heap.
-    Frame scratch = GetFrame(allocator, Heap::Upper);
+    Frame scratch = StackAllocatorGetFrame(allocator, Heap::Upper);
 
     const uint8* payload = nullptr;
     uint64 payloadSize = 0;
@@ -289,7 +289,7 @@ AssetLoadResult AssetLoadFont(StackAllocator* allocator, StringView8 path, Font*
         result = AssetCreateFont(allocator, payload, payloadSize, path, font);
     }
 
-    ReleaseFrame(allocator, scratch);
+    StackAllocatorReleaseFrame(allocator, scratch);
 
     return(result);
 }
@@ -300,55 +300,55 @@ void AssetUnloadFont(Font* font)
     *font = {};
 }
 
-StringView8 AssetDescribeResult(AssetLoadResult result)
+StringView AssetDescribeResult(AssetLoadResult result)
 {
     switch(result)
     {
         case AssetLoadResult::Ok:
         {
-            return(SV8(u8"ok"));
+            return(StringViewFromCString("ok"));
         }
 
         case AssetLoadResult::FileError:
         {
-            return(SV8(u8"the file couldn't be read (missing, inaccessible, or out of memory)"));
+            return(StringViewFromCString("the file couldn't be read (missing, inaccessible, or out of memory)"));
         }
 
         case AssetLoadResult::NotAnAsset:
         {
-            return(SV8(u8"the file isn't a cooked Afterglow asset"));
+            return(StringViewFromCString("the file isn't a cooked Afterglow asset"));
         }
 
         case AssetLoadResult::WrongVersion:
         {
-            return(SV8(u8"the file was cooked for a different engine version; recook the assets"));
+            return(StringViewFromCString("the file was cooked for a different engine version; recook the assets"));
         }
 
         case AssetLoadResult::WrongType:
         {
-            return(SV8(u8"the file is the wrong kind of asset"));
+            return(StringViewFromCString("the file is the wrong kind of asset"));
         }
 
         case AssetLoadResult::MissingStage:
         {
-            return(SV8(u8"the shader is missing an entry point (VSMain or PSMain)"));
+            return(StringViewFromCString("the shader is missing an entry point (VSMain or PSMain)"));
         }
 
         case AssetLoadResult::Corrupt:
         {
-            return(SV8(u8"the file is truncated or damaged"));
+            return(StringViewFromCString("the file is truncated or damaged"));
         }
 
         case AssetLoadResult::RendererFailed:
         {
-            return(SV8(u8"the renderer couldn't create it"));
+            return(StringViewFromCString("the renderer couldn't create it"));
         }
 
         case AssetLoadResult::OutOfMemory:
         {
-            return(SV8(u8"there wasn't enough memory for it"));
+            return(StringViewFromCString("there wasn't enough memory for it"));
         }
     }
 
-    return(SV8(u8"unknown error"));
+    return(StringViewFromCString("unknown error"));
 }

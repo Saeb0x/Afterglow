@@ -1,8 +1,8 @@
 #if !defined(AFTERGLOW_RENDERER2D_H)
 #define AFTERGLOW_RENDERER2D_H
 
-#include <SSTL/Core/Types.h>
-#include <SSTL/Core/String.h>
+#include <Creuse/Core/Types.h>
+#include <Creuse/Core/String.h>
 
 #include "Engine/Renderer/Camera2D.h"
 #include "Engine/Renderer/Gpu.h"
@@ -60,6 +60,6 @@ void Renderer2DPushQuad(const Renderer2DQuad* quad);
 void Renderer2DSetCamera(const Camera2D* camera);
 
 // NOTE(saeb): Loads a cooked .aga shader and creates a quad pipeline from it: its PSMain, and its VSMain if it has one (otherwise the quad vertex shader). Every quad pipeline takes the quad vertex and draws triangles, so a custom VSMain must read the quad vertex's inputs (ATTRIB0 to ATTRIB3) and pass on what its PSMain reads. On any failure, *pipeline is 0 (the default pipeline). The file is scratch; the pipeline's record stays in the Lower heap.
-AssetLoadResult Renderer2DLoadPipeline(StackAllocator* allocator, StringView8 path, Renderer2DBlend blend, Renderer2DPipeline* pipeline);
+AssetLoadResult Renderer2DLoadPipeline(StackAllocator* allocator, StringView path, Renderer2DBlend blend, Renderer2DPipeline* pipeline);
 
 #endif

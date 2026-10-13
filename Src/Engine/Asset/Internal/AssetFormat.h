@@ -1,8 +1,8 @@
 #if !defined(AFTERGLOW_ASSETFORMAT_H)
 #define AFTERGLOW_ASSETFORMAT_H
 
-#include <SSTL/Core/Types.h>
-#include <SSTL/Core/Assert.h>
+#include <Creuse/Core/Types.h>
+#include <Creuse/Core/Assert.h>
 
 // NOTE(saeb): The .aga (Afterglow asset) file format, shared by the engine and cooker so the two can never disagree. Little-endian only. The layout is AssetHeader, then a type-specific header, then the data. Every struct is a multiple of 16 bytes, so the data after them stays 16-byte aligned in FileRead's buffer and can be used in place.
 
@@ -28,7 +28,7 @@ struct AssetHeader
     uint64 PayloadSize; // Bytes after this header; must match the file size exactly
     uint64 Reserved2;
 };
-SSTL_ASSERT_STATIC_MSG(sizeof(AssetHeader) == 32, "Afterglow: AssetHeader must stay 32 bytes.");
+CREUSE_ASSERT_STATIC_MSG(sizeof(AssetHeader) == 32, "Afterglow: AssetHeader must stay 32 bytes.");
 
 // NOTE(saeb): Payload for AssetType::Texture: this header, then Width * Height * 4 bytes of RGBA8, premultiplied by the cooker, rows top to bottom.
 struct AssetTextureHeader
@@ -37,7 +37,7 @@ struct AssetTextureHeader
     uint32 Height;
     uint32 Reserved[2];
 };
-SSTL_ASSERT_STATIC_MSG(sizeof(AssetTextureHeader) == 16, "Afterglow: AssetTextureHeader must stay 16 bytes.");
+CREUSE_ASSERT_STATIC_MSG(sizeof(AssetTextureHeader) == 16, "Afterglow: AssetTextureHeader must stay 16 bytes.");
 
 // NOTE(saeb): Payload for AssetType::Shader: this header, then the compiled bytecode blobs. Offsets are from the start of the payload and AG_ASSET_ALIGNMENT-aligned; a size of 0 means the source had no such entry point (VSMain / PSMain).
 struct AssetShaderHeader
@@ -47,7 +47,7 @@ struct AssetShaderHeader
     uint32 PixelOffset;
     uint32 PixelSize;
 };
-SSTL_ASSERT_STATIC_MSG(sizeof(AssetShaderHeader) == 16, "Afterglow: AssetShaderHeader must stay 16 bytes.");
+CREUSE_ASSERT_STATIC_MSG(sizeof(AssetShaderHeader) == 16, "Afterglow: AssetShaderHeader must stay 16 bytes.");
 
 #define AG_ASSET_MAX_FONT_GLYPHS 4096 // Far more than any font is cooked with; bounds how big a glyph table the loader accepts
 
@@ -64,7 +64,7 @@ struct AssetFontHeader
     real32 DistanceRange; // Pixels from the edge to where the stored distance reaches 0 or 255
     uint32 Reserved[4];
 };
-SSTL_ASSERT_STATIC_MSG(sizeof(AssetFontHeader) == 48, "Afterglow: AssetFontHeader must stay 48 bytes.");
+CREUSE_ASSERT_STATIC_MSG(sizeof(AssetFontHeader) == 48, "Afterglow: AssetFontHeader must stay 48 bytes.");
 
 struct AssetGlyph
 {
@@ -74,6 +74,6 @@ struct AssetGlyph
     real32 Advance; // How far the pen moves after this glyph
     uint32 Reserved[2];
 };
-SSTL_ASSERT_STATIC_MSG(sizeof(AssetGlyph) == 32, "Afterglow: AssetGlyph must stay 32 bytes.");
+CREUSE_ASSERT_STATIC_MSG(sizeof(AssetGlyph) == 32, "Afterglow: AssetGlyph must stay 32 bytes.");
 
 #endif

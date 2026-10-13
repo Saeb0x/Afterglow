@@ -1,7 +1,7 @@
 #if !defined(AFTERGLOW_GPUINTERNAL_H)
 #define AFTERGLOW_GPUINTERNAL_H
 
-#include <SSTL/Core/Types.h>
+#include <Creuse/Core/Types.h>
 
 struct GpuDesc
 {

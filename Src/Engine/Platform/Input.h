@@ -1,7 +1,7 @@
 #if !defined(AFTERGLOW_INPUT_H)
 #define AFTERGLOW_INPUT_H
 
-#include <SSTL/Core/Types.h>
+#include <Creuse/Core/Types.h>
 
 enum InputFlags : uint32
 {

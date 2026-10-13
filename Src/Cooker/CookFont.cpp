@@ -34,7 +34,7 @@ static void CookFontFreeGlyphs(stbtt_fontinfo* info, CookGlyph* glyphs, uint32 c
     }
 }
 
-static bool CookFontWrite(CookerContext* context, StringView8 sourcePath, StringView8 outputPath, stbtt_fontinfo* info, real32 scale, CookGlyph* glyphs, uint32 glyphCount)
+static bool CookFontWrite(CookerContext* context, StringView sourcePath, StringView outputPath, stbtt_fontinfo* info, real32 scale, CookGlyph* glyphs, uint32 glyphCount)
 {
     // NOTE(saeb): Every glyph gets the same cell, sized to the largest one, laid out as a grid as close to square as possible. Simple and deterministic; a monospaced font wastes almost nothing. At least one pixel, so a font with no ink still makes a valid atlas.
     int cellWidth = 1;
@@ -65,7 +65,7 @@ static bool CookFontWrite(CookerContext* context, StringView8 sourcePath, String
     usize payloadSize = sizeof(AssetFontHeader) + glyphBytes + atlasBytes;
     usize outputSize = sizeof(AssetHeader) + payloadSize;
 
-    uint8* output = (uint8*)Allocate(context->Memory, Heap::Lower, outputSize, AG_ASSET_ALIGNMENT);
+    uint8* output = (uint8*)StackAllocatorAllocate(context->Memory, Heap::Lower, outputSize, AG_ASSET_ALIGNMENT);
     if(!output)
     {
         CookerError(sourcePath, "out of memory");
@@ -129,7 +129,7 @@ static bool CookFontWrite(CookerContext* context, StringView8 sourcePath, String
     return(true);
 }
 
-bool CookFont(CookerContext* context, StringView8 sourcePath, StringView8 outputPath)
+bool CookFont(CookerContext* context, StringView sourcePath, StringView outputPath)
 {
     FileContents file;
     FileReadResult readResult = FileRead(context->Memory, Heap::Upper, sourcePath, &file);

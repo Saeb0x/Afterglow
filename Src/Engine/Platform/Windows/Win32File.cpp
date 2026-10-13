@@ -1,69 +1,75 @@
 #include "Engine/Platform/File.h"
 
-#include <SSTL/Core/Utility.h>
+#include <Creuse/Core/Utility.h>
 
 #if !defined(WIN32_LEAN_AND_MEAN)
 #define WIN32_LEAN_AND_MEAN
 #endif
 #include <windows.h>
 
-static bool Win32FileIsSeparator(char16 c)
+static bool Win32FileIsSeparator(char c)
 {
-    return(c == u'\\' || c == u'/');
+    return(c == '\\' || c == '/');
 }
 
-// NOTE(saeb): Relative paths resolve against the exe's folder, not the working directory; shortcuts, launchers and debuggers can all start the game from anywhere. Writes a null-terminated UTF-16 path on the Upper heap to *fullPath.
-static FileReadResult Win32FileBuildPath(StackAllocator* allocator, StringView8 path, const char16** fullPath)
+// NOTE(saeb): Relative paths resolve against the exe's folder, not the working directory; shortcuts, launchers and debuggers can all start the game from anywhere. Writes a null-terminated ASCII path on the Upper heap to *fullPath.
+static FileReadResult Win32FileBuildPath(StackAllocator* allocator, StringView path, const char** fullPath)
 {
     *fullPath = nullptr;
 
-    // NOTE(saeb): An empty path would resolve to the exe's folder itself, which CreateFileW rejects as access denied.
+    // NOTE(saeb): An empty path would resolve to the exe's folder itself, which CreateFileA rejects as access denied.
     if(path.Length == 0)
     {
         return(FileReadResult::InvalidPath);
     }
 
-    StringView16 widePath = SV8ToSV16(allocator, path);
-    if(!widePath.Data)
+    // NOTE(saeb): A view isn't null-terminated, and Windows wants paths that are, so copy it.
+    usize length = path.Length;
+    char* text = (char*)StackAllocatorAllocate(allocator, Heap::Upper, length + 1, alignof(char));
+    if(!text)
     {
         return(FileReadResult::OutOfMemory);
     }
 
-    const char16* wide = widePath.Data;
-    usize length = widePath.Length;
+    for(usize index = 0; index < length; ++index)
+    {
+        text[index] = path.Data[index];
+    }
+
+    text[length] = '\0';
 
     // NOTE(saeb): Only "C:\..." and "\\..." (UNC, \\?\) are truly absolute and pass through unchanged, so tools can reuse this. "C:something" and "\something" still depend on the working directory's drive or folder, so reject them rather than guess.
-    bool hasDrive = (length >= 2 && wide[1] == u':');
+    bool hasDrive = (length >= 2 && text[1] == ':');
     if(hasDrive)
     {
-        if(length >= 3 && Win32FileIsSeparator(wide[2]))
+        if(length >= 3 && Win32FileIsSeparator(text[2]))
         {
-            *fullPath = wide;
+            *fullPath = text;
             return(FileReadResult::Ok);
         }
 
         return(FileReadResult::InvalidPath); // Drive-relative
     }
 
-    if(length >= 1 && Win32FileIsSeparator(wide[0]))
+    if(length >= 1 && Win32FileIsSeparator(text[0]))
     {
-        if(length >= 2 && Win32FileIsSeparator(wide[1]))
+        if(length >= 2 && Win32FileIsSeparator(text[1]))
         {
-            *fullPath = wide;
+            *fullPath = text;
             return(FileReadResult::Ok);
         }
 
         return(FileReadResult::InvalidPath); // Root-relative
     }
 
-    // NOTE(saeb): MAX_PATH is also CreateFileW's own limit without a long-path manifest, so a longer exe path couldn't open files anyway.
-    char16* exePath = (char16*)Allocate(allocator, Heap::Upper, MAX_PATH * sizeof(char16), alignof(char16));
+    // NOTE(saeb): MAX_PATH is also CreateFileA's own limit, so a longer exe path couldn't open files anyway.
+    char* exePath = (char*)StackAllocatorAllocate(allocator, Heap::Upper, MAX_PATH * sizeof(char), alignof(char));
     if(!exePath)
     {
         return(FileReadResult::OutOfMemory);
     }
 
-    DWORD exePathLength = GetModuleFileNameW(nullptr, (LPWSTR)exePath, MAX_PATH);
+    DWORD exePathLength = GetModuleFileNameA(nullptr, exePath, MAX_PATH);
     if(exePathLength == 0 || exePathLength >= MAX_PATH)
     {
         return(FileReadResult::InvalidPath); // Failed, or truncated
@@ -71,12 +77,12 @@ static FileReadResult Win32FileBuildPath(StackAllocator* allocator, StringView8 
 
     // NOTE(saeb): Keep everything up to and including the last separator: "C:\Dev\Afterglow\Afterglow.exe" -> "C:\Dev\Afterglow\".
     usize directoryLength = exePathLength;
-    while(directoryLength > 0 && exePath[directoryLength - 1] != u'\\')
+    while(directoryLength > 0 && exePath[directoryLength - 1] != '\\')
     {
         --directoryLength;
     }
 
-    char16* result = (char16*)Allocate(allocator, Heap::Upper, (directoryLength + length + 1) * sizeof(char16), alignof(char16));
+    char* result = (char*)StackAllocatorAllocate(allocator, Heap::Upper, (directoryLength + length + 1) * sizeof(char), alignof(char));
     if(!result)
     {
         return(FileReadResult::OutOfMemory);
@@ -89,10 +95,10 @@ static FileReadResult Win32FileBuildPath(StackAllocator* allocator, StringView8 
 
     for(usize index = 0; index < length; ++index)
     {
-        result[directoryLength + index] = wide[index];
+        result[directoryLength + index] = text[index];
     }
 
-    result[directoryLength + length] = u'\0';
+    result[directoryLength + length] = '\0';
     *fullPath = result;
 
     return(FileReadResult::Ok);
@@ -135,37 +141,37 @@ static uint64 Win32FileTimeToTicks(FILETIME time)
 }
 
 // NOTE(saeb): Same sharing as FileRead, so a file an editor still has open can be read.
-static FileReadResult Win32FileOpenForRead(StackAllocator* allocator, StringView8 path, HANDLE* fileHandle)
+static FileReadResult Win32FileOpenForRead(StackAllocator* allocator, StringView path, HANDLE* fileHandle)
 {
     *fileHandle = INVALID_HANDLE_VALUE;
 
-    Frame pathScratch = GetFrame(allocator, Heap::Upper);
+    Frame pathScratch = StackAllocatorGetFrame(allocator, Heap::Upper);
 
-    const char16* fullPath = nullptr;
+    const char* fullPath = nullptr;
     FileReadResult result = Win32FileBuildPath(allocator, path, &fullPath);
     if(result == FileReadResult::Ok)
     {
-        *fileHandle = CreateFileW((LPCWSTR)fullPath, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+        *fileHandle = CreateFileA(fullPath, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
         if(*fileHandle == INVALID_HANDLE_VALUE)
         {
             result = Win32FileReadResultFromError(GetLastError());
         }
     }
 
-    ReleaseFrame(allocator, pathScratch);
+    StackAllocatorReleaseFrame(allocator, pathScratch);
 
     return(result);
 }
 
-FileReadResult FileRead(StackAllocator* allocator, Heap heap, StringView8 path, FileContents* contents)
+FileReadResult FileRead(StackAllocator* allocator, Heap heap, StringView path, FileContents* contents)
 {
     contents->Data = nullptr;
     contents->Size = 0;
 
     // NOTE(saeb): The path is only needed to open the file; release it before allocating the data so the two never interleave on the Upper heap.
-    Frame pathScratch = GetFrame(allocator, Heap::Upper);
+    Frame pathScratch = StackAllocatorGetFrame(allocator, Heap::Upper);
 
-    const char16* fullPath = nullptr;
+    const char* fullPath = nullptr;
     FileReadResult pathResult = Win32FileBuildPath(allocator, path, &fullPath);
 
     HANDLE fileHandle = INVALID_HANDLE_VALUE;
@@ -173,11 +179,11 @@ FileReadResult FileRead(StackAllocator* allocator, Heap heap, StringView8 path, 
     if(pathResult == FileReadResult::Ok)
     {
         // NOTE(saeb): Share everything so the open doesn't fail while a tool or editor still has the file open. The file can then change mid-read; a shrink is caught by the short-read check below, but an in-place rewrite of the same size isn't.
-        fileHandle = CreateFileW((LPCWSTR)fullPath, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING, FILE_FLAG_SEQUENTIAL_SCAN, nullptr);
+        fileHandle = CreateFileA(fullPath, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING, FILE_FLAG_SEQUENTIAL_SCAN, nullptr);
         openError = GetLastError(); // Before ReleaseFrame, so nothing in between can overwrite it
     }
 
-    ReleaseFrame(allocator, pathScratch);
+    StackAllocatorReleaseFrame(allocator, pathScratch);
 
     if(pathResult != FileReadResult::Ok)
     {
@@ -199,8 +205,8 @@ FileReadResult FileRead(StackAllocator* allocator, Heap heap, StringView8 path, 
     usize size = (usize)fileSize.QuadPart;
 
     // NOTE(saeb): +1 for the zero terminator, which also means an empty file still gets a valid (non-null) buffer. 16-byte alignment so cooked data can be read as structs in place.
-    Frame dataFrame = GetFrame(allocator, heap);
-    uint8* data = (uint8*)Allocate(allocator, heap, size + 1, 16);
+    Frame dataFrame = StackAllocatorGetFrame(allocator, heap);
+    uint8* data = (uint8*)StackAllocatorAllocate(allocator, heap, size + 1, 16);
     if(!data)
     {
         CloseHandle(fileHandle);
@@ -218,7 +224,7 @@ FileReadResult FileRead(StackAllocator* allocator, Heap heap, StringView8 path, 
         if(!ReadFile(fileHandle, data + totalRead, chunkSize, &bytesRead, nullptr) || bytesRead == 0)
         {
             // NOTE(saeb): Give the allocation back; a failed read leaves the allocator exactly as it was.
-            ReleaseFrame(allocator, dataFrame);
+            StackAllocatorReleaseFrame(allocator, dataFrame);
             CloseHandle(fileHandle);
             return(FileReadResult::ReadFailed);
         }
@@ -236,16 +242,16 @@ FileReadResult FileRead(StackAllocator* allocator, Heap heap, StringView8 path, 
     return(FileReadResult::Ok);
 }
 
-// NOTE(saeb): Creates every directory along path: "C:\A\B\File.aga" -> "C:\A", then "C:\A\B". Failures are ignored; the root, "\\something" and existing folders all fail harmlessly, and a folder that really couldn't be created makes the CreateFileW after this fail instead.
-static void Win32FileCreateParentDirectories(char16* path)
+// NOTE(saeb): Creates every directory along path: "C:\A\B\File.aga" -> "C:\A", then "C:\A\B". Failures are ignored; the root, "\\something" and existing folders all fail harmlessly, and a folder that really couldn't be created makes the CreateFileA after this fail instead.
+static void Win32FileCreateParentDirectories(char* path)
 {
-    for(usize index = 1; path[index] != u'\0'; ++index)
+    for(usize index = 1; path[index] != '\0'; ++index)
     {
         if(Win32FileIsSeparator(path[index]))
         {
-            char16 separator = path[index];
-            path[index] = u'\0';
-            CreateDirectoryW((LPCWSTR)path, nullptr);
+            char separator = path[index];
+            path[index] = '\0';
+            CreateDirectoryA(path, nullptr);
             path[index] = separator;
         }
     }
@@ -276,14 +282,14 @@ static FileWriteResult Win32FileWriteResultFromError(DWORD error)
 }
 
 // NOTE(saeb): All allocations here are Upper heap scratch; FileWrite releases them in one place, so every early return below is safe.
-static FileWriteResult Win32FileWrite(StackAllocator* allocator, StringView8 path, const void* data, usize size)
+static FileWriteResult Win32FileWrite(StackAllocator* allocator, StringView path, const void* data, usize size)
 {
     if(!data && size > 0)
     {
         return(FileWriteResult::WriteFailed);
     }
 
-    const char16* fullPath = nullptr;
+    const char* fullPath = nullptr;
     FileReadResult pathResult = Win32FileBuildPath(allocator, path, &fullPath);
     if(pathResult == FileReadResult::OutOfMemory)
     {
@@ -296,15 +302,15 @@ static FileWriteResult Win32FileWrite(StackAllocator* allocator, StringView8 pat
     }
 
     usize fullPathLength = 0;
-    while(fullPath[fullPathLength] != u'\0')
+    while(fullPath[fullPathLength] != '\0')
     {
         ++fullPathLength;
     }
 
-    static const char16 TempSuffix[] = u".tmp";
-    usize suffixLength = SSTL_ARRAYCOUNT(TempSuffix) - 1;
+    static const char TempSuffix[] = ".tmp";
+    usize suffixLength = CREUSE_ARRAYCOUNT(TempSuffix) - 1;
 
-    char16* tempPath = (char16*)Allocate(allocator, Heap::Upper, (fullPathLength + suffixLength + 1) * sizeof(char16), alignof(char16));
+    char* tempPath = (char*)StackAllocatorAllocate(allocator, Heap::Upper, (fullPathLength + suffixLength + 1) * sizeof(char), alignof(char));
     if(!tempPath)
     {
         return(FileWriteResult::OutOfMemory);
@@ -320,13 +326,13 @@ static FileWriteResult Win32FileWrite(StackAllocator* allocator, StringView8 pat
         tempPath[fullPathLength + index] = TempSuffix[index];
     }
 
-    tempPath[fullPathLength + suffixLength] = u'\0';
+    tempPath[fullPathLength + suffixLength] = '\0';
 
     // NOTE(saeb): The temp file sits next to the target, so both share the same parent directories.
     Win32FileCreateParentDirectories(tempPath);
 
     // NOTE(saeb): No sharing; nobody should read a half-written file.
-    HANDLE fileHandle = CreateFileW((LPCWSTR)tempPath, GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN, nullptr);
+    HANDLE fileHandle = CreateFileA(tempPath, GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN, nullptr);
     if(fileHandle == INVALID_HANDLE_VALUE)
     {
         return(Win32FileWriteResultFromError(GetLastError()));
@@ -355,44 +361,44 @@ static FileWriteResult Win32FileWrite(StackAllocator* allocator, StringView8 pat
 
     if(!written)
     {
-        DeleteFileW((LPCWSTR)tempPath);
+        DeleteFileA(tempPath);
         return(FileWriteResult::WriteFailed);
     }
 
     // NOTE(saeb): The rename replaces the target in one step; readers see the old file or the new one, never a mix. Fails with AccessDenied while anyone has the target open; the target is left untouched, so retrying is safe.
-    if(!MoveFileExW((LPCWSTR)tempPath, (LPCWSTR)fullPath, MOVEFILE_REPLACE_EXISTING))
+    if(!MoveFileExA(tempPath, fullPath, MOVEFILE_REPLACE_EXISTING))
     {
-        DWORD moveError = GetLastError(); // Before DeleteFileW, which would overwrite it
-        DeleteFileW((LPCWSTR)tempPath);
+        DWORD moveError = GetLastError(); // Before DeleteFileA, which would overwrite it
+        DeleteFileA(tempPath);
         return(Win32FileWriteResultFromError(moveError));
     }
 
     return(FileWriteResult::Ok);
 }
 
-FileWriteResult FileWrite(StackAllocator* allocator, StringView8 path, const void* data, usize size)
+FileWriteResult FileWrite(StackAllocator* allocator, StringView path, const void* data, usize size)
 {
-    Frame pathScratch = GetFrame(allocator, Heap::Upper);
+    Frame pathScratch = StackAllocatorGetFrame(allocator, Heap::Upper);
     FileWriteResult result = Win32FileWrite(allocator, path, data, size);
-    ReleaseFrame(allocator, pathScratch);
+    StackAllocatorReleaseFrame(allocator, pathScratch);
 
     return(result);
 }
 
-FileReadResult FileGetInfo(StackAllocator* allocator, StringView8 path, FileInfo* info)
+FileReadResult FileGetInfo(StackAllocator* allocator, StringView path, FileInfo* info)
 {
     info->Size = 0;
     info->LastWriteTime = 0;
     info->IsDirectory = false;
 
-    Frame pathScratch = GetFrame(allocator, Heap::Upper);
+    Frame pathScratch = StackAllocatorGetFrame(allocator, Heap::Upper);
 
-    const char16* fullPath = nullptr;
+    const char* fullPath = nullptr;
     FileReadResult result = Win32FileBuildPath(allocator, path, &fullPath);
     if(result == FileReadResult::Ok)
     {
         WIN32_FILE_ATTRIBUTE_DATA data;
-        if(GetFileAttributesExW((LPCWSTR)fullPath, GetFileExInfoStandard, &data))
+        if(GetFileAttributesExA(fullPath, GetFileExInfoStandard, &data))
         {
             info->IsDirectory = (data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
             info->Size = info->IsDirectory ? 0 : (((uint64)data.nFileSizeHigh << 32) | (uint64)data.nFileSizeLow);
@@ -404,12 +410,12 @@ FileReadResult FileGetInfo(StackAllocator* allocator, StringView8 path, FileInfo
         }
     }
 
-    ReleaseFrame(allocator, pathScratch);
+    StackAllocatorReleaseFrame(allocator, pathScratch);
 
     return(result);
 }
 
-FileReadResult FileReadRange(StackAllocator* allocator, StringView8 path, uint64 offset, void* destination, usize size)
+FileReadResult FileReadRange(StackAllocator* allocator, StringView path, uint64 offset, void* destination, usize size)
 {
     // NOTE(saeb): SetFilePointerEx takes a signed 64-bit position.
     if((!destination && size > 0) || offset > 0x7FFFFFFFFFFFFFFFull)
@@ -456,9 +462,9 @@ FileReadResult FileReadRange(StackAllocator* allocator, StringView8 path, uint64
 }
 
 // NOTE(saeb): The search pattern ("<path>\*") and the find handle live for the whole listing; everything a callback does happens above them on the Upper heap.
-static FileReadResult Win32FileListDirectory(StackAllocator* allocator, StringView8 path, FileDirectoryCallback* callback, void* userData)
+static FileReadResult Win32FileListDirectory(StackAllocator* allocator, StringView path, FileDirectoryCallback* callback, void* userData)
 {
-    const char16* fullPath = nullptr;
+    const char* fullPath = nullptr;
     FileReadResult result = Win32FileBuildPath(allocator, path, &fullPath);
     if(result != FileReadResult::Ok)
     {
@@ -466,7 +472,7 @@ static FileReadResult Win32FileListDirectory(StackAllocator* allocator, StringVi
     }
 
     usize fullPathLength = 0;
-    while(fullPath[fullPathLength] != u'\0')
+    while(fullPath[fullPathLength] != '\0')
     {
         ++fullPathLength;
     }
@@ -475,7 +481,7 @@ static FileReadResult Win32FileListDirectory(StackAllocator* allocator, StringVi
     bool endsWithSeparator = fullPathLength > 0 && Win32FileIsSeparator(fullPath[fullPathLength - 1]);
     usize patternLength = fullPathLength + (endsWithSeparator ? 1 : 2);
 
-    char16* pattern = (char16*)Allocate(allocator, Heap::Upper, (patternLength + 1) * sizeof(char16), alignof(char16));
+    char* pattern = (char*)StackAllocatorAllocate(allocator, Heap::Upper, (patternLength + 1) * sizeof(char), alignof(char));
     if(!pattern)
     {
         return(FileReadResult::OutOfMemory);
@@ -488,45 +494,38 @@ static FileReadResult Win32FileListDirectory(StackAllocator* allocator, StringVi
 
     if(!endsWithSeparator)
     {
-        pattern[fullPathLength] = u'\\';
+        pattern[fullPathLength] = '\\';
     }
 
-    pattern[patternLength - 1] = u'*';
-    pattern[patternLength] = u'\0';
+    pattern[patternLength - 1] = '*';
+    pattern[patternLength] = '\0';
 
     // NOTE(saeb): FindExInfoBasic skips the 8.3 short name, which nothing here uses.
-    WIN32_FIND_DATAW find;
-    HANDLE findHandle = FindFirstFileExW((LPCWSTR)pattern, FindExInfoBasic, &find, FindExSearchNameMatch, nullptr, 0);
+    WIN32_FIND_DATAA find;
+    HANDLE findHandle = FindFirstFileExA(pattern, FindExInfoBasic, &find, FindExSearchNameMatch, nullptr, 0);
     if(findHandle == INVALID_HANDLE_VALUE)
     {
         return(Win32FileReadResultFromError(GetLastError()));
     }
 
-    // NOTE(saeb): True when the loop ends early (callback said stop, or out of memory) rather than because FindNextFileW ran out.
+    // NOTE(saeb): True when the loop ends early (callback said stop, or out of memory) rather than because FindNextFileA ran out.
     bool stoppedEarly = false;
 
     do
     {
-        const char16* name = (const char16*)find.cFileName;
+        const char* name = (const char*)find.cFileName;
 
-        bool dot = (name[0] == u'.' && name[1] == u'\0');
-        bool dotDot = (name[0] == u'.' && name[1] == u'.' && name[2] == u'\0');
+        bool dot = (name[0] == '.' && name[1] == '\0');
+        bool dotDot = (name[0] == '.' && name[1] == '.' && name[2] == '\0');
         if(dot || dotDot)
         {
             continue;
         }
 
-        Frame entryScratch = GetFrame(allocator, Heap::Upper);
+        Frame entryScratch = StackAllocatorGetFrame(allocator, Heap::Upper);
 
         FileDirectoryEntry entry;
-        entry.Name = SV16ToSV8(allocator, SV16(name));
-        if(!entry.Name.Data)
-        {
-            ReleaseFrame(allocator, entryScratch);
-            result = FileReadResult::OutOfMemory;
-            stoppedEarly = true;
-            break;
-        }
+        entry.Name = StringViewFromCString(name);
 
         entry.Info.IsDirectory = (find.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
         entry.Info.Size = entry.Info.IsDirectory ? 0 : (((uint64)find.nFileSizeHigh << 32) | (uint64)find.nFileSizeLow);
@@ -534,7 +533,7 @@ static FileReadResult Win32FileListDirectory(StackAllocator* allocator, StringVi
 
         bool keepGoing = callback(&entry, userData);
 
-        ReleaseFrame(allocator, entryScratch);
+        StackAllocatorReleaseFrame(allocator, entryScratch);
 
         if(!keepGoing)
         {
@@ -542,9 +541,9 @@ static FileReadResult Win32FileListDirectory(StackAllocator* allocator, StringVi
             break;
         }
     }
-    while(FindNextFileW(findHandle, &find));
+    while(FindNextFileA(findHandle, &find));
 
-    // NOTE(saeb): Otherwise the loop ended because FindNextFileW failed, and only "no more files" is a normal end; anything else means the listing is incomplete. Read right after the loop, before FindClose can overwrite it.
+    // NOTE(saeb): Otherwise the loop ended because FindNextFileA failed, and only "no more files" is a normal end; anything else means the listing is incomplete. Read right after the loop, before FindClose can overwrite it.
     if(!stoppedEarly && GetLastError() != ERROR_NO_MORE_FILES)
     {
         result = FileReadResult::ReadFailed;
@@ -555,16 +554,16 @@ static FileReadResult Win32FileListDirectory(StackAllocator* allocator, StringVi
     return(result);
 }
 
-FileReadResult FileListDirectory(StackAllocator* allocator, StringView8 path, FileDirectoryCallback* callback, void* userData)
+FileReadResult FileListDirectory(StackAllocator* allocator, StringView path, FileDirectoryCallback* callback, void* userData)
 {
     if(!callback)
     {
         return(FileReadResult::ReadFailed);
     }
 
-    Frame pathScratch = GetFrame(allocator, Heap::Upper);
+    Frame pathScratch = StackAllocatorGetFrame(allocator, Heap::Upper);
     FileReadResult result = Win32FileListDirectory(allocator, path, callback, userData);
-    ReleaseFrame(allocator, pathScratch);
+    StackAllocatorReleaseFrame(allocator, pathScratch);
 
     return(result);
 }

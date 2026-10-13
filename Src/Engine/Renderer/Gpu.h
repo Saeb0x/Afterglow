@@ -1,13 +1,13 @@
 #if !defined(AFTERGLOW_GPU_H)
 #define AFTERGLOW_GPU_H
 
-#include <SSTL/Core/Types.h>
-#include <SSTL/Core/String.h>
-#include <SSTL/Memory/StackAllocator.h>
+#include <Creuse/Core/Types.h>
+#include <Creuse/Core/String.h>
+#include <Creuse/Memory/StackAllocator.h>
 
 struct GpuCaps
 {
-    char8 Name[128];
+    char Name[128];
     uint64 VideoMemory;
     uint32 MaxTextureSize;
     bool Tearing;
@@ -37,7 +37,7 @@ struct GpuBufferDesc
     GpuUsage Usage;
     uint32 Size;
     const void* Data;
-    StringView8 DebugName;
+    StringView DebugName;
 };
 
 struct GpuTexture
@@ -56,7 +56,7 @@ struct GpuTextureDesc
     uint32 Width, Height;
     GpuFormat Format;
     const void* Data; // Rows top to bottom, no padding
-    StringView8 DebugName;
+    StringView DebugName;
 };
 
 struct GpuPipeline
@@ -119,7 +119,7 @@ struct GpuPipelineDesc
     GpuCull Cull;
     GpuDepth Depth;
     GpuPrimitive Primitive;
-    StringView8 DebugName;
+    StringView DebugName;
 };
 
 enum class GpuSampler : uint8
@@ -169,7 +169,7 @@ void GpuDrawIndexed(uint32 indexCount, uint32 firstIndex);
 
 void GpuGetStats(GpuStats* stats);
 
-void GpuBeginMarker(StringView8 name);
+void GpuBeginMarker(StringView name);
 void GpuEndMarker();
 bool GpuMarkersEnabled();
 

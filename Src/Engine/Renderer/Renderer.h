@@ -1,7 +1,7 @@
 #if !defined(AFTERGLOW_RENDERER_H)
 #define AFTERGLOW_RENDERER_H
 
-#include <SSTL/Core/Types.h>
+#include <Creuse/Core/Types.h>
 
 enum RendererFlags : uint32
 {

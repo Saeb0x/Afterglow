@@ -14,7 +14,7 @@
 #include <string.h>
 
 // NOTE(saeb): Compiles one entry point. Returns false on a real error (already printed). A missing entry point isn't an error: it returns true with *bytecode left null.
-static bool CookShaderStage(CookerContext* context, StringView8 sourcePath, const FileContents* source, const char* entryPoint, const char* target, ID3DBlob** bytecode)
+static bool CookShaderStage(CookerContext* context, StringView sourcePath, const FileContents* source, const char* entryPoint, const char* target, ID3DBlob** bytecode)
 {
     *bytecode = nullptr;
 
@@ -66,7 +66,7 @@ static bool CookShaderStage(CookerContext* context, StringView8 sourcePath, cons
     return(true);
 }
 
-static bool CookShaderWrite(CookerContext* context, StringView8 sourcePath, StringView8 outputPath, ID3DBlob* vertex, ID3DBlob* pixel)
+static bool CookShaderWrite(CookerContext* context, StringView sourcePath, StringView outputPath, ID3DBlob* vertex, ID3DBlob* pixel)
 {
     usize vertexSize = vertex ? vertex->GetBufferSize() : 0;
     usize pixelSize = pixel ? pixel->GetBufferSize() : 0;
@@ -79,19 +79,19 @@ static bool CookShaderWrite(CookerContext* context, StringView8 sourcePath, Stri
     if(vertexSize > 0)
     {
         vertexOffset = cursor;
-        cursor = SSTL_ALIGNUP(cursor + vertexSize, AG_ASSET_ALIGNMENT);
+        cursor = CREUSE_ALIGNUP(cursor + vertexSize, AG_ASSET_ALIGNMENT);
     }
 
     if(pixelSize > 0)
     {
         pixelOffset = cursor;
-        cursor = SSTL_ALIGNUP(cursor + pixelSize, AG_ASSET_ALIGNMENT);
+        cursor = CREUSE_ALIGNUP(cursor + pixelSize, AG_ASSET_ALIGNMENT);
     }
 
     usize payloadSize = cursor;
     usize outputSize = sizeof(AssetHeader) + payloadSize;
 
-    uint8* output = (uint8*)Allocate(context->Memory, Heap::Lower, outputSize, AG_ASSET_ALIGNMENT);
+    uint8* output = (uint8*)StackAllocatorAllocate(context->Memory, Heap::Lower, outputSize, AG_ASSET_ALIGNMENT);
     if(!output)
     {
         CookerError(sourcePath, "out of memory");
@@ -135,7 +135,7 @@ static bool CookShaderWrite(CookerContext* context, StringView8 sourcePath, Stri
     return(true);
 }
 
-bool CookShader(CookerContext* context, StringView8 sourcePath, StringView8 outputPath)
+bool CookShader(CookerContext* context, StringView sourcePath, StringView outputPath)
 {
     FileContents source;
     FileReadResult readResult = FileRead(context->Memory, Heap::Upper, sourcePath, &source);

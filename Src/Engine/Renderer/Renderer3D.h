@@ -1,8 +1,8 @@
 #if !defined(AFTERGLOW_RENDERER3D_H)
 #define AFTERGLOW_RENDERER3D_H
 
-#include <SSTL/Core/Types.h>
-#include <SSTL/Core/String.h>
+#include <Creuse/Core/Types.h>
+#include <Creuse/Core/String.h>
 
 #include "Engine/Renderer/Camera3D.h"
 #include "Engine/Renderer/Gpu.h"
@@ -25,7 +25,7 @@ struct Renderer3DMesh
 };
 
 // NOTE(saeb): The GPU copies the vertices and indices, so the arrays can be scratch. Destroy the mesh when done with it.
-bool Renderer3DCreateMesh(const Renderer3DVertex* vertices, uint32 vertexCount, const uint32* indices, uint32 indexCount, StringView8 debugName, Renderer3DMesh* mesh);
+bool Renderer3DCreateMesh(const Renderer3DVertex* vertices, uint32 vertexCount, const uint32* indices, uint32 indexCount, StringView debugName, Renderer3DMesh* mesh);
 void Renderer3DDestroyMesh(Renderer3DMesh* mesh);
 
 // NOTE(saeb): Meshes drawn this frame are seen through this camera; it's copied, and stays until another is set.

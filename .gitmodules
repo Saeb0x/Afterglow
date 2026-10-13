@@ -1,6 +1,6 @@
-[submodule "External/SSTL"]
-	path = External/SSTL
-	url = https://github.com/Saeb0x/SSTL.git
+[submodule "External/Creuse"]
+	path = External/Creuse
+	url = https://github.com/Saeb0x/Creuse.git
 [submodule "External/DirectXMath"]
 	path = External/DirectXMath
 	url = https://github.com/microsoft/DirectXMath.git

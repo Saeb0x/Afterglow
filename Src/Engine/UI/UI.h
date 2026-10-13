@@ -1,8 +1,8 @@
 #if !defined(AFTERGLOW_UI_H)
 #define AFTERGLOW_UI_H
 
-#include <SSTL/Core/Types.h>
-#include <SSTL/Core/String.h>
+#include <Creuse/Core/Types.h>
+#include <Creuse/Core/String.h>
 
 #include "Engine/Renderer/Text.h"
 
@@ -47,7 +47,7 @@ struct UIPanel
 void UIBegin(UIContext* ui, const Font* font);
 void UIEnd(UIContext* ui);
 
-void UIPanelBegin(UIContext* ui, UIPanel* panel, StringView8 title);
+void UIPanelBegin(UIContext* ui, UIPanel* panel, StringView title);
 void UIPanelEnd(UIContext* ui);
 
 // NOTE(saeb): True while the mouse is over any UI or dragging one; the game should ignore mouse clicks then. Reflects the last UIEnd.
@@ -56,15 +56,15 @@ bool UIWantsMouse(const UIContext* ui);
 // NOTE(saeb): Every widget below takes the next row of the current panel. Labels double as IDs, so two widgets in one panel need different labels.
 
 // Returns true on the frame it's clicked.
-bool UIButton(UIContext* ui, StringView8 label);
+bool UIButton(UIContext* ui, StringView label);
 
 // Plain text, left-aligned. Not interactive, so it needs no ID and any text can repeat.
-void UILabel(UIContext* ui, StringView8 text);
+void UILabel(UIContext* ui, StringView text);
 
 // Clicking anywhere on the row flips *value. Returns true on the frame it flips.
-bool UICheckbox(UIContext* ui, StringView8 label, bool* value);
+bool UICheckbox(UIContext* ui, StringView label, bool* value);
 
 // Press and drag along the track to set *value between minimum and maximum; shows "label: value". Returns true on frames the value changes.
-bool UISlider(UIContext* ui, StringView8 label, real32* value, real32 minimum, real32 maximum);
+bool UISlider(UIContext* ui, StringView label, real32* value, real32 minimum, real32 maximum);
 
 #endif

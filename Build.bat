@@ -21,7 +21,7 @@ if "!BUILD!"=="debug" (
     if not exist "box2d.lib" (
         echo [Afterglow] Compiling Box2D [debug]...
         if not exist "Box2D" mkdir "Box2D"
-        cl /nologo /c /std:c17 /utf-8 /MTd /Od /Zi ^
+        cl /nologo /c /std:c17 /MTd /Od /Zi ^
         /I "%~dp0External\Box2D\include" ^
         "%~dp0External\Box2D\src\*.c" ^
         /Fo:"Box2D\\" /Fd:"Box2D\box2d.pdb"
@@ -31,8 +31,8 @@ if "!BUILD!"=="debug" (
     )
 
     echo [Afterglow] Compiling and linking game [debug]...
-    cl /nologo /std:c++20 /permissive- /utf-8 /MTd /Od /Zi ^
-    /I "%~dp0Src" /I "%~dp0External\SSTL\Include" /I "%~dp0External\DirectXMath\Inc" /I "%~dp0External\Box2D\include" ^
+    cl /nologo /std:c++20 /permissive- /MTd /Od /Zi ^
+    /I "%~dp0Src" /I "%~dp0External\Creuse\Include" /I "%~dp0External\DirectXMath\Inc" /I "%~dp0External\Box2D\include" ^
     "%~dp0Src\Afterglow.cpp" ^
     "%~dp0Src\Sandbox\Sandbox.cpp" ^
     /Fd"Afterglow.pdb" /Fe"Afterglow.exe" ^
@@ -40,8 +40,8 @@ if "!BUILD!"=="debug" (
     if !errorlevel! neq 0 goto error
 
     echo [Afterglow] Compiling and linking cooker [debug]...
-    cl /nologo /std:c++20 /permissive- /utf-8 /MTd /Od /Zi ^
-    /I "%~dp0Src" /I "%~dp0External\stb" /I "%~dp0External\SSTL\Include" ^
+    cl /nologo /std:c++20 /permissive- /MTd /Od /Zi ^
+    /I "%~dp0Src" /I "%~dp0External\stb" /I "%~dp0External\Creuse\Include" ^
     "%~dp0Src\AfterglowCooker.cpp" ^
     /Fd"AfterglowCooker.pdb" /Fe"AfterglowCooker.exe" ^
     /link /nologo /DEBUG Kernel32.lib D3DCompiler.lib
@@ -50,7 +50,7 @@ if "!BUILD!"=="debug" (
     if not exist "box2d.lib" (
         echo [Afterglow] Compiling Box2D [release]...
         if not exist "Box2D" mkdir "Box2D"
-        cl /nologo /c /std:c17 /utf-8 /MT /O2 ^
+        cl /nologo /c /std:c17 /MT /O2 ^
         /I "%~dp0External\Box2D\include" ^
         "%~dp0External\Box2D\src\*.c" ^
         /Fo:"Box2D\\"
@@ -60,8 +60,8 @@ if "!BUILD!"=="debug" (
     )
 
     echo [Afterglow] Compiling and linking game [release]...
-    cl /nologo /std:c++20 /permissive- /utf-8 /MT /O2 ^
-    /I "%~dp0Src" /I "%~dp0External\SSTL\Include" /I "%~dp0External\DirectXMath\Inc" /I "%~dp0External\Box2D\include" ^
+    cl /nologo /std:c++20 /permissive- /MT /O2 ^
+    /I "%~dp0Src" /I "%~dp0External\Creuse\Include" /I "%~dp0External\DirectXMath\Inc" /I "%~dp0External\Box2D\include" ^
     "%~dp0Src\Afterglow.cpp" ^
     "%~dp0Src\Sandbox\Sandbox.cpp" ^
     /Fe"Afterglow.exe" ^
@@ -69,8 +69,8 @@ if "!BUILD!"=="debug" (
     if !errorlevel! neq 0 goto error
 
     echo [Afterglow] Compiling and linking cooker [release]...
-    cl /nologo /std:c++20 /permissive- /utf-8 /MT /O2 ^
-    /I "%~dp0Src" /I "%~dp0External\stb" /I "%~dp0External\SSTL\Include" ^
+    cl /nologo /std:c++20 /permissive- /MT /O2 ^
+    /I "%~dp0Src" /I "%~dp0External\stb" /I "%~dp0External\Creuse\Include" ^
     "%~dp0Src\AfterglowCooker.cpp" ^
     /Fe"AfterglowCooker.exe" ^
     /link /nologo Kernel32.lib D3DCompiler.lib

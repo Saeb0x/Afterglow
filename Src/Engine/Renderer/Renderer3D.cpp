@@ -3,11 +3,11 @@
 #include "Engine/Renderer/Internal/GpuInternal.h"
 #include "Engine/Asset/Internal/AssetInternal.h"
 
-#include <SSTL/Core/Assert.h>
+#include <Creuse/Core/Assert.h>
 
 #include <stddef.h>
 
-#define AG_MESH_SHADER_PATH u8"Data/Engine/Mesh.aga"
+#define AG_MESH_SHADER_PATH "Data/Engine/Mesh.aga"
 #define AG_MAX_MESH_DRAWS 4096
 
 // NOTE(saeb): Everything one mesh draw needs; matches Mesh.hlsl's MeshConstants. Matrices are row-major, as DirectXMath stores them.
@@ -20,7 +20,7 @@ struct MeshConstants
     real32 SunColor[4];
     real32 AmbientColor[4];
 };
-SSTL_ASSERT_STATIC_MSG(sizeof(MeshConstants) % 16 == 0, "Afterglow: Constant buffers must be a multiple of 16 bytes.");
+CREUSE_ASSERT_STATIC_MSG(sizeof(MeshConstants) % 16 == 0, "Afterglow: Constant buffers must be a multiple of 16 bytes.");
 
 struct MeshDraw
 {
@@ -45,10 +45,10 @@ bool Renderer3DInit(StackAllocator* allocator, RendererInitError* error)
     Renderer3DData.Camera.FieldOfView = DirectX::XMConvertToRadians(70.0f);
     Renderer3DData.Camera.Near = 0.1f;
 
-    error->Message = SV8(u8"Couldn't set up the 3D renderer.");
+    error->Message = StringViewFromCString("Couldn't set up the 3D renderer.");
     error->Reason = AssetDescribeResult(AssetLoadResult::OutOfMemory);
 
-    Renderer3DData.Draws = (MeshDraw*)Allocate(allocator, Heap::Lower, AG_MAX_MESH_DRAWS * sizeof(MeshDraw), alignof(MeshDraw));
+    Renderer3DData.Draws = (MeshDraw*)StackAllocatorAllocate(allocator, Heap::Lower, AG_MAX_MESH_DRAWS * sizeof(MeshDraw), alignof(MeshDraw));
     if(!Renderer3DData.Draws)
     {
         return(false);
@@ -60,7 +60,7 @@ bool Renderer3DInit(StackAllocator* allocator, RendererInitError* error)
     constantBufferDesc.Type = GpuBufferType::Constant;
     constantBufferDesc.Usage = GpuUsage::Dynamic;
     constantBufferDesc.Size = sizeof(MeshConstants);
-    constantBufferDesc.DebugName = SV8(u8"MeshConstants");
+    constantBufferDesc.DebugName = StringViewFromCString("MeshConstants");
 
     Renderer3DData.ConstantBuffer = GpuCreateBuffer(&constantBufferDesc);
     if(!Renderer3DData.ConstantBuffer.Object)
@@ -69,10 +69,10 @@ bool Renderer3DInit(StackAllocator* allocator, RendererInitError* error)
     }
 
     // NOTE(saeb): The mesh shader every mesh draws with; the driver keeps its own copy of the bytecode, so the file is scratch.
-    Frame scratch = GetFrame(allocator, Heap::Upper);
+    Frame scratch = StackAllocatorGetFrame(allocator, Heap::Upper);
 
     AssetShader shader;
-    AssetLoadResult shaderResult = AssetReadShader(allocator, SV8(AG_MESH_SHADER_PATH), &shader);
+    AssetLoadResult shaderResult = AssetReadShader(allocator, StringViewFromCString(AG_MESH_SHADER_PATH), &shader);
     if(shaderResult == AssetLoadResult::Ok && (!shader.Vertex || !shader.Pixel))
     {
         shaderResult = AssetLoadResult::MissingStage;
@@ -91,16 +91,16 @@ bool Renderer3DInit(StackAllocator* allocator, RendererInitError* error)
         desc.Blend = GpuBlend::Opaque;
         desc.Cull = GpuCull::Back; // A closed mesh never shows its inside, so skip faces turned away from the camera
         desc.Depth = GpuDepth::TestWrite;
-        desc.DebugName = SV8(u8"MeshPipeline");
+        desc.DebugName = StringViewFromCString("MeshPipeline");
 
         Renderer3DData.Pipeline = GpuCreatePipeline(allocator, &desc);
     }
 
-    ReleaseFrame(allocator, scratch);
+    StackAllocatorReleaseFrame(allocator, scratch);
 
     if(!Renderer3DData.Pipeline.Object)
     {
-        error->Message = SV8(u8"Couldn't load the mesh shader (" AG_MESH_SHADER_PATH u8").");
+        error->Message = StringViewFromCString("Couldn't load the mesh shader (" AG_MESH_SHADER_PATH ").");
         error->Reason = (shaderResult != AssetLoadResult::Ok) ? AssetDescribeResult(shaderResult) : AssetDescribeResult(AssetLoadResult::RendererFailed);
         return(false);
     }
@@ -112,7 +112,7 @@ void Renderer3DEndFrame(bool draw)
 {
     if(draw && Renderer3DData.DrawCount > 0)
     {
-        GpuBeginMarker(SV8(u8"Meshes"));
+        GpuBeginMarker(StringViewFromCString("Meshes"));
 
         int32 backBufferWidth, backBufferHeight;
         GpuGetBackBufferSize(&backBufferWidth, &backBufferHeight);
@@ -163,12 +163,12 @@ void Renderer3DShutdown()
     Renderer3DData.Pipeline = {};
     Renderer3DData.ConstantBuffer = {};
 
-    // NOTE(saeb): The draw list lives in the engine's Lower heap; ShutdownStackAllocator frees it.
+    // NOTE(saeb): The draw list lives in the engine's Lower heap; StackAllocatorShutdown frees it.
     Renderer3DData.Draws = nullptr;
     Renderer3DData.DrawCount = 0;
 }
 
-bool Renderer3DCreateMesh(const Renderer3DVertex* vertices, uint32 vertexCount, const uint32* indices, uint32 indexCount, StringView8 debugName, Renderer3DMesh* mesh)
+bool Renderer3DCreateMesh(const Renderer3DVertex* vertices, uint32 vertexCount, const uint32* indices, uint32 indexCount, StringView debugName, Renderer3DMesh* mesh)
 {
     *mesh = {};
 

@@ -47,7 +47,7 @@ static bool TextIsUsable(const Font* font, real32 size)
     return(font && font->Glyphs && font->GlyphCount > 0 && font->PixelHeight > 0.0f && size > 0.0f);
 }
 
-void TextDraw(const Font* font, real32 x, real32 y, real32 size, real32 r, real32 g, real32 b, real32 a, StringView8 text)
+void TextDraw(const Font* font, real32 x, real32 y, real32 size, real32 r, real32 g, real32 b, real32 a, StringView text)
 {
     if(!TextIsUsable(font, size) || !text.Data)
     {
@@ -61,19 +61,19 @@ void TextDraw(const Font* font, real32 x, real32 y, real32 size, real32 r, real3
     // NOTE(saeb): In screen space one unit is one pixel, so small text is snapped to the pixel grid: each glyph starts on a whole pixel horizontally, which keeps stems crisp, and each line's baseline is snapped once, so every glyph on the line sits on the same pixel row. Rounding each glyph's top instead would scatter the baseline, since glyph tops sit at different fractions of a pixel. World space isn't snapped, so moving game text stays smooth.
     bool snap = (Renderer2DGetSpace() == Renderer2DSpace::Screen);
 
-    for(usize index = 0; index < text.Length;)
+    // NOTE(saeb): ASCII: each character is one byte and one glyph. Bytes the font doesn't have get its fallback glyph.
+    for(usize index = 0; index < text.Length; ++index)
     {
-        String8Decoded decoded = String8DecodeNext(text, index);
-        index += decoded.Length;
+        uint32 character = (uint8)text.Data[index];
 
-        if(decoded.Codepoint == '\n')
+        if(character == '\n')
         {
             penX = x;
             baseline += font->LineHeight * scale;
             continue;
         }
 
-        const TextGlyph* glyph = TextFindGlyph(font, decoded.Codepoint);
+        const TextGlyph* glyph = TextFindGlyph(font, character);
 
         // NOTE(saeb): Every glyph shares the atlas, so a whole block of text batches into one draw call.
         if(glyph->Width > 0.0f && glyph->Height > 0.0f)
@@ -103,7 +103,7 @@ void TextDraw(const Font* font, real32 x, real32 y, real32 size, real32 r, real3
     }
 }
 
-void TextMeasure(const Font* font, real32 size, StringView8 text, real32* width, real32* height)
+void TextMeasure(const Font* font, real32 size, StringView text, real32* width, real32* height)
 {
     *width = 0.0f;
     *height = 0.0f;
@@ -117,19 +117,18 @@ void TextMeasure(const Font* font, real32 size, StringView8 text, real32* width,
     real32 lineWidth = 0.0f;
     uint32 extraLines = 0;
 
-    for(usize index = 0; index < text.Length;)
+    for(usize index = 0; index < text.Length; ++index)
     {
-        String8Decoded decoded = String8DecodeNext(text, index);
-        index += decoded.Length;
+        uint32 character = (uint8)text.Data[index];
 
-        if(decoded.Codepoint == '\n')
+        if(character == '\n')
         {
             ++extraLines;
             lineWidth = 0.0f;
             continue;
         }
 
-        lineWidth += TextFindGlyph(font, decoded.Codepoint)->Advance * scale;
+        lineWidth += TextFindGlyph(font, character)->Advance * scale;
         if(lineWidth > *width)
         {
             *width = lineWidth;

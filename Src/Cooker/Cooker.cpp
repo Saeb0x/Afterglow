@@ -5,13 +5,13 @@
 #include <stdarg.h>
 #include <stdio.h>
 
-// NOTE(saeb): UTF-8 bytes. Only a buffer size; the platform's own limit (MAX_PATH on Windows) is lower and comes back from the File layer as InvalidPath.
+// NOTE(saeb): ASCII bytes. Only a buffer size; the platform's own limit (MAX_PATH on Windows) is lower and comes back from the File layer as InvalidPath.
 #define COOKER_MAX_PATH 4096
 
 // NOTE(saeb): Always null-terminated, since D3DCompile takes the source path as a C string.
 struct CookerPath
 {
-    char8 Data[COOKER_MAX_PATH];
+    char Data[COOKER_MAX_PATH];
     usize Length;
 };
 
@@ -37,7 +37,7 @@ struct CookerWalk
 
 static CookerContext Context;
 
-void CookerError(StringView8 path, const char* format, ...)
+void CookerError(StringView path, const char* format, ...)
 {
     if(path.Data)
     {
@@ -127,9 +127,9 @@ const char* CookerDescribeWrite(FileWriteResult result)
     return("unknown error");
 }
 
-static StringView8 CookerPathView(const CookerPath* path)
+static StringView CookerPathView(const CookerPath* path)
 {
-    return(StringView8{ path->Data, path->Length });
+    return(StringView{ path->Data, path->Length });
 }
 
 static void CookerPathTruncate(CookerPath* path, usize length)
@@ -139,7 +139,7 @@ static void CookerPathTruncate(CookerPath* path, usize length)
 }
 
 // NOTE(saeb): On failure (too long), the path is left partly appended; callers always truncate back to a saved length.
-static bool CookerPathAppend(CookerPath* path, StringView8 text)
+static bool CookerPathAppend(CookerPath* path, StringView text)
 {
     for(usize index = 0; index < text.Length; ++index)
     {
@@ -156,7 +156,7 @@ static bool CookerPathAppend(CookerPath* path, StringView8 text)
     return(true);
 }
 
-static bool CookerEquals(StringView8 a, const char* b)
+static bool CookerEquals(StringView a, const char* b)
 {
     usize index = 0;
     for(; index < a.Length; ++index)
@@ -171,7 +171,7 @@ static bool CookerEquals(StringView8 a, const char* b)
 }
 
 // NOTE(saeb): Case-insensitive for ASCII, so "Something.PNG" still cooks. Suffixes are lowercase ASCII.
-static bool CookerEndsWith(StringView8 name, const char* suffix)
+static bool CookerEndsWith(StringView name, const char* suffix)
 {
     usize suffixLength = 0;
     while(suffix[suffixLength] != '\0')
@@ -184,13 +184,13 @@ static bool CookerEndsWith(StringView8 name, const char* suffix)
         return(false);
     }
 
-    const char8* tail = name.Data + (name.Length - suffixLength);
+    const char* tail = name.Data + (name.Length - suffixLength);
     for(usize index = 0; index < suffixLength; ++index)
     {
-        char8 c = tail[index];
+        char c = tail[index];
         if(c >= 'A' && c <= 'Z')
         {
-            c = (char8)(c + ('a' - 'A'));
+            c = (char)(c + ('a' - 'A'));
         }
 
         if((char)c != suffix[index])
@@ -202,7 +202,7 @@ static bool CookerEndsWith(StringView8 name, const char* suffix)
     return(true);
 }
 
-static CookerSourceType CookerGetSourceType(StringView8 name)
+static CookerSourceType CookerGetSourceType(StringView name)
 {
     if(CookerEndsWith(name, ".png"))
     {
@@ -223,7 +223,7 @@ static CookerSourceType CookerGetSourceType(StringView8 name)
 }
 
 // NOTE(saeb): An output only counts if it was cooked with the current format; the engine rejects any other version, so an old one must be recooked even when it's newer than its source.
-static bool CookerOutputIsCurrent(StringView8 outputPath)
+static bool CookerOutputIsCurrent(StringView outputPath)
 {
     AssetHeader header = {};
     if(FileReadRange(Context.Memory, outputPath, 0, &header, sizeof(header)) != FileReadResult::Ok)
@@ -236,8 +236,8 @@ static bool CookerOutputIsCurrent(StringView8 outputPath)
 
 static void CookerCookFile(CookerWalk* walk, CookerSourceType type, uint64 sourceTime)
 {
-    StringView8 sourcePath = CookerPathView(&walk->Source);
-    StringView8 outputPath = CookerPathView(&walk->Output);
+    StringView sourcePath = CookerPathView(&walk->Source);
+    StringView outputPath = CookerPathView(&walk->Output);
 
     // NOTE(saeb): Up to date if the output is newer than its source and was cooked with the current format version. The timestamp check comes first, since it needs no file read. When a cooker change alters the output, bump AG_ASSET_VERSION (or cook with --force).
     FileInfo outputInfo;
@@ -250,8 +250,8 @@ static void CookerCookFile(CookerWalk* walk, CookerSourceType type, uint64 sourc
     }
 
     // NOTE(saeb): A fresh frame on both heaps per file; whatever a cook allocates is gone before the next one, so memory use stays flat.
-    Frame lowerFrame = GetFrame(Context.Memory, Heap::Lower);
-    Frame upperFrame = GetFrame(Context.Memory, Heap::Upper);
+    Frame lowerFrame = StackAllocatorGetFrame(Context.Memory, Heap::Lower);
+    Frame upperFrame = StackAllocatorGetFrame(Context.Memory, Heap::Upper);
 
     bool cooked = false;
     if(type == CookerSourceType::Texture)
@@ -267,8 +267,8 @@ static void CookerCookFile(CookerWalk* walk, CookerSourceType type, uint64 sourc
         cooked = CookFont(&Context, sourcePath, outputPath);
     }
 
-    ReleaseFrame(Context.Memory, upperFrame);
-    ReleaseFrame(Context.Memory, lowerFrame);
+    StackAllocatorReleaseFrame(Context.Memory, upperFrame);
+    StackAllocatorReleaseFrame(Context.Memory, lowerFrame);
 
     if(cooked)
     {
@@ -289,7 +289,7 @@ static void CookerWalkDirectory(CookerWalk* walk);
 static bool CookerVisitEntry(const FileDirectoryEntry* entry, void* userData)
 {
     CookerWalk* walk = (CookerWalk*)userData;
-    StringView8 name = entry->Name;
+    StringView name = entry->Name;
 
     // NOTE(saeb): Skips dot-files and folders such as .gitkeep.
     if(name.Length == 0 || name.Data[0] == '.')
@@ -308,7 +308,7 @@ static bool CookerVisitEntry(const FileDirectoryEntry* entry, void* userData)
     usize outputLength = walk->Output.Length;
 
     // NOTE(saeb): "/" works as a separator on every platform, Windows included.
-    StringView8 separator = SV8(u8"/");
+    StringView separator = StringViewFromCString("/");
     bool pathsFit = CookerPathAppend(&walk->Source, separator) && CookerPathAppend(&walk->Source, name) && CookerPathAppend(&walk->Output, separator) && CookerPathAppend(&walk->Output, name);
 
     if(pathsFit && !isDirectory)
@@ -321,7 +321,7 @@ static bool CookerVisitEntry(const FileDirectoryEntry* entry, void* userData)
         }
 
         CookerPathTruncate(&walk->Output, dot - 1);
-        pathsFit = CookerPathAppend(&walk->Output, SV8(u8".aga"));
+        pathsFit = CookerPathAppend(&walk->Output, StringViewFromCString(".aga"));
     }
 
     if(!pathsFit)
@@ -355,12 +355,12 @@ static void CookerWalkDirectory(CookerWalk* walk)
     }
 }
 
-int CookerRun(StackAllocator* memory, int argumentCount, const StringView8* arguments)
+int CookerRun(StackAllocator* memory, int argumentCount, const StringView* arguments)
 {
     Context.Memory = memory;
 
-    StringView8 sourceArgument = { nullptr, 0 };
-    StringView8 outputArgument = { nullptr, 0 };
+    StringView sourceArgument = { nullptr, 0 };
+    StringView outputArgument = { nullptr, 0 };
     bool force = false;
     bool usage = false;
 
@@ -408,7 +408,7 @@ int CookerRun(StackAllocator* memory, int argumentCount, const StringView8* argu
 
     if(!CookerPathAppend(&walk.Source, sourceArgument) || !CookerPathAppend(&walk.Output, outputArgument))
     {
-        CookerError(StringView8{ nullptr, 0 }, "source or output directory path is too long");
+        CookerError(StringView{ nullptr, 0 }, "source or output directory path is too long");
         return(1);
     }
 

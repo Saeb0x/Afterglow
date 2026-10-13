@@ -1,14 +1,14 @@
 #if !defined(AFTERGLOW_RENDERERINTERNAL_H)
 #define AFTERGLOW_RENDERERINTERNAL_H
 
-#include <SSTL/Core/Types.h>
-#include <SSTL/Core/String.h>
-#include <SSTL/Memory/StackAllocator.h>
+#include <Creuse/Core/Types.h>
+#include <Creuse/Core/String.h>
+#include <Creuse/Memory/StackAllocator.h>
 
 struct RendererInitError
 {
-    StringView8 Message;
-    StringView8 Reason;
+    StringView Message;
+    StringView Reason;
 };
 
 // NOTE(saeb): After GpuInit; initializes every rendering system.

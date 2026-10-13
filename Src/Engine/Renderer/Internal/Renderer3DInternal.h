@@ -1,8 +1,8 @@
 #if !defined(AFTERGLOW_RENDERER3DINTERNAL_H)
 #define AFTERGLOW_RENDERER3DINTERNAL_H
 
-#include <SSTL/Core/Types.h>
-#include <SSTL/Memory/StackAllocator.h>
+#include <Creuse/Core/Types.h>
+#include <Creuse/Memory/StackAllocator.h>
 
 #include "Engine/Renderer/Internal/RendererInternal.h"
 

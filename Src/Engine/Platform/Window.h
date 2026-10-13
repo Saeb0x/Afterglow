@@ -1,8 +1,8 @@
 #if !defined(AFTERGLOW_WINDOW_H)
 #define AFTERGLOW_WINDOW_H
 
-#include <SSTL/Core/Types.h>
-#include <SSTL/Core/String.h>
+#include <Creuse/Core/Types.h>
+#include <Creuse/Core/String.h>
 
 enum WindowFlags : uint32
 {
@@ -11,7 +11,7 @@ enum WindowFlags : uint32
 };
 
 void WindowSetFlags(uint32 windowFlags);
-void WindowSetTitle(StringView8 title);
+void WindowSetTitle(StringView title);
 void WindowSetClientAreaDimensions(int32 width, int32 height);
 void WindowSetMinClientAreaDimensions(int32 width, int32 height);
 void WindowGetClientAreaDimensions(int32* width, int32* height);

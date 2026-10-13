@@ -4,20 +4,20 @@
 #include "Engine/Renderer/Internal/GpuInternal.h"
 #include "Engine/Asset/Internal/AssetInternal.h"
 
-#include <SSTL/Core/Config.h>
-#include <SSTL/Core/Utility.h>
-#include <SSTL/Core/Assert.h>
-#include <SSTL/Core/String.h>
+#include <Creuse/Core/Config.h>
+#include <Creuse/Core/Utility.h>
+#include <Creuse/Core/Assert.h>
+#include <Creuse/Core/String.h>
 
 #include <DirectXMath.h>
 
 // NOTE(saeb): 16384 quads * 4 = 65536 vertices, the most a 16-bit index can address.
 #define AG_MAX_QUADS 16384
-SSTL_ASSERT_STATIC_MSG(AG_MAX_QUADS * 4 <= 65536, "Afterglow: Quad vertices must be addressable by 16-bit indices.");
+CREUSE_ASSERT_STATIC_MSG(AG_MAX_QUADS * 4 <= 65536, "Afterglow: Quad vertices must be addressable by 16-bit indices.");
 
 #define AG_MAX_PIPELINES 64
 
-#define AG_QUAD_SHADER_PATH u8"Data/Engine/Quad.aga"
+#define AG_QUAD_SHADER_PATH "Data/Engine/Quad.aga"
 
 // NOTE(saeb): Every quad belongs to a view, the matrix that maps its units to the screen. View 0 is the screen; the rest are this frame's cameras, in the order they were set.
 #define AG_VIEW_SCREEN 0 // Screen pixels, y down
@@ -49,7 +49,7 @@ struct QuadConstants
 {
     DirectX::XMFLOAT4X4 ViewProjection; // Matches Quad.hlsl's ViewProjection: row-major, as DirectXMath stores it
 };
-SSTL_ASSERT_STATIC_MSG(sizeof(QuadConstants) % 16 == 0, "Afterglow: Constant buffers must be a multiple of 16 bytes.");
+CREUSE_ASSERT_STATIC_MSG(sizeof(QuadConstants) % 16 == 0, "Afterglow: Constant buffers must be a multiple of 16 bytes.");
 
 struct Renderer2D
 {
@@ -83,7 +83,7 @@ struct QuadPipelineDesc
     const uint8* PixelShader;
     usize PixelShaderSize;
     Renderer2DBlend Blend;
-    StringView8 DebugName;
+    StringView DebugName;
 };
 
 static GpuPipeline Renderer2DCreateQuadPipeline(StackAllocator* allocator, const QuadPipelineDesc* quadDesc)
@@ -253,17 +253,17 @@ static uint32 Renderer2DFlushQuads()
         // NOTE(saeb): One event per batch, so RenderDoc / PIX show why batches split. Labels are only formatted while a capture tool is attached.
         if(labeled)
         {
-            char8 buffer[128];
-            String8 label = { buffer, 0, sizeof(buffer) };
-            String8Append(&label, SV8(u8"Batch "));
-            String8AppendUInt(&label, batchIndex);
-            String8Append(&label, SV8(u8": "));
-            String8AppendUInt(&label, current->QuadCount);
-            String8Append(&label, SV8(u8" quads, pipeline "));
-            String8AppendUInt(&label, pipeline);
-            String8Append(&label, SV8(u8", view "));
-            String8AppendUInt(&label, current->View);
-            GpuBeginMarker(StringView8{ label.Data, label.Length });
+            char buffer[128];
+            String label = { buffer, 0, sizeof(buffer) };
+            StringAppend(&label, StringViewFromCString("Batch "));
+            StringAppendUInt(&label, batchIndex);
+            StringAppend(&label, StringViewFromCString(": "));
+            StringAppendUInt(&label, current->QuadCount);
+            StringAppend(&label, StringViewFromCString(" quads, pipeline "));
+            StringAppendUInt(&label, pipeline);
+            StringAppend(&label, StringViewFromCString(", view "));
+            StringAppendUInt(&label, current->View);
+            GpuBeginMarker(StringView{ label.Data, label.Length });
         }
 
         GpuDrawIndexed(current->QuadCount * 6, current->FirstQuad * 6);
@@ -280,9 +280,9 @@ static uint32 Renderer2DFlushQuads()
 static bool Renderer2DCreateDefaultPipeline(StackAllocator* allocator, const uint8* vertexBytecode, usize vertexSize, const uint8* pixelBytecode, usize pixelSize)
 {
     // NOTE(saeb): All or nothing: on failure the copy is given back.
-    Frame lowerFrame = GetFrame(allocator, Heap::Lower);
+    Frame lowerFrame = StackAllocatorGetFrame(allocator, Heap::Lower);
 
-    uint8* vertexCopy = (uint8*)Allocate(allocator, Heap::Lower, vertexSize, 16);
+    uint8* vertexCopy = (uint8*)StackAllocatorAllocate(allocator, Heap::Lower, vertexSize, 16);
     if(!vertexCopy)
     {
         return(false);
@@ -299,14 +299,14 @@ static bool Renderer2DCreateDefaultPipeline(StackAllocator* allocator, const uin
     QuadPipelineDesc desc = {};
     desc.PixelShader = pixelBytecode;
     desc.PixelShaderSize = pixelSize;
-    desc.DebugName = SV8(u8"QuadPipeline");
+    desc.DebugName = StringViewFromCString("QuadPipeline");
 
     GpuPipeline pipeline = Renderer2DCreateQuadPipeline(allocator, &desc);
     if(!pipeline.Object)
     {
         Renderer2DData.QuadVertexShader = nullptr;
         Renderer2DData.QuadVertexShaderSize = 0;
-        ReleaseFrame(allocator, lowerFrame);
+        StackAllocatorReleaseFrame(allocator, lowerFrame);
         return(false);
     }
 
@@ -317,13 +317,13 @@ static bool Renderer2DCreateDefaultPipeline(StackAllocator* allocator, const uin
 
 bool Renderer2DInit(StackAllocator* allocator, RendererInitError* error)
 {
-    *error = { SV8(u8"Couldn't create the 2D renderer's GPU resources."), StringView8{ nullptr, 0 } };
+    *error = { StringViewFromCString("Couldn't create the 2D renderer's GPU resources."), StringView{ nullptr, 0 } };
 
     GpuBufferDesc vertexBufferDesc = {};
     vertexBufferDesc.Type = GpuBufferType::Vertex;
     vertexBufferDesc.Usage = GpuUsage::Dynamic;
     vertexBufferDesc.Size = AG_MAX_QUADS * 4 * sizeof(QuadVertex);
-    vertexBufferDesc.DebugName = SV8(u8"QuadVertices");
+    vertexBufferDesc.DebugName = StringViewFromCString("QuadVertices");
 
     Renderer2DData.VertexBuffer = GpuCreateBuffer(&vertexBufferDesc);
     if(!Renderer2DData.VertexBuffer.Object)
@@ -331,13 +331,13 @@ bool Renderer2DInit(StackAllocator* allocator, RendererInitError* error)
         return(false);
     }
 
-    Frame frameScratch = GetFrame(allocator, Heap::Upper);
+    Frame frameScratch = StackAllocatorGetFrame(allocator, Heap::Upper);
 
     uint32 indexCount = AG_MAX_QUADS * 6;
-    uint16* indices = (uint16*)Allocate(allocator, Heap::Upper, indexCount * sizeof(uint16), alignof(uint16));
+    uint16* indices = (uint16*)StackAllocatorAllocate(allocator, Heap::Upper, indexCount * sizeof(uint16), alignof(uint16));
     if(!indices)
     {
-        ReleaseFrame(allocator, frameScratch);
+        StackAllocatorReleaseFrame(allocator, frameScratch);
         return(false);
     }
 
@@ -360,11 +360,11 @@ bool Renderer2DInit(StackAllocator* allocator, RendererInitError* error)
     indexBufferDesc.Usage = GpuUsage::Immutable;
     indexBufferDesc.Size = indexCount * sizeof(uint16);
     indexBufferDesc.Data = indices;
-    indexBufferDesc.DebugName = SV8(u8"QuadIndices");
+    indexBufferDesc.DebugName = StringViewFromCString("QuadIndices");
 
     Renderer2DData.IndexBuffer = GpuCreateBuffer(&indexBufferDesc);
 
-    ReleaseFrame(allocator, frameScratch);
+    StackAllocatorReleaseFrame(allocator, frameScratch);
 
     if(!Renderer2DData.IndexBuffer.Object)
     {
@@ -372,9 +372,9 @@ bool Renderer2DInit(StackAllocator* allocator, RendererInitError* error)
     }
 
     // NOTE(saeb): AG_MAX_QUADS (16384) * 60 bytes = 960 KiB for the quads, 16384 bytes = 16 KiB for their views and 16384 * 20 bytes = 320 KiB for the batches. Sizing the batch array for the worst case (every quad changes state) means no check for running out of batches.
-    Renderer2DData.Quads = (Renderer2DQuad*)Allocate(allocator, Heap::Lower, AG_MAX_QUADS * sizeof(Renderer2DQuad), alignof(Renderer2DQuad));
-    Renderer2DData.QuadViews = (uint8*)Allocate(allocator, Heap::Lower, AG_MAX_QUADS * sizeof(uint8), alignof(uint8));
-    Renderer2DData.Batches = (QuadBatch*)Allocate(allocator, Heap::Lower, AG_MAX_QUADS * sizeof(QuadBatch), alignof(QuadBatch));
+    Renderer2DData.Quads = (Renderer2DQuad*)StackAllocatorAllocate(allocator, Heap::Lower, AG_MAX_QUADS * sizeof(Renderer2DQuad), alignof(Renderer2DQuad));
+    Renderer2DData.QuadViews = (uint8*)StackAllocatorAllocate(allocator, Heap::Lower, AG_MAX_QUADS * sizeof(uint8), alignof(uint8));
+    Renderer2DData.Batches = (QuadBatch*)StackAllocatorAllocate(allocator, Heap::Lower, AG_MAX_QUADS * sizeof(QuadBatch), alignof(QuadBatch));
     if(!Renderer2DData.Quads || !Renderer2DData.QuadViews || !Renderer2DData.Batches)
     {
         return(false);
@@ -393,7 +393,7 @@ bool Renderer2DInit(StackAllocator* allocator, RendererInitError* error)
     constantBufferDesc.Type = GpuBufferType::Constant;
     constantBufferDesc.Usage = GpuUsage::Dynamic;
     constantBufferDesc.Size = sizeof(QuadConstants);
-    constantBufferDesc.DebugName = SV8(u8"QuadConstants");
+    constantBufferDesc.DebugName = StringViewFromCString("QuadConstants");
 
     Renderer2DData.QuadConstantBuffer = GpuCreateBuffer(&constantBufferDesc);
     if(!Renderer2DData.QuadConstantBuffer.Object)
@@ -408,7 +408,7 @@ bool Renderer2DInit(StackAllocator* allocator, RendererInitError* error)
     whiteDesc.Height = 1;
     whiteDesc.Format = GpuFormat::RGBA8;
     whiteDesc.Data = &whitePixel;
-    whiteDesc.DebugName = SV8(u8"WhiteTexture");
+    whiteDesc.DebugName = StringViewFromCString("WhiteTexture");
 
     Renderer2DData.WhiteTexture = GpuCreateTexture(&whiteDesc);
     if(!Renderer2DData.WhiteTexture.Object)
@@ -417,10 +417,10 @@ bool Renderer2DInit(StackAllocator* allocator, RendererInitError* error)
     }
 
     // NOTE(saeb): The quad shader every pipeline 0 quad draws with; the driver keeps its own copy of the bytecode, so the file is scratch.
-    Frame scratch = GetFrame(allocator, Heap::Upper);
+    Frame scratch = StackAllocatorGetFrame(allocator, Heap::Upper);
 
     AssetShader shader;
-    AssetLoadResult shaderResult = AssetReadShader(allocator, SV8(AG_QUAD_SHADER_PATH), &shader);
+    AssetLoadResult shaderResult = AssetReadShader(allocator, StringViewFromCString(AG_QUAD_SHADER_PATH), &shader);
     if(shaderResult == AssetLoadResult::Ok && (!shader.Vertex || !shader.Pixel))
     {
         shaderResult = AssetLoadResult::MissingStage;
@@ -428,11 +428,11 @@ bool Renderer2DInit(StackAllocator* allocator, RendererInitError* error)
 
     bool created = (shaderResult == AssetLoadResult::Ok) && Renderer2DCreateDefaultPipeline(allocator, shader.Vertex, shader.VertexSize, shader.Pixel, shader.PixelSize);
 
-    ReleaseFrame(allocator, scratch);
+    StackAllocatorReleaseFrame(allocator, scratch);
 
     if(!created)
     {
-        error->Message = SV8(u8"Couldn't load the quad shader (" AG_QUAD_SHADER_PATH u8").");
+        error->Message = StringViewFromCString("Couldn't load the quad shader (" AG_QUAD_SHADER_PATH ").");
         error->Reason = (shaderResult != AssetLoadResult::Ok) ? AssetDescribeResult(shaderResult) : AssetDescribeResult(AssetLoadResult::RendererFailed);
         return(false);
     }
@@ -445,7 +445,7 @@ void Renderer2DEndFrame(bool draw)
     uint32 drawCalls = 0;
     if(draw && Renderer2DData.QuadCount > 0)
     {
-        GpuBeginMarker(SV8(u8"Quads"));
+        GpuBeginMarker(StringViewFromCString("Quads"));
         drawCalls = Renderer2DFlushQuads();
         GpuEndMarker();
     }
@@ -490,7 +490,7 @@ void Renderer2DShutdown()
     Renderer2DData.IndexBuffer = {};
     Renderer2DData.VertexBuffer = {};
 
-    // NOTE(saeb): The quad, view and batch arrays live in the engine's Lower heap; ShutdownStackAllocator frees them.
+    // NOTE(saeb): The quad, view and batch arrays live in the engine's Lower heap; StackAllocatorShutdown frees them.
     Renderer2DData.Quads = nullptr;
     Renderer2DData.QuadViews = nullptr;
     Renderer2DData.Batches = nullptr;
@@ -538,7 +538,7 @@ void Renderer2DPushQuad(const Renderer2DQuad* quad)
     }
 }
 
-AssetLoadResult Renderer2DLoadPipeline(StackAllocator* allocator, StringView8 path, Renderer2DBlend blend, Renderer2DPipeline* pipeline)
+AssetLoadResult Renderer2DLoadPipeline(StackAllocator* allocator, StringView path, Renderer2DBlend blend, Renderer2DPipeline* pipeline)
 {
     *pipeline = 0;
 
@@ -548,7 +548,7 @@ AssetLoadResult Renderer2DLoadPipeline(StackAllocator* allocator, StringView8 pa
     }
 
     // NOTE(saeb): The driver keeps its own copy of the bytecode, so the whole file is scratch.
-    Frame scratch = GetFrame(allocator, Heap::Upper);
+    Frame scratch = StackAllocatorGetFrame(allocator, Heap::Upper);
 
     AssetShader shader;
     AssetLoadResult result = AssetReadShader(allocator, path, &shader);
@@ -581,7 +581,7 @@ AssetLoadResult Renderer2DLoadPipeline(StackAllocator* allocator, StringView8 pa
         }
     }
 
-    ReleaseFrame(allocator, scratch);
+    StackAllocatorReleaseFrame(allocator, scratch);
 
     return(result);
 }

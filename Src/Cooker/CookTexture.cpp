@@ -8,7 +8,7 @@
 #define STBI_NO_STDIO
 #include "stb_image.h"
 
-bool CookTexture(CookerContext* context, StringView8 sourcePath, StringView8 outputPath)
+bool CookTexture(CookerContext* context, StringView sourcePath, StringView outputPath)
 {
     StackAllocator* memory = context->Memory;
 
@@ -49,7 +49,7 @@ bool CookTexture(CookerContext* context, StringView8 sourcePath, StringView8 out
     usize payloadSize = sizeof(AssetTextureHeader) + pixelBytes;
     usize outputSize = sizeof(AssetHeader) + payloadSize;
 
-    uint8* output = (uint8*)Allocate(memory, Heap::Lower, outputSize, AG_ASSET_ALIGNMENT);
+    uint8* output = (uint8*)StackAllocatorAllocate(memory, Heap::Lower, outputSize, AG_ASSET_ALIGNMENT);
     if(!output)
     {
         CookerError(sourcePath, "out of memory; a %dx%d image needs a larger cooker memory block", width, height);

@@ -5,21 +5,16 @@
 #endif
 #include <windows.h>
 
-void LogPrint(StackAllocator* allocator, StringView8 message)
+void LogPrint(StackAllocator* allocator, StringView message)
 {
-    Frame lowerFrameScratch = GetFrame(allocator, Heap::Lower);
-    Frame upperFrameScratch = GetFrame(allocator, Heap::Upper);
+    Frame lowerFrameScratch = StackAllocatorGetFrame(allocator, Heap::Lower);
 
-    String8 line = String8Reserve(allocator, message.Length + 2);
-    if(String8Append(&line, message) && String8Append(&line, SV8(u8"\n")))
+    // NOTE(saeb): StringAppend keeps the string null-terminated, which is what OutputDebugStringA needs.
+    String line = StringReserve(allocator, message.Length + 2);
+    if(StringAppend(&line, message) && StringAppend(&line, StringViewFromCString("\n")))
     {
-        StringView16 wideLine = SV8ToSV16(allocator, StringView8{ line.Data, line.Length });
-        if(wideLine.Data)
-        {
-            OutputDebugStringW((LPCWSTR)wideLine.Data);
-        }
+        OutputDebugStringA(line.Data);
     }
 
-    ReleaseFrame(allocator, upperFrameScratch);
-    ReleaseFrame(allocator, lowerFrameScratch);
+    StackAllocatorReleaseFrame(allocator, lowerFrameScratch);
 }

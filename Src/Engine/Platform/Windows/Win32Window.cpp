@@ -5,8 +5,8 @@
 struct Window
 {
     HWND Handle;
-    StringView8 InitialTitle;
-    String8 Title;
+    StringView InitialTitle;
+    String Title;
     int32 InitialWidth, InitialHeight;
     int32 Width, Height;
     int32 MinWidth, MinHeight;
@@ -38,7 +38,7 @@ static LRESULT CALLBACK Win32WindowProcedure(HWND windowHandle, UINT message, WP
             if(WindowData.MinWidth > 0 || WindowData.MinHeight > 0)
             {
                 RECT minimum = { 0, 0, WindowData.MinWidth, WindowData.MinHeight };
-                AdjustWindowRectEx(&minimum, (DWORD)GetWindowLongPtrW(windowHandle, GWL_STYLE), FALSE, (DWORD)GetWindowLongPtrW(windowHandle, GWL_EXSTYLE));
+                AdjustWindowRectEx(&minimum, (DWORD)GetWindowLongPtrA(windowHandle, GWL_STYLE), FALSE, (DWORD)GetWindowLongPtrA(windowHandle, GWL_EXSTYLE));
 
                 MINMAXINFO* info = (MINMAXINFO*)lParam;
                 if(WindowData.MinWidth > 0)
@@ -62,7 +62,7 @@ static LRESULT CALLBACK Win32WindowProcedure(HWND windowHandle, UINT message, WP
                 return(TRUE);
             }
 
-            return(DefWindowProcW(windowHandle, message, wParam, lParam));
+            return(DefWindowProcA(windowHandle, message, wParam, lParam));
         }
 
         case WM_SIZE:
@@ -80,7 +80,7 @@ static LRESULT CALLBACK Win32WindowProcedure(HWND windowHandle, UINT message, WP
 
         default:
         {
-            return(DefWindowProcW(windowHandle, message, wParam, lParam));
+            return(DefWindowProcA(windowHandle, message, wParam, lParam));
         }
     }
 
@@ -89,19 +89,19 @@ static LRESULT CALLBACK Win32WindowProcedure(HWND windowHandle, UINT message, WP
 
 bool Win32WindowCreate(StackAllocator* allocator)
 {
-    StringView8 title = (WindowData.InitialTitle.Data && WindowData.InitialTitle.Length > 0) ? WindowData.InitialTitle : SV8(u8"Afterglow");
+    StringView title = (WindowData.InitialTitle.Data && WindowData.InitialTitle.Length > 0) ? WindowData.InitialTitle : StringViewFromCString("Afterglow");
     int32 width = (WindowData.InitialWidth > 0) ? WindowData.InitialWidth : 1280;
     int32 height = (WindowData.InitialHeight > 0) ? WindowData.InitialHeight : 720;
 
-    WNDCLASSEXW windowClass = {};
-    windowClass.cbSize = sizeof(WNDCLASSEXW);
+    WNDCLASSEXA windowClass = {};
+    windowClass.cbSize = sizeof(WNDCLASSEXA);
     windowClass.style = CS_OWNDC | CS_HREDRAW | CS_VREDRAW;
     windowClass.lpfnWndProc = Win32WindowProcedure;
-    windowClass.hInstance = GetModuleHandleW(nullptr);
-    windowClass.hCursor = LoadCursorW(nullptr, MAKEINTRESOURCEW(IDC_ARROW));
-    windowClass.lpszClassName = L"AfterglowWin32WindowClass";
+    windowClass.hInstance = GetModuleHandleA(nullptr);
+    windowClass.hCursor = LoadCursorA(nullptr, MAKEINTRESOURCEA(IDC_ARROW));
+    windowClass.lpszClassName = "AfterglowWin32WindowClass";
 
-    if(!RegisterClassExW(&windowClass))
+    if(!RegisterClassExA(&windowClass))
     {
         return(false);
     }
@@ -129,27 +129,27 @@ bool Win32WindowCreate(StackAllocator* allocator)
         windowHeight = windowClientArea.bottom - windowClientArea.top;
     }
 
-    Frame frameScratch = GetFrame(allocator, Heap::Upper);
-    HWND windowHandle = CreateWindowExW(0,
-                                        L"AfterglowWin32WindowClass",
-                                        (LPCWSTR)((SV8ToSV16(allocator, title)).Data),
+    // NOTE(saeb): The window keeps its own copy of the title, which is also null-terminated, as CreateWindowExA needs.
+    WindowData.Title = StringFromView(allocator, title);
+
+    HWND windowHandle = CreateWindowExA(0,
+                                        "AfterglowWin32WindowClass",
+                                        WindowData.Title.Data,
                                         windowStyle,
                                         windowX, windowY,
                                         windowWidth, windowHeight,
                                         nullptr,
                                         nullptr,
-                                        GetModuleHandleW(nullptr),
+                                        GetModuleHandleA(nullptr),
                                         nullptr);
-    ReleaseFrame(allocator, frameScratch);
 
     if(!windowHandle)
     {
-        UnregisterClassW(L"AfterglowWin32WindowClass", GetModuleHandleW(nullptr));
+        UnregisterClassA("AfterglowWin32WindowClass", GetModuleHandleA(nullptr));
         return(false);
     }
 
     WindowData.Handle = windowHandle;
-    WindowData.Title = String8FromView(allocator, title);
 
     RECT windowClientArea = {};
     GetClientRect(windowHandle, &windowClientArea);
@@ -164,7 +164,7 @@ bool Win32WindowPumpEvents()
     Win32InputBegin();
 
     MSG message;
-    while(PeekMessageW(&message, nullptr, 0, 0, PM_REMOVE))
+    while(PeekMessageA(&message, nullptr, 0, 0, PM_REMOVE))
     {
         // NOTE(saeb): Nothing in the engine posts WM_QUIT, but anything calling PostQuitMessage() should still end the loop.
         if(message.message == WM_QUIT)
@@ -173,7 +173,7 @@ bool Win32WindowPumpEvents()
         }
 
         TranslateMessage(&message);
-        DispatchMessageW(&message);
+        DispatchMessageA(&message);
     }
 
     return(!WindowData.CloseRequested);
@@ -187,7 +187,7 @@ void Win32WindowShutdown()
         WindowData.Handle = nullptr;
     }
 
-    UnregisterClassW(L"AfterglowWin32WindowClass", GetModuleHandleW(nullptr));
+    UnregisterClassA("AfterglowWin32WindowClass", GetModuleHandleA(nullptr));
 }
 
 HWND Win32WindowGetHandle()
@@ -200,7 +200,7 @@ void WindowSetFlags(uint32 windowFlags)
     WindowData.Flags = windowFlags;
 }
 
-void WindowSetTitle(StringView8 title)
+void WindowSetTitle(StringView title)
 {
     WindowData.InitialTitle = title;
 }
@@ -246,7 +246,7 @@ void WindowSetCursorVisible(bool visible)
     POINT cursor;
     if(WindowData.Handle && GetCursorPos(&cursor) && WindowFromPoint(cursor) == WindowData.Handle)
     {
-        LRESULT hit = SendMessageW(WindowData.Handle, WM_NCHITTEST, 0, MAKELPARAM(cursor.x, cursor.y));
-        SendMessageW(WindowData.Handle, WM_SETCURSOR, (WPARAM)WindowData.Handle, MAKELPARAM(hit, WM_MOUSEMOVE));
+        LRESULT hit = SendMessageA(WindowData.Handle, WM_NCHITTEST, 0, MAKELPARAM(cursor.x, cursor.y));
+        SendMessageA(WindowData.Handle, WM_SETCURSOR, (WPARAM)WindowData.Handle, MAKELPARAM(hit, WM_MOUSEMOVE));
     }
 }

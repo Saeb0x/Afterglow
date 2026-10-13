@@ -1,9 +1,9 @@
 #include "Engine/Renderer/Gpu.h"
 #include "Engine/Renderer/Internal/GpuInternal.h"
 
-#include <SSTL/Core/Config.h>
-#include <SSTL/Core/Utility.h>
-#include <SSTL/Core/Assert.h>
+#include <Creuse/Core/Config.h>
+#include <Creuse/Core/Utility.h>
+#include <Creuse/Core/Assert.h>
 
 #include <d3d11.h>
 #include <d3d11_1.h>
@@ -39,7 +39,7 @@ struct Gpu
 static Gpu GpuData;
 
 // NOTE(saeb): Shows up in RenderDoc / PIX and in debug-layer messages, including the live-object report at shutdown.
-static void D3D11SetName(ID3D11DeviceChild* object, StringView8 name)
+static void D3D11SetName(ID3D11DeviceChild* object, StringView name)
 {
     if(!object || !name.Data || name.Length == 0)
     {
@@ -93,8 +93,8 @@ static bool D3D11CreateBackBufferView()
         return(false);
     }
 
-    D3D11SetName(backBuffer, SV8(u8"BackBuffer"));
-    D3D11SetName(GpuData.RenderTargetView, SV8(u8"BackBufferRTV"));
+    D3D11SetName(backBuffer, StringViewFromCString("BackBuffer"));
+    D3D11SetName(GpuData.RenderTargetView, StringViewFromCString("BackBufferRTV"));
 
     backBuffer->Release();
 
@@ -128,8 +128,8 @@ static bool D3D11CreateDepthView(int32 width, int32 height)
         return(false);
     }
 
-    D3D11SetName(depthTexture, SV8(u8"DepthBuffer"));
-    D3D11SetName(GpuData.DepthView, SV8(u8"DepthBufferDSV"));
+    D3D11SetName(depthTexture, StringViewFromCString("DepthBuffer"));
+    D3D11SetName(GpuData.DepthView, StringViewFromCString("DepthBufferDSV"));
 
     // NOTE(saeb): The view keeps the texture alive, like the back buffer's view does.
     depthTexture->Release();
@@ -141,7 +141,7 @@ GpuInitResult GpuInit(const GpuDesc* desc)
 {
     // NOTE(saeb): Factory first, so we choose the adapter; the swap chain later comes from this same factory, which is the adapter's parent (a mismatched factory fails).
     UINT factoryFlags = 0;
-#if SSTL_DEBUG
+#if CREUSE_DEBUG
     factoryFlags |= DXGI_CREATE_FACTORY_DEBUG;
 #endif
 
@@ -183,15 +183,20 @@ GpuInitResult GpuInit(const GpuDesc* desc)
 
         if(!(adapterDesc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE))
         {
-            OutputDebugStringW(L"[Afterglow] GPU: ");
-            OutputDebugStringW(adapterDesc.Description);
-            OutputDebugStringW(L"\n");
+            // NOTE(saeb): DXGI only gives the name as wide characters. Everything in the engine is ASCII, so anything outside it becomes '?'.
+            uint32 nameLength = 0;
+            while(nameLength < CREUSE_ARRAYCOUNT(GpuData.Caps.Name) - 1 && adapterDesc.Description[nameLength] != 0)
+            {
+                WCHAR c = adapterDesc.Description[nameLength];
+                GpuData.Caps.Name[nameLength++] = (c < 128) ? (char)c : '?';
+            }
+            GpuData.Caps.Name[nameLength] = 0;
+
+            OutputDebugStringA("[Afterglow] GPU: ");
+            OutputDebugStringA(GpuData.Caps.Name);
+            OutputDebugStringA("\n");
 
             GpuData.Caps.VideoMemory = (uint64)adapterDesc.DedicatedVideoMemory;
-            if(WideCharToMultiByte(CP_UTF8, 0, adapterDesc.Description, -1, (LPSTR)GpuData.Caps.Name, sizeof(GpuData.Caps.Name), nullptr, nullptr) == 0)
-            {
-                GpuData.Caps.Name[0] = 0;
-            }
 
             break;
         }
@@ -211,7 +216,7 @@ GpuInitResult GpuInit(const GpuDesc* desc)
     }
 
     UINT deviceFlags = 0;
-#if SSTL_DEBUG
+#if CREUSE_DEBUG
     deviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
 #endif
 
@@ -224,23 +229,23 @@ GpuInitResult GpuInit(const GpuDesc* desc)
                                        nullptr,
                                        deviceFlags,
                                        featureLevels,
-                                       SSTL_ARRAYCOUNT(featureLevels),
+                                       CREUSE_ARRAYCOUNT(featureLevels),
                                        D3D11_SDK_VERSION,
                                        &GpuData.Device,
                                        nullptr,
                                        &GpuData.Context);
-#if SSTL_DEBUG
+#if CREUSE_DEBUG
     // NOTE(saeb): The debug layer ships with the optional "Graphics Tools" Windows feature; run without it rather than fail.
     if(result == DXGI_ERROR_SDK_COMPONENT_MISSING)
     {
-        OutputDebugStringW(L"[Afterglow] D3D11 debug layer not installed (Settings > Optional features > Graphics Tools).\n");
+        OutputDebugStringA("[Afterglow] D3D11 debug layer not installed (Settings > Optional features > Graphics Tools).\n");
         deviceFlags &= ~D3D11_CREATE_DEVICE_DEBUG;
         result = D3D11CreateDevice(GpuData.Adapter,
                                    D3D_DRIVER_TYPE_UNKNOWN,
                                    nullptr,
                                    deviceFlags,
                                    featureLevels,
-                                   SSTL_ARRAYCOUNT(featureLevels),
+                                   CREUSE_ARRAYCOUNT(featureLevels),
                                    D3D11_SDK_VERSION,
                                    &GpuData.Device,
                                    nullptr,
@@ -256,7 +261,7 @@ GpuInitResult GpuInit(const GpuDesc* desc)
     // NOTE(saeb): Optional; groups calls in RenderDoc / PIX. A failure just means no markers.
     GpuData.Context->QueryInterface(IID_PPV_ARGS(&GpuData.Annotation));
 
-#if SSTL_DEBUG
+#if CREUSE_DEBUG
     // NOTE(saeb): Stop in the debugger on the exact API call that misuses D3D, instead of finding out from a black screen.
     ID3D11InfoQueue* infoQueue = nullptr;
     if(SUCCEEDED(GpuData.Device->QueryInterface(IID_PPV_ARGS(&infoQueue))))
@@ -274,8 +279,8 @@ GpuInitResult GpuInit(const GpuDesc* desc)
     GpuData.Caps.MaxTextureSize = D3D11_REQ_TEXTURE2D_U_OR_V_DIMENSION;
 
     // NOTE(saeb): The fixed sampler set, in GpuSampler order.
-    StringView8 samplerNames[] = { SV8(u8"LinearClampSampler"), SV8(u8"LinearWrapSampler"), SV8(u8"PointClampSampler"), SV8(u8"PointWrapSampler") };
-    SSTL_ASSERT_STATIC_MSG(SSTL_ARRAYCOUNT(samplerNames) == (uint32)GpuSampler::Count, "Afterglow: One sampler name per GpuSampler.");
+    StringView samplerNames[] = { StringViewFromCString("LinearClampSampler"), StringViewFromCString("LinearWrapSampler"), StringViewFromCString("PointClampSampler"), StringViewFromCString("PointWrapSampler") };
+    CREUSE_ASSERT_STATIC_MSG(CREUSE_ARRAYCOUNT(samplerNames) == (uint32)GpuSampler::Count, "Afterglow: One sampler name per GpuSampler.");
     for(uint32 index = 0; index < (uint32)GpuSampler::Count; ++index)
     {
         bool linear = (index == (uint32)GpuSampler::LinearClamp || index == (uint32)GpuSampler::LinearWrap);
@@ -392,7 +397,7 @@ void GpuShutdown()
         GpuData.Context = nullptr;
     }
 
-#if SSTL_DEBUG
+#if CREUSE_DEBUG
     // NOTE(saeb): Anything listed here besides the device itself is a leaked COM reference.
     ID3D11Debug* debug = nullptr;
     if(GpuData.Device && SUCCEEDED(GpuData.Device->QueryInterface(IID_PPV_ARGS(&debug))))
@@ -653,7 +658,7 @@ void GpuBeginPass(const GpuPassDesc* desc)
 
     GpuData.Context->RSSetViewports(1, &viewport);
 
-    GpuBeginMarker(SV8(u8"Clear"));
+    GpuBeginMarker(StringViewFromCString("Clear"));
 
     GpuData.Context->ClearRenderTargetView(GpuData.RenderTargetView, desc->ClearColor);
 
@@ -685,15 +690,20 @@ void GpuGetBackBufferSize(int32* width, int32* height)
     *height = GpuData.BackBufferHeight;
 }
 
-void GpuBeginMarker(StringView8 name)
+void GpuBeginMarker(StringView name)
 {
     if(!GpuData.Annotation)
     {
         return;
     }
 
+    // NOTE(saeb): BeginEvent only takes wide characters; an ASCII character is the same number either way, so each one just widens.
     wchar_t wide[128];
-    int length = MultiByteToWideChar(CP_UTF8, 0, (LPCCH)name.Data, (int)name.Length, wide, SSTL_ARRAYCOUNT(wide) - 1);
+    usize length = (name.Length < CREUSE_ARRAYCOUNT(wide) - 1) ? name.Length : CREUSE_ARRAYCOUNT(wide) - 1;
+    for(usize index = 0; index < length; ++index)
+    {
+        wide[index] = (wchar_t)(uint8)name.Data[index];
+    }
     wide[length] = 0;
     GpuData.Annotation->BeginEvent(wide);
 }
@@ -845,7 +855,7 @@ GpuPipeline GpuCreatePipeline(StackAllocator* allocator, const GpuPipelineDesc* 
         SUCCEEDED(GpuData.Device->CreateRasterizerState(&rasterizerDesc, &pipeline.RasterizerState)) &&
         SUCCEEDED(GpuData.Device->CreateDepthStencilState(&depthDesc, &pipeline.DepthState));
 
-    D3D11Pipeline* record = created ? (D3D11Pipeline*)Allocate(allocator, Heap::Lower, sizeof(D3D11Pipeline), alignof(D3D11Pipeline)) : nullptr;
+    D3D11Pipeline* record = created ? (D3D11Pipeline*)StackAllocatorAllocate(allocator, Heap::Lower, sizeof(D3D11Pipeline), alignof(D3D11Pipeline)) : nullptr;
     if(!record)
     {
         D3D11ReleasePipeline(&pipeline);

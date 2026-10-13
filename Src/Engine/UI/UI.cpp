@@ -14,7 +14,7 @@
 #define UI_TEXT_SIZE 0.6f // Text height as a fraction of its row's height
 
 // NOTE(saeb): FNV-1a starting from seed, so IDs can be derived from a parent's: the same text under two different seeds gives two different IDs.
-static UIID UIHashSeeded(uint32 seed, StringView8 text)
+static UIID UIHashSeeded(uint32 seed, StringView text)
 {
     uint32 hash = seed;
     for(usize index = 0; index < text.Length; ++index)
@@ -27,13 +27,13 @@ static UIID UIHashSeeded(uint32 seed, StringView8 text)
 }
 
 // NOTE(saeb): Same label, same ID every frame; 0 is reserved for "none".
-static UIID UIHash(StringView8 text)
+static UIID UIHash(StringView text)
 {
     return(UIHashSeeded(2166136261u, text)); // FNV-1a's standard starting value
 }
 
 // NOTE(saeb): Inside a panel, IDs derive from the panel's, so "Reset" in two panels gives two different IDs.
-static UIID UIWidgetID(UIContext* ui, StringView8 label)
+static UIID UIWidgetID(UIContext* ui, StringView label)
 {
     return(ui->Seed ? UIHashSeeded(ui->Seed, label) : UIHash(label));
 }
@@ -64,7 +64,7 @@ static void UIDrawRect(real32 x, real32 y, real32 width, real32 height, real32 r
 }
 
 // NOTE(saeb): Text sized to the row and centred vertically in it; centred horizontally too, or left-aligned at x. TextDraw's y is the top of the text and TextMeasure's height is ascent + descent, so this centres exactly.
-static void UIDrawText(UIContext* ui, StringView8 text, real32 x, real32 y, real32 width, real32 height, bool centre)
+static void UIDrawText(UIContext* ui, StringView text, real32 x, real32 y, real32 width, real32 height, bool centre)
 {
     real32 textSize = height * UI_TEXT_SIZE;
     real32 textWidth, textHeight;
@@ -141,11 +141,11 @@ void UIEnd(UIContext* ui)
     Renderer2DSetSpace(Renderer2DSpace::World);
 }
 
-void UIPanelBegin(UIContext* ui, UIPanel* panel, StringView8 title)
+void UIPanelBegin(UIContext* ui, UIPanel* panel, StringView title)
 {
     UIID id = UIHash(title);
-    UIID gripId = UIHashSeeded(id, SV8(u8"#Resize"));
-    UIID bodyId = UIHashSeeded(id, SV8(u8"#Body"));
+    UIID gripId = UIHashSeeded(id, StringViewFromCString("#Resize"));
+    UIID bodyId = UIHashSeeded(id, StringViewFromCString("#Body"));
 
     // NOTE(saeb): Without a title bar there's nothing to grab, so it can't move either. The title string still names the panel's ID.
     bool hasTitle = !(panel->Flags & UIPanelFlags_NoTitle);
@@ -336,7 +336,7 @@ bool UIWantsMouse(const UIContext* ui)
     return(ui->Hot != 0 || ui->Active != 0);
 }
 
-bool UIButton(UIContext* ui, StringView8 label)
+bool UIButton(UIContext* ui, StringView label)
 {
     UIID id = UIWidgetID(ui, label);
 
@@ -352,7 +352,7 @@ bool UIButton(UIContext* ui, StringView8 label)
     return(clicked);
 }
 
-void UILabel(UIContext* ui, StringView8 text)
+void UILabel(UIContext* ui, StringView text)
 {
     real32 x, y, width, height;
     UINextRow(ui, UI_ROW_HEIGHT, &x, &y, &width, &height);
@@ -360,7 +360,7 @@ void UILabel(UIContext* ui, StringView8 text)
     UIDrawText(ui, text, x, y, width, height, false);
 }
 
-bool UICheckbox(UIContext* ui, StringView8 label, bool* value)
+bool UICheckbox(UIContext* ui, StringView label, bool* value)
 {
     UIID id = UIWidgetID(ui, label);
 
@@ -393,7 +393,7 @@ bool UICheckbox(UIContext* ui, StringView8 label, bool* value)
     return(toggled);
 }
 
-bool UISlider(UIContext* ui, StringView8 label, real32* value, real32 minimum, real32 maximum)
+bool UISlider(UIContext* ui, StringView label, real32* value, real32 minimum, real32 maximum)
 {
     UIID id = UIWidgetID(ui, label);
 
@@ -447,13 +447,13 @@ bool UISlider(UIContext* ui, StringView8 label, real32* value, real32 minimum, r
     UIDrawRect(x, y, width * fill, height, 0.25f, 0.45f, 0.7f, 1.0f);
 
     // "Label: 0.50" centred on the track, built in a local buffer.
-    char8 buffer[128];
-    String8 text = { buffer, 0, sizeof(buffer) };
-    String8Append(&text, label);
-    String8Append(&text, SV8(u8": "));
-    String8AppendReal(&text, *value, 2);
+    char buffer[128];
+    String text = { buffer, 0, sizeof(buffer) };
+    StringAppend(&text, label);
+    StringAppend(&text, StringViewFromCString(": "));
+    StringAppendReal(&text, *value, 2);
 
-    UIDrawText(ui, StringView8{ text.Data, text.Length }, x, y, width, height, true);
+    UIDrawText(ui, StringView{ text.Data, text.Length }, x, y, width, height, true);
 
     return(*value != oldValue);
 }

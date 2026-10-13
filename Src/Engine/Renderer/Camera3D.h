@@ -1,7 +1,7 @@
 #if !defined(AFTERGLOW_CAMERA3D_H)
 #define AFTERGLOW_CAMERA3D_H
 
-#include <SSTL/Core/Types.h>
+#include <Creuse/Core/Types.h>
 
 #include <DirectXMath.h>
 

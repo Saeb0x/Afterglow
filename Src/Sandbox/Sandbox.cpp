@@ -7,7 +7,7 @@
 void GameConfigure()
 {
     WindowSetFlags(WindowFlags_None);
-    WindowSetTitle(SV8(u8"Afterglow Sandbox"));
+    WindowSetTitle(StringViewFromCString("Afterglow Sandbox"));
     WindowSetClientAreaDimensions(1280, 720);
     WindowSetMinClientAreaDimensions(360, 360);
     InputSetFlags(InputFlags_Mouse | InputFlags_Keyboard);
