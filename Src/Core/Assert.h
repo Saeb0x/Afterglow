@@ -17,11 +17,11 @@
 #define AG_ASSERT(condition)                                                                       \
 	do                                                                                             \
 	{                                                                                              \
-		if (!(condition))                                                                          \
+		if(!(condition))                                                                           \
 		{                                                                                          \
 			AG_DEBUGBREAK();                                                                       \
 		}                                                                                          \
-	} while (0)
+	} while(0)
 #else
 #define AG_ASSERT(condition) (void)sizeof(!(condition))
 #endif

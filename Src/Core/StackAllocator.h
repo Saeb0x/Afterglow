@@ -30,7 +30,7 @@ inline bool StackAllocatorInit(StackAllocator* allocator, void* memory, usize si
 	AG_ASSERT(allocator);
 	AG_ASSERT(size > 0);
 
-	if (!memory)
+	if(!memory)
 	{
 		AG_ASSERT(false);
 		return (false);
@@ -67,9 +67,9 @@ inline void* StackAllocatorAllocate(StackAllocator* allocator, StackAllocatorHea
 	usize upper = (usize)allocator->UpperHeap;
 
 	void* memory;
-	if (heap == StackAllocatorHeap::Upper)
+	if(heap == StackAllocatorHeap::Upper)
 	{
-		if (size > upper - lower)
+		if(size > upper - lower)
 		{
 			AG_ASSERT(false);
 			return (nullptr); // Out of memory
@@ -78,7 +78,7 @@ inline void* StackAllocatorAllocate(StackAllocator* allocator, StackAllocatorHea
 		// NOTE(saeb): Growing down, so align down; aligning up would move back into memory already
 		// handed out.
 		usize aligned = AG_ALIGNDOWN(upper - size, alignment);
-		if (aligned < lower)
+		if(aligned < lower)
 		{
 			AG_ASSERT(false);
 			return (nullptr); // Alignment padding collides with lower heap
@@ -90,7 +90,7 @@ inline void* StackAllocatorAllocate(StackAllocator* allocator, StackAllocatorHea
 	else
 	{
 		usize aligned = AG_ALIGNUP(lower, alignment);
-		if (aligned > upper || size > upper - aligned)
+		if(aligned > upper || size > upper - aligned)
 		{
 			AG_ASSERT(false);
 			return (nullptr); // Out of memory or collision
@@ -140,7 +140,7 @@ inline void StackAllocatorReleaseFrame(StackAllocator* allocator, StackAllocator
 
 	// NOTE(saeb): Frames must be released newest first; releasing an older frame and then a newer
 	// one would move the heap back over memory that was already given back.
-	if (frame.Heap == StackAllocatorHeap::Upper)
+	if(frame.Heap == StackAllocatorHeap::Upper)
 	{
 		AG_ASSERT(frame.Mark >= allocator->UpperHeap && frame.Mark <= allocator->Cap);
 		allocator->UpperHeap = frame.Mark;
