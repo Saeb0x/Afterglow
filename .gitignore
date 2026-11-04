@@ -1,8 +1,3 @@
-# Directories
 Build/
-Docs/
-
-# Emacs
-*~
-.#*
-\#*\#
+.clang-format
+compile_flags.txt

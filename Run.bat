@@ -1,28 +1,28 @@
 @echo off
-setlocal enabledelayedexpansion
+setlocal
 
 set BUILD=debug
 if /i "%1"=="release" set BUILD=release
 
 set BUILD_DIR=%~dp0Build\Debug
-if "!BUILD!"=="release" set BUILD_DIR=%~dp0Build\Release
+if "%BUILD%"=="release" set BUILD_DIR=%~dp0Build\Release
 
-if exist "!BUILD_DIR!" (
-    pushd "!BUILD_DIR!"
+if exist "%BUILD_DIR%" (
+	pushd "%BUILD_DIR%"
 
-    if not exist "Afterglow.exe" (
-        echo [Afterglow] Afterglow.exe not found. Run Build.bat !BUILD! first.
-        popd
-        endlocal
-        exit /b 1
-    )
+	if not exist "Afterglow.exe" (
+		echo [Afterglow] Afterglow.exe not found. Run Build.bat %BUILD% first.
+		popd
+		endlocal
+		exit /b 1
+	)
 
-    start "" "Afterglow.exe"
-    popd
-    endlocal
-    exit /b 0
+	start "" "Afterglow.exe"
+	popd
+	endlocal
+	exit /b 0
 ) else (
-    echo [Afterglow] Afterglow.exe not found. Run Build.bat !BUILD! first.
-    endlocal
-    exit /b 1
+	echo [Afterglow] Afterglow.exe not found. Run Build.bat %BUILD% first.
+	endlocal
+	exit /b 1
 )
