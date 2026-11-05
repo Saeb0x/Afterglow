@@ -1,13 +1,19 @@
+#include "Core/Utility.h"
 #include "Core/Log.cpp"
 #include "Win32Platform.cpp"
 
 int WINAPI WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, int showCommand)
 {
-#if AG_DEBUG
 	Win32ConsoleInit();
-#endif
 
-	AG_LOG_INFO("Afterglow started");
+	usize memorySize = AG_MIB(64);
+	void* memory = PlatformAllocateMemory(memorySize);
+	if(!memory)
+	{
+		PlatformFatalError("Couldn't allocate %zu bytes of memory.", memorySize);
+	}
+
+	PlatformFreeMemory(memory);
 
 	return (0);
 }
