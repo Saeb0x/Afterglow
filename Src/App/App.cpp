@@ -1,4 +1,5 @@
 #include "App.h"
+#include "Core/Log.h"
 
 WindowConfig AppGetWindowConfig()
 {
@@ -10,6 +11,7 @@ WindowConfig AppGetWindowConfig()
 	return (config);
 }
 
-void AppMain()
+void AppMain(void* data)
 {
+	AG_LOG_DEBUG("App: Running on its own thread.");
 }

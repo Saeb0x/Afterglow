@@ -4,6 +4,6 @@
 #include "Platform/Platform.h"
 
 WindowConfig AppGetWindowConfig();
-void AppMain();
+void AppMain(void* data);
 
 #endif

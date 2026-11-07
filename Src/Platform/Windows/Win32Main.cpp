@@ -17,8 +17,15 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine
 	WindowConfig config = AppGetWindowConfig();
 	HWND window = Win32CreateWindow(instance, &config);
 
+	PlatformThread appThread = {};
+	if(!PlatformThreadStart(&appThread, AppMain, nullptr, "App"))
+	{
+		PlatformFatalError("Couldn't start the app thread.");
+	}
+
 	Win32PumpMessages();
 
+	PlatformThreadWait(&appThread);
 	DestroyWindow(window);
 	PlatformFreeMemory(memory);
 

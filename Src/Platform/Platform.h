@@ -10,9 +10,22 @@ struct WindowConfig
 	uint32 Height;
 };
 
+typedef void (*PlatformThreadFunc)(void* data);
+
+struct PlatformThread
+{
+	PlatformThreadFunc Function;
+	void* Data;
+	void* Handle;
+};
+
 void PlatformFatalError(const char* format, ...);
 
 void* PlatformAllocateMemory(usize size);
 void PlatformFreeMemory(void* memory);
+
+bool PlatformThreadStart(PlatformThread* thread, PlatformThreadFunc function, void* data,
+						 const char* name);
+void PlatformThreadWait(PlatformThread* thread);
 
 #endif

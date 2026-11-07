@@ -1,9 +1,11 @@
+#include "Core/Utility.h"
 #include "Platform/Platform.h"
 #include "Core/Assert.h"
 #include "Core/Log.h"
 
 #include <cstdarg>
 #include <cstdio>
+#include <process.h>
 
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
@@ -129,4 +131,50 @@ void PlatformFreeMemory(void* memory)
 	{
 		VirtualFree(memory, 0, MEM_RELEASE);
 	}
+}
+
+static unsigned __stdcall Win32ThreadEntry(void* parameter)
+{
+	PlatformThread* thread = (PlatformThread*)parameter;
+	thread->Function(thread->Data);
+
+	return (0);
+}
+
+bool PlatformThreadStart(PlatformThread* thread, PlatformThreadFunc function, void* data,
+						 const char* name)
+{
+	AG_ASSERT(thread);
+	AG_ASSERT(function);
+	AG_ASSERT(name);
+
+	thread->Function = function;
+	thread->Data = data;
+
+	uintptr_t handle = _beginthreadex(nullptr, 0, Win32ThreadEntry, thread, 0, nullptr);
+	if(!handle)
+	{
+		AG_LOG_ERROR("Thread: Couldn't start \"%s\".", name);
+		return (false);
+	}
+
+	thread->Handle = (void*)handle;
+
+	wchar_t wideName[64];
+	if(MultiByteToWideChar(CP_ACP, 0, name, -1, wideName, AG_ARRAYCOUNT(wideName)))
+	{
+		SetThreadDescription((HANDLE)handle, wideName);
+	}
+
+	return (true);
+}
+
+void PlatformThreadWait(PlatformThread* thread)
+{
+	AG_ASSERT(thread);
+	AG_ASSERT(thread->Handle);
+
+	WaitForSingleObject((HANDLE)thread->Handle, INFINITE);
+	CloseHandle((HANDLE)thread->Handle);
+	thread->Handle = nullptr;
 }
