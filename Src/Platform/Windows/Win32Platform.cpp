@@ -1,6 +1,6 @@
 #include "Platform/Platform.h"
-#include "Core/Log.h"
 #include "Core/Assert.h"
+#include "Core/Log.h"
 
 #include <cstdarg>
 #include <cstdio>
@@ -31,6 +31,67 @@ static void Win32ConsoleInit()
 			Win32ConsoleOutput = output;
 			LogSetCallback(Win32LogToConsole);
 		}
+	}
+}
+
+static LRESULT CALLBACK Win32WindowProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
+{
+	switch(message)
+	{
+		case WM_CLOSE:
+		{
+			PostQuitMessage(0);
+			return (0);
+		}
+	}
+
+	return (DefWindowProcA(window, message, wParam, lParam));
+}
+
+static HWND Win32CreateWindow(HINSTANCE instance, const WindowConfig* config)
+{
+	const char* windowClassName = "AfterglowWindowClass";
+
+	WNDCLASSA windowClass = {};
+	windowClass.lpfnWndProc = Win32WindowProc;
+	windowClass.hInstance = instance;
+	windowClass.hCursor = LoadCursorA(nullptr, IDC_ARROW);
+	windowClass.lpszClassName = windowClassName;
+
+	if(!RegisterClassA(&windowClass))
+	{
+		PlatformFatalError("Couldn't register the window class, error %lu.", GetLastError());
+	}
+
+	DWORD style = WS_OVERLAPPEDWINDOW;
+
+	RECT rect = {};
+	rect.right = (LONG)config->Width;
+	rect.bottom = (LONG)config->Height;
+	AdjustWindowRect(&rect, style, FALSE);
+
+	HWND window = CreateWindowExA(0, windowClassName, config->Title, style, CW_USEDEFAULT,
+								  CW_USEDEFAULT, rect.right - rect.left, rect.bottom - rect.top,
+								  nullptr, nullptr, instance, nullptr);
+	if(!window)
+	{
+		PlatformFatalError("Couldn't create the window, error %lu.", GetLastError());
+	}
+
+	ShowWindow(window, SW_SHOW);
+
+	AG_LOG_INFO("Window: Created \"%s\" with a client area of %ux%u.", config->Title, config->Width,
+				config->Height);
+	return (window);
+}
+
+static void Win32PumpMessages()
+{
+	MSG message;
+	while(GetMessageA(&message, nullptr, 0, 0) > 0)
+	{
+		TranslateMessage(&message);
+		DispatchMessageA(&message);
 	}
 }
 

@@ -1,9 +1,10 @@
 #if !defined(AG_STACKALLOCATOR_H)
 #define AG_STACKALLOCATOR_H
 
-#include "Assert.h"
 #include "Types.h"
 #include "Utility.h"
+#include "Assert.h"
+#include "Log.h"
 
 struct StackAllocator
 {
@@ -71,8 +72,11 @@ inline void* StackAllocatorAllocate(StackAllocator* allocator, StackAllocatorHea
 	{
 		if(size > upper - lower)
 		{
+			AG_LOG_ERROR("Stack Allocator: Can't allocate %zu bytes with alignment %zu, %zu bytes "
+						 "available.",
+						 size, alignment, upper - lower);
 			AG_ASSERT(false);
-			return (nullptr); // Out of memory
+			return (nullptr);
 		}
 
 		// NOTE(saeb): Growing down, so align down; aligning up would move back into memory already
@@ -80,8 +84,11 @@ inline void* StackAllocatorAllocate(StackAllocator* allocator, StackAllocatorHea
 		usize aligned = AG_ALIGNDOWN(upper - size, alignment);
 		if(aligned < lower)
 		{
+			AG_LOG_ERROR("Stack Allocator: Can't allocate %zu bytes with alignment %zu, %zu bytes "
+						 "available.",
+						 size, alignment, upper - lower);
 			AG_ASSERT(false);
-			return (nullptr); // Alignment padding collides with lower heap
+			return (nullptr);
 		}
 
 		allocator->UpperHeap = (uint8*)aligned;
@@ -92,8 +99,11 @@ inline void* StackAllocatorAllocate(StackAllocator* allocator, StackAllocatorHea
 		usize aligned = AG_ALIGNUP(lower, alignment);
 		if(aligned > upper || size > upper - aligned)
 		{
+			AG_LOG_ERROR("Stack Allocator: Can't allocate %zu bytes with alignment %zu, %zu bytes "
+						 "available.",
+						 size, alignment, upper - lower);
 			AG_ASSERT(false);
-			return (nullptr); // Out of memory or collision
+			return (nullptr);
 		}
 
 		allocator->LowerHeap = (uint8*)(aligned + size);

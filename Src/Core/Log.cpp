@@ -11,14 +11,21 @@ static const char* LogVerbosityName(LogVerbosity verbosity)
 {
 	switch(verbosity)
 	{
+		case LogVerbosity::Debug:
+		{
+			return ("Debug");
+		}
+
 		case LogVerbosity::Info:
 		{
 			return ("Info");
 		}
+
 		case LogVerbosity::Warning:
 		{
 			return ("Warning");
 		}
+
 		case LogVerbosity::Error:
 		{
 			return ("Error");
