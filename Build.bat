@@ -23,7 +23,7 @@ if "%BUILD%"=="debug" (
 	/I "%~dp0Src" ^
 	"%~dp0Src\Platform\Windows\Win32Main.cpp" ^
 	/Fd"Afterglow.pdb" /Fe"Afterglow.exe" ^
-	/link /nologo /INCREMENTAL:NO /DEBUG Kernel32.lib User32.lib
+	/link /nologo /INCREMENTAL:NO /DEBUG Kernel32.lib User32.lib Gdi32.lib
 	if !errorlevel! neq 0 goto error
 ) else (
 	echo [Afterglow] Compiling and linking [release]...
@@ -31,7 +31,7 @@ if "%BUILD%"=="debug" (
 	/I "%~dp0Src" ^
 	"%~dp0Src\Platform\Windows\Win32Main.cpp" ^
 	/Fd"Afterglow.pdb" /Fe"Afterglow.exe" ^
-	/link /nologo /INCREMENTAL:NO /DEBUG /OPT:REF /OPT:ICF Kernel32.lib User32.lib
+	/link /nologo /INCREMENTAL:NO /DEBUG /OPT:REF /OPT:ICF Kernel32.lib User32.lib Gdi32.lib
 	if !errorlevel! neq 0 goto error
 )
 

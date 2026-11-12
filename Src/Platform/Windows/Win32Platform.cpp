@@ -52,27 +52,26 @@ static LRESULT CALLBACK Win32WindowProc(HWND window, UINT message, WPARAM wParam
 
 static HWND Win32CreateWindow(HINSTANCE instance, const WindowConfig* config)
 {
-	const char* windowClassName = "AfterglowWindowClass";
-
 	WNDCLASSA windowClass = {};
+	windowClass.style = CS_OWNDC | CS_HREDRAW | CS_VREDRAW;
 	windowClass.lpfnWndProc = Win32WindowProc;
 	windowClass.hInstance = instance;
 	windowClass.hCursor = LoadCursorA(nullptr, IDC_ARROW);
-	windowClass.lpszClassName = windowClassName;
+	windowClass.hbrBackground = CreateSolidBrush(0xBEDEFF);
+	windowClass.lpszClassName = "AfterglowWindowClass";
 
 	if(!RegisterClassA(&windowClass))
 	{
 		PlatformFatalError("Couldn't register the window class, error %lu.", GetLastError());
 	}
 
-	DWORD style = WS_OVERLAPPEDWINDOW;
-
 	RECT rect = {};
 	rect.right = (LONG)config->Width;
 	rect.bottom = (LONG)config->Height;
+	DWORD style = WS_OVERLAPPEDWINDOW;
 	AdjustWindowRect(&rect, style, FALSE);
 
-	HWND window = CreateWindowExA(0, windowClassName, config->Title, style, CW_USEDEFAULT,
+	HWND window = CreateWindowExA(0, "AfterglowWindowClass", config->Title, style, CW_USEDEFAULT,
 								  CW_USEDEFAULT, rect.right - rect.left, rect.bottom - rect.top,
 								  nullptr, nullptr, instance, nullptr);
 	if(!window)
