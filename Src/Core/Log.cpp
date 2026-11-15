@@ -5,7 +5,7 @@
 
 #define AG_LOG_MAX_CHARS_PER_LINE 1024
 
-static LogCallback LogOutput;
+static LogOutputCallback OutputCallback;
 
 static const char* LogVerbosityName(LogVerbosity verbosity)
 {
@@ -35,19 +35,18 @@ static const char* LogVerbosityName(LogVerbosity verbosity)
 	return ("Unknown");
 }
 
-void LogSetCallback(LogCallback callback)
+void LogSetOutputCallback(LogOutputCallback callback)
 {
-	LogOutput = callback;
+	OutputCallback = callback;
 }
 
 void Log(LogVerbosity verbosity, const char* format, ...)
 {
-	if(!LogOutput)
+	if(!OutputCallback)
 	{
 		return;
 	}
 
-	// NOTE(saeb): On the stack, so logging never allocates and threads can't overwrite each other.
 	char line[AG_LOG_MAX_CHARS_PER_LINE];
 	usize capacity = sizeof(line) - 1;
 
@@ -67,5 +66,5 @@ void Log(LogVerbosity verbosity, const char* format, ...)
 	line[length++] = '\n';
 	line[length] = '\0';
 
-	LogOutput(verbosity, line, length);
+	OutputCallback(verbosity, line, length);
 }

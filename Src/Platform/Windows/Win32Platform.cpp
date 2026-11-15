@@ -1,7 +1,8 @@
-#include "Core/Utility.h"
 #include "Platform/Platform.h"
+#include "Core/Utility.h"
 #include "Core/Assert.h"
 #include "Core/Log.h"
+#include "Renderer/OpenGL/OpenGLRenderer.h"
 
 #include <cstdarg>
 #include <cstdio>
@@ -10,8 +11,20 @@
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #include <windows.h>
+#include <gl/GL.h>
+#include "GL/wglext.h"
 
 static HANDLE Win32ConsoleOutput;
+
+struct Win32Window
+{
+	char Title[32];
+	uint32 Width;
+	uint32 Height;
+	HDC DeviceContext;
+	HGLRC OpenGLContext;
+};
+static Win32Window Window;
 
 static void Win32LogToConsole(LogVerbosity verbosity, const char* text, usize length)
 {
@@ -24,6 +37,7 @@ static void Win32ConsoleInit()
 	if(AllocConsole())
 	{
 		SetConsoleTitleA("Afterglow");
+		MoveWindow(GetConsoleWindow(), 0, 0, 1200, 400, false);
 
 		HANDLE output = CreateFileA("CONOUT$", GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE,
 									nullptr, OPEN_EXISTING, 0, nullptr);
@@ -31,7 +45,7 @@ static void Win32ConsoleInit()
 		if(output != INVALID_HANDLE_VALUE)
 		{
 			Win32ConsoleOutput = output;
-			LogSetCallback(Win32LogToConsole);
+			LogSetOutputCallback(Win32LogToConsole);
 		}
 	}
 }
@@ -40,9 +54,82 @@ static LRESULT CALLBACK Win32WindowProc(HWND window, UINT message, WPARAM wParam
 {
 	switch(message)
 	{
+		case WM_CREATE:
+		{
+			PIXELFORMATDESCRIPTOR pixelFormat = {};
+			pixelFormat.nSize = sizeof(PIXELFORMATDESCRIPTOR);
+			pixelFormat.nVersion = 1;
+			pixelFormat.dwFlags = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER;
+			pixelFormat.iPixelType = PFD_TYPE_RGBA;
+			pixelFormat.cColorBits = 32;
+			pixelFormat.cDepthBits = 24;
+			pixelFormat.cStencilBits = 8;
+
+			Window.DeviceContext = GetDC(window);
+			int supportedpixelFormat = ChoosePixelFormat(Window.DeviceContext, &pixelFormat);
+			if(!SetPixelFormat(Window.DeviceContext, supportedpixelFormat, &pixelFormat))
+			{
+				AG_LOG_WARNING("Window: Couldn't set the pixel format for the window client area's "
+							   "device context.");
+			}
+
+			HGLRC dummyOpenGLContext = wglCreateContext(Window.DeviceContext);
+			if(!wglMakeCurrent(Window.DeviceContext, dummyOpenGLContext))
+			{
+				AG_LOG_WARNING("Window: Couldn't make the dummy OpenGL context current.");
+			}
+
+			PFNWGLCREATECONTEXTATTRIBSARBPROC wglCreateContextAttribsARB =
+				(PFNWGLCREATECONTEXTATTRIBSARBPROC)PlatformGetOpenGLFunction(
+					"wglCreateContextAttribsARB");
+
+			wglMakeCurrent(Window.DeviceContext, nullptr);
+			wglDeleteContext(dummyOpenGLContext);
+
+			const int contextAttributes[] = {WGL_CONTEXT_MAJOR_VERSION_ARB,
+											 3,
+											 WGL_CONTEXT_MINOR_VERSION_ARB,
+											 3,
+											 WGL_CONTEXT_PROFILE_MASK_ARB,
+											 WGL_CONTEXT_CORE_PROFILE_BIT_ARB,
+											 WGL_CONTEXT_FLAGS_ARB,
+											 WGL_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB,
+											 0};
+
+			Window.OpenGLContext =
+				wglCreateContextAttribsARB(Window.DeviceContext, nullptr, contextAttributes);
+
+			if(!wglMakeCurrent(Window.DeviceContext, Window.OpenGLContext))
+			{
+				AG_LOG_WARNING("Window: Couldn't make the main OpenGL context current.");
+			}
+
+			OpenGLRendererSetViewportSize(Window.Width, Window.Height);
+
+			return (0);
+		}
+
 		case WM_CLOSE:
 		{
+			wglMakeCurrent(Window.DeviceContext, nullptr);
+			wglDeleteContext(Window.OpenGLContext);
 			PostQuitMessage(0);
+			return (0);
+		}
+
+		case WM_SIZE:
+		{
+			if(Window.Width != LOWORD(lParam) || Window.Height != HIWORD(lParam))
+			{
+				Window.Width = LOWORD(lParam);
+				Window.Height = HIWORD(lParam);
+				OpenGLRendererSetViewportSize(Window.Width, Window.Height);
+
+				AG_LOG_DEBUG(
+					"Window: Client area has been resized (%ux%u) and context viewport updated.",
+					Window.Width, Window.Height);
+			}
+
 			return (0);
 		}
 	}
@@ -50,14 +137,17 @@ static LRESULT CALLBACK Win32WindowProc(HWND window, UINT message, WPARAM wParam
 	return (DefWindowProcA(window, message, wParam, lParam));
 }
 
-static HWND Win32CreateWindow(HINSTANCE instance, const WindowConfig* config)
+static HWND Win32CreateWindow(HINSTANCE instance, const char* title, uint32 width, uint32 height)
 {
+	snprintf(Window.Title, sizeof(Window.Title), "%s", title);
+	Window.Width = width;
+	Window.Height = height;
+
 	WNDCLASSA windowClass = {};
 	windowClass.style = CS_OWNDC | CS_HREDRAW | CS_VREDRAW;
 	windowClass.lpfnWndProc = Win32WindowProc;
 	windowClass.hInstance = instance;
 	windowClass.hCursor = LoadCursorA(nullptr, IDC_ARROW);
-	windowClass.hbrBackground = CreateSolidBrush(0xBEDEFF);
 	windowClass.lpszClassName = "AfterglowWindowClass";
 
 	if(!RegisterClassA(&windowClass))
@@ -66,12 +156,12 @@ static HWND Win32CreateWindow(HINSTANCE instance, const WindowConfig* config)
 	}
 
 	RECT rect = {};
-	rect.right = (LONG)config->Width;
-	rect.bottom = (LONG)config->Height;
-	DWORD style = WS_OVERLAPPEDWINDOW;
+	rect.right = (LONG)Window.Width;
+	rect.bottom = (LONG)Window.Height;
+	DWORD style = WS_OVERLAPPEDWINDOW | WS_VISIBLE;
 	AdjustWindowRect(&rect, style, FALSE);
 
-	HWND window = CreateWindowExA(0, "AfterglowWindowClass", config->Title, style, CW_USEDEFAULT,
+	HWND window = CreateWindowExA(0, "AfterglowWindowClass", Window.Title, style, CW_USEDEFAULT,
 								  CW_USEDEFAULT, rect.right - rect.left, rect.bottom - rect.top,
 								  nullptr, nullptr, instance, nullptr);
 	if(!window)
@@ -79,10 +169,14 @@ static HWND Win32CreateWindow(HINSTANCE instance, const WindowConfig* config)
 		PlatformFatalError("Couldn't create the window, error %lu.", GetLastError());
 	}
 
-	ShowWindow(window, SW_SHOW);
+	OpenGLRendererContextInfo contextInfo = OpenGLRendererGetContextInfo();
 
-	AG_LOG_INFO("Window: Created \"%s\" with a client area of %ux%u.", config->Title, config->Width,
-				config->Height);
+	AG_LOG_INFO("Window: Created \"%s\" with a client area of %ux%u and an OpenGL context (%u.%u, "
+				"%s Profile%s).",
+				Window.Title, Window.Width, Window.Height, contextInfo.MajorVersion,
+				contextInfo.MinorVersion, contextInfo.Profile,
+				(contextInfo.ForwardCompatible) ? ", Forward Compatible" : "");
+
 	return (window);
 }
 
@@ -93,6 +187,10 @@ static void Win32PumpMessages()
 	{
 		TranslateMessage(&message);
 		DispatchMessageA(&message);
+
+		OpenGLRendererClear(0.63f, 0.87f, 1.0f, 1.0f);
+
+		SwapBuffers(Window.DeviceContext);
 	}
 }
 
@@ -107,7 +205,7 @@ void PlatformFatalError(const char* format, ...)
 
 	const char* text = (length >= 0) ? errorMessage : format;
 
-	AG_LOG_ERROR("%s", text);
+	AG_LOG_ERROR("Platform: %s", text);
 
 	if(IsDebuggerPresent())
 	{
@@ -176,4 +274,17 @@ void PlatformThreadWait(PlatformThread* thread)
 	WaitForSingleObject((HANDLE)thread->Handle, INFINITE);
 	CloseHandle((HANDLE)thread->Handle);
 	thread->Handle = nullptr;
+}
+
+void* PlatformGetOpenGLFunction(const char* name)
+{
+	void* funcAddress = (void*)wglGetProcAddress(name);
+	if(funcAddress == 0 || (funcAddress == (void*)0x1) || (funcAddress == (void*)0x2) ||
+	   (funcAddress == (void*)0x3) || (funcAddress == (void*)-1))
+	{
+		HMODULE glModule = LoadLibraryA("Opengl32.dll");
+		funcAddress = (void*)GetProcAddress(glModule, name);
+	}
+
+	return (funcAddress);
 }

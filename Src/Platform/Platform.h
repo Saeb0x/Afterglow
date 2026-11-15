@@ -3,13 +3,6 @@
 
 #include "Core/Types.h"
 
-struct WindowConfig
-{
-	const char* Title;
-	uint32 Width;
-	uint32 Height;
-};
-
 typedef void (*PlatformThreadFunc)(void* data);
 
 struct PlatformThread
@@ -27,5 +20,7 @@ void PlatformFreeMemory(void* memory);
 bool PlatformThreadStart(PlatformThread* thread, PlatformThreadFunc function, void* data,
 						 const char* name);
 void PlatformThreadWait(PlatformThread* thread);
+
+void* PlatformGetOpenGLFunction(const char* name);
 
 #endif

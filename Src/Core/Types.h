@@ -17,6 +17,5 @@ typedef float real32;
 typedef double real64;
 
 typedef std::size_t usize;
-typedef std::ptrdiff_t isize;
 
 #endif

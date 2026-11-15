@@ -20,18 +20,18 @@ pushd "%BUILD_DIR%"
 if "%BUILD%"=="debug" (
 	echo [Afterglow] Compiling and linking [debug]...
 	cl /nologo /std:c++20 /permissive- /MTd /Od /Zi /DAG_DEBUG=1 /W4 /WX /wd4100 /wd4505 /GR- /EHa- /FC ^
-	/I "%~dp0Src" ^
+	/I"%~dp0Src" /I"%~dp0External" ^
 	"%~dp0Src\Platform\Windows\Win32Main.cpp" ^
 	/Fd"Afterglow.pdb" /Fe"Afterglow.exe" ^
-	/link /nologo /INCREMENTAL:NO /DEBUG Kernel32.lib User32.lib Gdi32.lib
+	/link /nologo /INCREMENTAL:NO /DEBUG Kernel32.lib User32.lib Gdi32.lib Opengl32.lib
 	if !errorlevel! neq 0 goto error
 ) else (
 	echo [Afterglow] Compiling and linking [release]...
 	cl /nologo /std:c++20 /permissive- /MT /O2 /Zi /DAG_DEBUG=0 /W4 /WX /wd4100 /wd4505 /GR- /EHa- /FC ^
-	/I "%~dp0Src" ^
+	/I"%~dp0Src" /I"%~dp0External" ^
 	"%~dp0Src\Platform\Windows\Win32Main.cpp" ^
 	/Fd"Afterglow.pdb" /Fe"Afterglow.exe" ^
-	/link /nologo /INCREMENTAL:NO /DEBUG /OPT:REF /OPT:ICF Kernel32.lib User32.lib Gdi32.lib
+	/link /nologo /INCREMENTAL:NO /DEBUG /OPT:REF /OPT:ICF Kernel32.lib User32.lib Gdi32.lib Opengl32.lib
 	if !errorlevel! neq 0 goto error
 )
 

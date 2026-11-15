@@ -11,9 +11,9 @@ enum class LogVerbosity : uint8
 	Error
 };
 
-typedef void (*LogCallback)(LogVerbosity verbosity, const char* text, usize length);
+typedef void (*LogOutputCallback)(LogVerbosity verbosity, const char* text, usize length);
 
-void LogSetCallback(LogCallback callback);
+void LogSetOutputCallback(LogOutputCallback callback);
 void Log(LogVerbosity verbosity, const char* format, ...);
 
 #define AG_LOG_DEBUG(...) Log(LogVerbosity::Debug, __VA_ARGS__)
