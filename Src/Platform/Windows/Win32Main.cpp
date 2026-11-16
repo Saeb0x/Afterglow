@@ -4,13 +4,12 @@
 
 int WINAPI WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, int showCommand)
 {
-	Win32ConsoleInit();
+	PlatformInitConsole();
+	PlatformCreateWindow("Afterglow", 1280, 720);
 
-	HWND window = Win32CreateWindow(instance, "Afterglow", 1280, 720);
+	PlatformGameLoop();
 
-	Win32PumpMessages();
-
-	DestroyWindow(window);
+	PlatformCleanup();
 
 	return (0);
 }

@@ -21,6 +21,12 @@ bool PlatformThreadStart(PlatformThread* thread, PlatformThreadFunc function, vo
 						 const char* name);
 void PlatformThreadWait(PlatformThread* thread);
 
+void PlatformInitConsole();
+
+void PlatformCreateWindow(const char* title, uint32 width, uint32 height);
+void PlatformGameLoop();
+void PlatformCleanup();
+
 void* PlatformGetOpenGLFunction(const char* name);
 
 #endif

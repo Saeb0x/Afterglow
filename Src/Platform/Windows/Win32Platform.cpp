@@ -14,41 +14,28 @@
 #include <gl/GL.h>
 #include "GL/wglext.h"
 
-static HANDLE Win32ConsoleOutput;
+struct Win32Console
+{
+	HANDLE Handle;
+};
+static Win32Console Console;
+
+static void Win32ConsoleLogOutputCallback(LogVerbosity verbosity, const char* text, usize length)
+{
+	DWORD written = 0;
+	WriteFile(Console.Handle, text, (DWORD)length, &written, nullptr);
+}
 
 struct Win32Window
 {
 	char Title[32];
 	uint32 Width;
 	uint32 Height;
+	HWND Handle;
 	HDC DeviceContext;
 	HGLRC OpenGLContext;
 };
 static Win32Window Window;
-
-static void Win32LogToConsole(LogVerbosity verbosity, const char* text, usize length)
-{
-	DWORD written = 0;
-	WriteFile(Win32ConsoleOutput, text, (DWORD)length, &written, nullptr);
-}
-
-static void Win32ConsoleInit()
-{
-	if(AllocConsole())
-	{
-		SetConsoleTitleA("Afterglow");
-		MoveWindow(GetConsoleWindow(), 0, 0, 1200, 400, false);
-
-		HANDLE output = CreateFileA("CONOUT$", GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE,
-									nullptr, OPEN_EXISTING, 0, nullptr);
-
-		if(output != INVALID_HANDLE_VALUE)
-		{
-			Win32ConsoleOutput = output;
-			LogSetOutputCallback(Win32LogToConsole);
-		}
-	}
-}
 
 static LRESULT CALLBACK Win32WindowProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -114,6 +101,7 @@ static LRESULT CALLBACK Win32WindowProc(HWND window, UINT message, WPARAM wParam
 			wglMakeCurrent(Window.DeviceContext, nullptr);
 			wglDeleteContext(Window.OpenGLContext);
 			PostQuitMessage(0);
+
 			return (0);
 		}
 
@@ -132,16 +120,30 @@ static LRESULT CALLBACK Win32WindowProc(HWND window, UINT message, WPARAM wParam
 
 			return (0);
 		}
+
+		case WM_KEYDOWN:
+		{
+			if(wParam == VK_ESCAPE)
+			{
+				wglMakeCurrent(Window.DeviceContext, nullptr);
+				wglDeleteContext(Window.OpenGLContext);
+				PostQuitMessage(0);
+			}
+
+			return (0);
+		}
 	}
 
 	return (DefWindowProcA(window, message, wParam, lParam));
 }
 
-static HWND Win32CreateWindow(HINSTANCE instance, const char* title, uint32 width, uint32 height)
+void PlatformCreateWindow(const char* title, uint32 width, uint32 height)
 {
 	snprintf(Window.Title, sizeof(Window.Title), "%s", title);
 	Window.Width = width;
 	Window.Height = height;
+
+	HINSTANCE instance = GetModuleHandle(nullptr);
 
 	WNDCLASSA windowClass = {};
 	windowClass.style = CS_OWNDC | CS_HREDRAW | CS_VREDRAW;
@@ -161,10 +163,10 @@ static HWND Win32CreateWindow(HINSTANCE instance, const char* title, uint32 widt
 	DWORD style = WS_OVERLAPPEDWINDOW | WS_VISIBLE;
 	AdjustWindowRect(&rect, style, FALSE);
 
-	HWND window = CreateWindowExA(0, "AfterglowWindowClass", Window.Title, style, CW_USEDEFAULT,
-								  CW_USEDEFAULT, rect.right - rect.left, rect.bottom - rect.top,
-								  nullptr, nullptr, instance, nullptr);
-	if(!window)
+	Window.Handle = CreateWindowExA(0, "AfterglowWindowClass", Window.Title, style, CW_USEDEFAULT,
+									CW_USEDEFAULT, rect.right - rect.left, rect.bottom - rect.top,
+									nullptr, nullptr, instance, nullptr);
+	if(!Window.Handle)
 	{
 		PlatformFatalError("Couldn't create the window, error %lu.", GetLastError());
 	}
@@ -176,22 +178,6 @@ static HWND Win32CreateWindow(HINSTANCE instance, const char* title, uint32 widt
 				Window.Title, Window.Width, Window.Height, contextInfo.MajorVersion,
 				contextInfo.MinorVersion, contextInfo.Profile,
 				(contextInfo.ForwardCompatible) ? ", Forward Compatible" : "");
-
-	return (window);
-}
-
-static void Win32PumpMessages()
-{
-	MSG message;
-	while(GetMessageA(&message, nullptr, 0, 0) > 0)
-	{
-		TranslateMessage(&message);
-		DispatchMessageA(&message);
-
-		OpenGLRendererClear(0.63f, 0.87f, 1.0f, 1.0f);
-
-		SwapBuffers(Window.DeviceContext);
-	}
 }
 
 void PlatformFatalError(const char* format, ...)
@@ -274,6 +260,44 @@ void PlatformThreadWait(PlatformThread* thread)
 	WaitForSingleObject((HANDLE)thread->Handle, INFINITE);
 	CloseHandle((HANDLE)thread->Handle);
 	thread->Handle = nullptr;
+}
+
+void PlatformInitConsole()
+{
+	if(AllocConsole())
+	{
+		SetConsoleTitleA("Afterglow");
+		MoveWindow(GetConsoleWindow(), 0, 0, 1200, 400, false);
+
+		HANDLE output = CreateFileA("CONOUT$", GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE,
+									nullptr, OPEN_EXISTING, 0, nullptr);
+
+		if(output != INVALID_HANDLE_VALUE)
+		{
+			Console.Handle = output;
+			LogSetOutputCallback(Win32ConsoleLogOutputCallback);
+		}
+	}
+}
+
+void PlatformGameLoop()
+{
+	MSG message;
+	while(GetMessageA(&message, nullptr, 0, 0) > 0)
+	{
+		TranslateMessage(&message);
+		DispatchMessageA(&message);
+
+		OpenGLRendererClear(0.63f, 0.87f, 1.0f, 1.0f);
+
+		SwapBuffers(Window.DeviceContext);
+	}
+}
+
+void PlatformCleanup()
+{
+	UnregisterClass("AfterglowWindowClass", GetModuleHandle(nullptr));
+	DestroyWindow(Window.Handle);
 }
 
 void* PlatformGetOpenGLFunction(const char* name)
