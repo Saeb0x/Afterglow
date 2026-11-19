@@ -25,7 +25,6 @@ void PlatformInitConsole();
 
 void PlatformCreateWindow(const char* title, uint32 width, uint32 height);
 void PlatformGameLoop();
-void PlatformCleanup();
 
 void* PlatformGetOpenGLFunction(const char* name);
 

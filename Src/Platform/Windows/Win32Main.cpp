@@ -9,7 +9,5 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine
 
 	PlatformGameLoop();
 
-	PlatformCleanup();
-
 	return (0);
 }

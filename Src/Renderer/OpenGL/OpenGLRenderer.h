@@ -11,9 +11,14 @@ struct OpenGLRendererContextInfo
 	bool ForwardCompatible;
 };
 
+void OpenGLRendererLoadFunctions();
+
 OpenGLRendererContextInfo OpenGLRendererGetContextInfo();
 
 void OpenGLRendererClear(real32 r, real32 g, real32 b, real32 a);
-void OpenGLRendererSetViewportSize(uint32 width, uint32 height);
+void OpenGLRendererSetViewport(uint32 width, uint32 height);
+
+void OpenGLRendererPrepare();
+void OpenGLRendererRender();
 
 #endif

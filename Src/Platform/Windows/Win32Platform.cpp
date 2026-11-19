@@ -20,22 +20,33 @@ struct Win32Console
 };
 static Win32Console Console;
 
+struct Win32Window
+{
+	HINSTANCE Instance;
+	const char* ClassName = "AfterglowWindowClass";
+	HWND Handle;
+	HDC DeviceContext;
+	HGLRC OpenGLContext;
+	char Title[64];
+	uint32 Width;
+	uint32 Height;
+};
+static Win32Window Window;
+
 static void Win32ConsoleLogOutputCallback(LogVerbosity verbosity, const char* text, usize length)
 {
 	DWORD written = 0;
 	WriteFile(Console.Handle, text, (DWORD)length, &written, nullptr);
 }
 
-struct Win32Window
+static void Win32Cleanup()
 {
-	char Title[32];
-	uint32 Width;
-	uint32 Height;
-	HWND Handle;
-	HDC DeviceContext;
-	HGLRC OpenGLContext;
-};
-static Win32Window Window;
+	if(!wglMakeCurrent(Window.DeviceContext, nullptr) || !wglDeleteContext(Window.OpenGLContext) ||
+	   !DestroyWindow(Window.Handle) || !UnregisterClass(Window.ClassName, Window.Instance))
+	{
+		PlatformFatalError("Couldn't cleanup resources, error %lu.", GetLastError());
+	}
+}
 
 static LRESULT CALLBACK Win32WindowProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -91,27 +102,29 @@ static LRESULT CALLBACK Win32WindowProc(HWND window, UINT message, WPARAM wParam
 				AG_LOG_WARNING("Window: Couldn't make the main OpenGL context current.");
 			}
 
-			OpenGLRendererSetViewportSize(Window.Width, Window.Height);
+			OpenGLRendererLoadFunctions();
+
+			OpenGLRendererSetViewport(Window.Width, Window.Height);
+			OpenGLRendererPrepare();
 
 			return (0);
 		}
 
 		case WM_CLOSE:
 		{
-			wglMakeCurrent(Window.DeviceContext, nullptr);
-			wglDeleteContext(Window.OpenGLContext);
+			Win32Cleanup();
 			PostQuitMessage(0);
-
 			return (0);
 		}
 
 		case WM_SIZE:
 		{
+
 			if(Window.Width != LOWORD(lParam) || Window.Height != HIWORD(lParam))
 			{
 				Window.Width = LOWORD(lParam);
 				Window.Height = HIWORD(lParam);
-				OpenGLRendererSetViewportSize(Window.Width, Window.Height);
+				OpenGLRendererSetViewport(Window.Width, Window.Height);
 
 				AG_LOG_DEBUG(
 					"Window: Client area has been resized (%ux%u) and context viewport updated.",
@@ -125,8 +138,7 @@ static LRESULT CALLBACK Win32WindowProc(HWND window, UINT message, WPARAM wParam
 		{
 			if(wParam == VK_ESCAPE)
 			{
-				wglMakeCurrent(Window.DeviceContext, nullptr);
-				wglDeleteContext(Window.OpenGLContext);
+				Win32Cleanup();
 				PostQuitMessage(0);
 			}
 
@@ -143,14 +155,14 @@ void PlatformCreateWindow(const char* title, uint32 width, uint32 height)
 	Window.Width = width;
 	Window.Height = height;
 
-	HINSTANCE instance = GetModuleHandle(nullptr);
+	Window.Instance = GetModuleHandleA(nullptr);
 
 	WNDCLASSA windowClass = {};
 	windowClass.style = CS_OWNDC | CS_HREDRAW | CS_VREDRAW;
 	windowClass.lpfnWndProc = Win32WindowProc;
-	windowClass.hInstance = instance;
+	windowClass.hInstance = Window.Instance;
 	windowClass.hCursor = LoadCursorA(nullptr, IDC_ARROW);
-	windowClass.lpszClassName = "AfterglowWindowClass";
+	windowClass.lpszClassName = Window.ClassName;
 
 	if(!RegisterClassA(&windowClass))
 	{
@@ -163,9 +175,9 @@ void PlatformCreateWindow(const char* title, uint32 width, uint32 height)
 	DWORD style = WS_OVERLAPPEDWINDOW | WS_VISIBLE;
 	AdjustWindowRect(&rect, style, FALSE);
 
-	Window.Handle = CreateWindowExA(0, "AfterglowWindowClass", Window.Title, style, CW_USEDEFAULT,
+	Window.Handle = CreateWindowExA(0, Window.ClassName, Window.Title, style, CW_USEDEFAULT,
 									CW_USEDEFAULT, rect.right - rect.left, rect.bottom - rect.top,
-									nullptr, nullptr, instance, nullptr);
+									nullptr, nullptr, Window.Instance, nullptr);
 	if(!Window.Handle)
 	{
 		PlatformFatalError("Couldn't create the window, error %lu.", GetLastError());
@@ -186,19 +198,18 @@ void PlatformFatalError(const char* format, ...)
 
 	va_list arguments;
 	va_start(arguments, format);
-	int length = vsnprintf(errorMessage, sizeof(errorMessage), format, arguments);
+	int errorMessageLength = vsnprintf(errorMessage, sizeof(errorMessage), format, arguments);
 	va_end(arguments);
 
-	const char* text = (length >= 0) ? errorMessage : format;
-
-	AG_LOG_ERROR("Platform: %s", text);
+	AG_LOG_ERROR("Platform: %s", (errorMessageLength >= 0) ? errorMessage : format);
 
 	if(IsDebuggerPresent())
 	{
 		AG_DEBUGBREAK();
 	}
 
-	MessageBoxA(nullptr, text, "Afterglow", MB_OK | MB_ICONERROR);
+	MessageBoxA(nullptr, ((errorMessageLength >= 0) ? errorMessage : format), "Afterglow",
+				MB_OK | MB_ICONERROR);
 	ExitProcess(1);
 }
 
@@ -289,15 +300,10 @@ void PlatformGameLoop()
 		DispatchMessageA(&message);
 
 		OpenGLRendererClear(0.63f, 0.87f, 1.0f, 1.0f);
+		OpenGLRendererRender();
 
 		SwapBuffers(Window.DeviceContext);
 	}
-}
-
-void PlatformCleanup()
-{
-	UnregisterClass("AfterglowWindowClass", GetModuleHandle(nullptr));
-	DestroyWindow(Window.Handle);
 }
 
 void* PlatformGetOpenGLFunction(const char* name)
