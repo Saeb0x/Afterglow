@@ -5,8 +5,8 @@
 
 struct OpenGLRendererContextInfo
 {
-	uint32 MajorVersion;
-	uint32 MinorVersion;
+	uint8 MajorVersion;
+	uint8 MinorVersion;
 	char Profile[32];
 	bool ForwardCompatible;
 };
@@ -18,7 +18,7 @@ OpenGLRendererContextInfo OpenGLRendererGetContextInfo();
 void OpenGLRendererClear(real32 r, real32 g, real32 b, real32 a);
 void OpenGLRendererSetViewport(uint32 width, uint32 height);
 
-void OpenGLRendererPrepare();
-void OpenGLRendererRender();
+void OpenGLRendererSetupQuad();
+void OpenGLRendererDrawQuad(bool wireframe);
 
 #endif

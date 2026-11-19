@@ -1,7 +1,18 @@
 #include "App.h"
-#include "Core/Log.h"
 
-void AppMain(void* data)
+#include "Renderer/OpenGL/OpenGLRenderer.h"
+
+void AppInit()
 {
-	AG_LOG_DEBUG("App: Running on its own thread.");
+	OpenGLRendererSetupQuad();
+}
+
+void AppUpdate()
+{
+}
+
+void AppRender()
+{
+	OpenGLRendererClear(0.63f, 0.87f, 1.0f, 1.0f);
+	OpenGLRendererDrawQuad(false);
 }

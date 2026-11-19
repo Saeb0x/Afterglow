@@ -1,8 +1,10 @@
 #include "Platform/Platform.h"
+
 #include "Core/Utility.h"
 #include "Core/Assert.h"
 #include "Core/Log.h"
 #include "Renderer/OpenGL/OpenGLRenderer.h"
+#include "App/App.h"
 
 #include <cstdarg>
 #include <cstdio>
@@ -13,6 +15,8 @@
 #include <windows.h>
 #include <gl/GL.h>
 #include "GL/wglext.h"
+
+static bool Win32Running = false;
 
 struct Win32Console
 {
@@ -103,9 +107,9 @@ static LRESULT CALLBACK Win32WindowProc(HWND window, UINT message, WPARAM wParam
 			}
 
 			OpenGLRendererLoadFunctions();
-
 			OpenGLRendererSetViewport(Window.Width, Window.Height);
-			OpenGLRendererPrepare();
+
+			AppInit();
 
 			return (0);
 		}
@@ -293,15 +297,29 @@ void PlatformInitConsole()
 
 void PlatformGameLoop()
 {
-	MSG message;
-	while(GetMessageA(&message, nullptr, 0, 0) > 0)
+	Win32Running = true;
+	while(Win32Running)
 	{
-		TranslateMessage(&message);
-		DispatchMessageA(&message);
+		MSG message;
+		while(PeekMessageA(&message, nullptr, 0, 0, PM_REMOVE))
+		{
+			if(message.message == WM_QUIT)
+			{
+				Win32Running = false;
+			}
 
-		OpenGLRendererClear(0.63f, 0.87f, 1.0f, 1.0f);
-		OpenGLRendererRender();
+			TranslateMessage(&message);
+			DispatchMessageA(&message);
+		}
 
+		if(!Win32Running)
+		{
+			break;
+		}
+
+		AppUpdate();
+
+		AppRender();
 		SwapBuffers(Window.DeviceContext);
 	}
 }

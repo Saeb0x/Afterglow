@@ -1,4 +1,5 @@
 #include "OpenGLRenderer.h"
+
 #include "Core/Config.h"
 #include "Platform/Platform.h"
 
@@ -34,17 +35,16 @@ PFNGLUSEPROGRAMPROC glUseProgram = nullptr;
 
 static OpenGLRendererContextInfo ContextInfo;
 
-static float Vertices[] = {-0.5f, -0.5f, 0.0f, 0.5f, -0.5f, 0.0f, 0.0f, 0.5f, 0.0f};
-static GLuint VAO;
-static GLuint ShaderProgram;
+static GLuint QuadShaderProgram;
+static GLuint QuadVAO;
 
 OpenGLRendererContextInfo OpenGLRendererGetContextInfo()
 {
 	GLint majorVersion = 0, minorVersion = 0;
 	glGetIntegerv(GL_MAJOR_VERSION, &majorVersion);
 	glGetIntegerv(GL_MINOR_VERSION, &minorVersion);
-	ContextInfo.MajorVersion = (uint32)majorVersion;
-	ContextInfo.MinorVersion = (uint32)minorVersion;
+	ContextInfo.MajorVersion = (uint8)majorVersion;
+	ContextInfo.MinorVersion = (uint8)minorVersion;
 
 	GLint profileMask = 0;
 	glGetIntegerv(GL_CONTEXT_PROFILE_MASK, &profileMask);
@@ -103,19 +103,27 @@ void OpenGLRendererSetViewport(uint32 width, uint32 height)
 	glViewport(0, 0, width, height);
 }
 
-void OpenGLRendererPrepare()
+void OpenGLRendererSetupQuad()
 {
-	glGenVertexArrays(1, &VAO);
+	glGenVertexArrays(1, &QuadVAO);
+	glBindVertexArray(QuadVAO);
 
-	GLuint VBO;
-	glGenBuffers(1, &VBO);
+	float QuadVertices[12] = {-0.5f, -0.5f, 0.0f, -0.5f, 0.5f,  0.0f,
+							  0.5f,  0.5f,  0.0f, 0.5f,  -0.5f, 0.0f};
 
-	glBindVertexArray(VAO);
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(Vertices), Vertices, GL_STATIC_DRAW);
-
+	GLuint QuadVBO;
+	glGenBuffers(1, &QuadVBO);
+	glBindBuffer(GL_ARRAY_BUFFER, QuadVBO);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(QuadVertices), QuadVertices, GL_STATIC_DRAW);
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
 	glEnableVertexAttribArray(0);
+
+	unsigned int QuadIndices[6] = {3, 0, 1, 3, 1, 2};
+
+	GLuint QuadEBO;
+	glGenBuffers(1, &QuadEBO);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, QuadEBO);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(QuadIndices), QuadIndices, GL_STATIC_DRAW);
 
 	const char* vertexShaderSource = "#version 330 core\n"
 									 "layout (location = 0) in vec3 aPos;\n"
@@ -139,18 +147,21 @@ void OpenGLRendererPrepare()
 	glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
 	glCompileShader(fragmentShader);
 
-	ShaderProgram = glCreateProgram();
-	glAttachShader(ShaderProgram, vertexShader);
-	glAttachShader(ShaderProgram, fragmentShader);
-	glLinkProgram(ShaderProgram);
+	QuadShaderProgram = glCreateProgram();
+	glAttachShader(QuadShaderProgram, vertexShader);
+	glAttachShader(QuadShaderProgram, fragmentShader);
+	glLinkProgram(QuadShaderProgram);
 
 	glDeleteShader(vertexShader);
 	glDeleteShader(fragmentShader);
 }
 
-void OpenGLRendererRender()
+void OpenGLRendererDrawQuad(bool wireframe)
 {
-	glUseProgram(ShaderProgram);
-	glBindVertexArray(VAO);
-	glDrawArrays(GL_TRIANGLES, 0, 3);
+	glUseProgram(QuadShaderProgram);
+	glBindVertexArray(QuadVAO);
+	glPolygonMode(GL_FRONT_AND_BACK, (wireframe) ? GL_LINE : GL_FILL);
+	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+	glBindVertexArray(0);
+	glUseProgram(0);
 }

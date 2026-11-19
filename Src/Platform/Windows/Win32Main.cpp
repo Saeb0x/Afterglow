@@ -1,6 +1,7 @@
 #include "Core/Log.cpp"
 #include "Renderer/OpenGL/OpenGLRenderer.cpp"
 #include "Win32Platform.cpp"
+#include "App/App.cpp"
 
 int WINAPI WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR commandLine, int showCommand)
 {
