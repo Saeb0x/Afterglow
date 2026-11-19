@@ -6,8 +6,8 @@
 #include "Renderer/OpenGL/OpenGLRenderer.h"
 #include "App/App.h"
 
-#include <cstdarg>
-#include <cstdio>
+#include <stdarg.h>
+#include <stdio.h>
 #include <process.h>
 
 #define WIN32_LEAN_AND_MEAN

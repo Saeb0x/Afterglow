@@ -1,7 +1,7 @@
 #include "Log.h"
 
-#include <cstdarg>
-#include <cstdio>
+#include <stdarg.h>
+#include <stdio.h>
 
 #define AG_LOG_MAX_CHARS_PER_LINE 1024
 

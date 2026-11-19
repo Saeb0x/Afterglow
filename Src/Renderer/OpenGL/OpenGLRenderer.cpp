@@ -3,7 +3,7 @@
 #include "Core/Config.h"
 #include "Platform/Platform.h"
 
-#include <cstdio>
+#include <stdio.h>
 
 #if AG_PLATFORM_WINDOWS
 #define WIN32_LEAN_AND_MEAN
