@@ -1,4 +1,4 @@
-#include "OpenGLRenderer.h"
+#include "OpenGLRHI.h"
 
 #include "Core/Config.h"
 #include "Platform/Platform.h"
@@ -10,7 +10,7 @@
 #define NOMINMAX
 #include <windows.h>
 #else
-#error "Afterglow: Unsupported platform for this OpenGL renderer."
+#error "Afterglow: Unsupported platform for this OpenGL RHI."
 #endif
 #include <gl/GL.h>
 #include "GL/glext.h"
@@ -33,12 +33,12 @@ PFNGLCREATEPROGRAMPROC glCreateProgram = nullptr;
 PFNGLLINKPROGRAMPROC glLinkProgram = nullptr;
 PFNGLUSEPROGRAMPROC glUseProgram = nullptr;
 
-static OpenGLRendererContextInfo ContextInfo;
+static OpenGLRHIContextInfo ContextInfo;
 
 static GLuint QuadShaderProgram;
 static GLuint QuadVAO;
 
-OpenGLRendererContextInfo OpenGLRendererGetContextInfo()
+OpenGLRHIContextInfo OpenGLRHIGetContextInfo()
 {
 	GLint majorVersion = 0, minorVersion = 0;
 	glGetIntegerv(GL_MAJOR_VERSION, &majorVersion);
@@ -69,7 +69,7 @@ OpenGLRendererContextInfo OpenGLRendererGetContextInfo()
 	return (ContextInfo);
 }
 
-void OpenGLRendererLoadFunctions()
+void OpenGLRHILoadFunctions()
 {
 	glGenVertexArrays = (PFNGLGENVERTEXARRAYSPROC)PlatformGetOpenGLFunction("glGenVertexArrays");
 	glBindVertexArray = (PFNGLBINDVERTEXARRAYPROC)PlatformGetOpenGLFunction("glBindVertexArray");
@@ -92,18 +92,18 @@ void OpenGLRendererLoadFunctions()
 	glUseProgram = (PFNGLUSEPROGRAMPROC)PlatformGetOpenGLFunction("glUseProgram");
 }
 
-void OpenGLRendererClear(real32 r, real32 g, real32 b, real32 a)
+void OpenGLRHIClear(real32 r, real32 g, real32 b, real32 a)
 {
-	glClearColor((GLfloat)r, (GLfloat)g, (GLfloat)b, (GLfloat)a);
+	glClearColor((GLclampf)r, (GLclampf)g, (GLclampf)b, (GLclampf)a);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 }
 
-void OpenGLRendererSetViewport(uint32 width, uint32 height)
+void OpenGLRHISetViewport(uint16 width, uint16 height)
 {
-	glViewport(0, 0, width, height);
+	glViewport(0, 0, (GLsizei)width, (GLsizei)height);
 }
 
-void OpenGLRendererSetupQuad()
+void OpenGLRHISetupQuad()
 {
 	glGenVertexArrays(1, &QuadVAO);
 	glBindVertexArray(QuadVAO);
@@ -156,7 +156,7 @@ void OpenGLRendererSetupQuad()
 	glDeleteShader(fragmentShader);
 }
 
-void OpenGLRendererDrawQuad(bool wireframe)
+void OpenGLRHIDrawQuad(bool wireframe)
 {
 	glUseProgram(QuadShaderProgram);
 	glBindVertexArray(QuadVAO);

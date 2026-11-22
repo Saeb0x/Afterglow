@@ -1,5 +1,5 @@
 #include "Core/Log.cpp"
-#include "Renderer/OpenGL/OpenGLRenderer.cpp"
+#include "Rendering/RHI/OpenGL/OpenGLRHI.cpp"
 #include "Win32Platform.cpp"
 #include "App/App.cpp"
 

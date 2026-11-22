@@ -3,12 +3,12 @@
 
 #include "Types.h"
 
-enum class LogVerbosity : uint8
+enum LogVerbosity
 {
-	Debug = 0,
-	Info,
-	Warning,
-	Error
+	LOGVERBOSITY_DEBUG = 0,
+	LOGVERBOSITY_INFO,
+	LOGVERBOSITY_WARNING,
+	LOGVERBOSITY_ERROR
 };
 
 typedef void (*LogOutputCallback)(LogVerbosity verbosity, const char* text, usize length);
@@ -16,9 +16,9 @@ typedef void (*LogOutputCallback)(LogVerbosity verbosity, const char* text, usiz
 void LogSetOutputCallback(LogOutputCallback callback);
 void Log(LogVerbosity verbosity, const char* format, ...);
 
-#define AG_LOG_DEBUG(...) Log(LogVerbosity::Debug, __VA_ARGS__)
-#define AG_LOG_INFO(...) Log(LogVerbosity::Info, __VA_ARGS__)
-#define AG_LOG_WARNING(...) Log(LogVerbosity::Warning, __VA_ARGS__)
-#define AG_LOG_ERROR(...) Log(LogVerbosity::Error, __VA_ARGS__)
+#define AG_LOG_DEBUG(...) Log(LOGVERBOSITY_DEBUG, __VA_ARGS__)
+#define AG_LOG_INFO(...) Log(LOGVERBOSITY_INFO, __VA_ARGS__)
+#define AG_LOG_WARNING(...) Log(LOGVERBOSITY_WARNING, __VA_ARGS__)
+#define AG_LOG_ERROR(...) Log(LOGVERBOSITY_ERROR, __VA_ARGS__)
 
 #endif

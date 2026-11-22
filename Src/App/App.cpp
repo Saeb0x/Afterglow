@@ -1,10 +1,10 @@
 #include "App.h"
 
-#include "Renderer/OpenGL/OpenGLRenderer.h"
+#include "Rendering/RHI/OpenGL/OpenGLRHI.h"
 
 void AppInit()
 {
-	OpenGLRendererSetupQuad();
+	OpenGLRHISetupQuad();
 }
 
 void AppUpdate()
@@ -13,6 +13,6 @@ void AppUpdate()
 
 void AppRender()
 {
-	OpenGLRendererClear(0.63f, 0.87f, 1.0f, 1.0f);
-	OpenGLRendererDrawQuad(false);
+	OpenGLRHIClear(0.63f, 0.87f, 1.0f, 1.0f);
+	OpenGLRHIDrawQuad(false);
 }
