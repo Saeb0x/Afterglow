@@ -9,9 +9,7 @@ void PlatformFreeMemory(void* memory);
 
 void PlatformInitConsole();
 
-void* PlatformGetOpenGLFunction(const char* name);
-
 void PlatformCreateWindow(const char* title, uint16 width, uint16 height);
-void PlatformGameLoop();
+void PlatformLoop();
 
 #endif

@@ -2,8 +2,7 @@
 
 #include "Core/Log.h"
 #include "Core/Assert.h"
-#include "Rendering/RHI/OpenGL/OpenGLRHI.h"
-#include "App/App.h"
+#include "Renderer/Renderer.h"
 
 #include <stdarg.h>
 #include <stdio.h>
@@ -11,98 +10,36 @@
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #include <windows.h>
-#include <gl/GL.h>
-#include "GL/wglext.h"
 
 static bool Win32Running;
 
-struct Win32Console
+static struct
 {
 	HANDLE Handle;
-};
-static Win32Console Console;
+} Win32Console;
 
-struct Win32Window
+static struct
 {
 	HINSTANCE Instance;
 	const char* ClassName = "AfterglowWindowClass";
 	HWND Handle;
-	HDC DeviceContext;
-	HGLRC OpenGLContext;
 	char Title[64];
 	uint16 Width;
 	uint16 Height;
-};
-static Win32Window Window;
+} Win32Window;
 
 static void Win32ConsoleLogOutputCallback(LogVerbosity verbosity, const char* text, usize length)
 {
+	(void)verbosity;
+
 	DWORD written = 0;
-	WriteFile(Console.Handle, text, (DWORD)length, &written, nullptr);
-}
-
-static bool Win32CreateOpenGLContext(HWND windowHandle)
-{
-	PIXELFORMATDESCRIPTOR desiredPixelFormat = {};
-	desiredPixelFormat.nSize = sizeof(PIXELFORMATDESCRIPTOR);
-	desiredPixelFormat.nVersion = 1;
-	desiredPixelFormat.dwFlags = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER;
-	desiredPixelFormat.iPixelType = PFD_TYPE_RGBA;
-	desiredPixelFormat.cColorBits = 24;
-	desiredPixelFormat.cAlphaBits = 8;
-	desiredPixelFormat.cDepthBits = 24;
-	desiredPixelFormat.cStencilBits = 8;
-	desiredPixelFormat.iLayerType = PFD_MAIN_PLANE;
-
-	Window.DeviceContext = GetDC(windowHandle);
-
-	int supportedPixelFormatIndex = ChoosePixelFormat(Window.DeviceContext, &desiredPixelFormat);
-	PIXELFORMATDESCRIPTOR supportedPixelFormat = {};
-	DescribePixelFormat(Window.DeviceContext, supportedPixelFormatIndex,
-						sizeof(supportedPixelFormat), &supportedPixelFormat);
-
-	if(!SetPixelFormat(Window.DeviceContext, supportedPixelFormatIndex, &desiredPixelFormat))
-	{
-		return (false);
-	}
-
-	HGLRC dummyContext = wglCreateContext(Window.DeviceContext);
-	if(!wglMakeCurrent(Window.DeviceContext, dummyContext))
-	{
-		return (false);
-	}
-
-	PFNWGLCREATECONTEXTATTRIBSARBPROC wglCreateContextAttribsARB =
-		(PFNWGLCREATECONTEXTATTRIBSARBPROC)PlatformGetOpenGLFunction("wglCreateContextAttribsARB");
-
-	wglMakeCurrent(Window.DeviceContext, nullptr);
-	wglDeleteContext(dummyContext);
-
-	const int contextAttributes[] = {WGL_CONTEXT_MAJOR_VERSION_ARB,
-									 3,
-									 WGL_CONTEXT_MINOR_VERSION_ARB,
-									 3,
-									 WGL_CONTEXT_PROFILE_MASK_ARB,
-									 WGL_CONTEXT_CORE_PROFILE_BIT_ARB,
-									 WGL_CONTEXT_FLAGS_ARB,
-									 WGL_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB,
-									 0};
-
-	Window.OpenGLContext =
-		wglCreateContextAttribsARB(Window.DeviceContext, nullptr, contextAttributes);
-
-	if(!wglMakeCurrent(Window.DeviceContext, Window.OpenGLContext))
-	{
-		return (false);
-	}
-
-	return (true);
+	WriteFile(Win32Console.Handle, text, (DWORD)length, &written, nullptr);
 }
 
 static void Win32Cleanup()
 {
-	if(!wglMakeCurrent(Window.DeviceContext, nullptr) || !wglDeleteContext(Window.OpenGLContext) ||
-	   !DestroyWindow(Window.Handle) || !UnregisterClass(Window.ClassName, Window.Instance))
+	if(!RendererShutdown() || !DestroyWindow(Win32Window.Handle) ||
+	   !UnregisterClass(Win32Window.ClassName, Win32Window.Instance))
 	{
 		PlatformError("Couldn't cleanup resources, error %lu.", GetLastError());
 	}
@@ -114,15 +51,14 @@ static LRESULT CALLBACK Win32WindowProc(HWND window, UINT message, WPARAM wParam
 	{
 		case WM_CREATE:
 		{
-			if(!Win32CreateOpenGLContext(window))
+			AG_LOG_DEBUG("Window: Created \"%s\" with a client area of %ux%u.", Win32Window.Title,
+						 Win32Window.Width, Win32Window.Height);
+
+			if(!RendererInit((void*)window))
 			{
-				PlatformError("Couldn't create an OpenGL context, error %lu.", GetLastError());
+				PlatformError("Couldn't initialize the renderer, error %lu.", GetLastError());
 			}
-
-			OpenGLRHILoadFunctions();
-			OpenGLRHISetViewport(Window.Width, Window.Height);
-
-			AppInit();
+			RendererSetViewport(Win32Window.Width, Win32Window.Height);
 
 			return (0);
 		}
@@ -137,15 +73,16 @@ static LRESULT CALLBACK Win32WindowProc(HWND window, UINT message, WPARAM wParam
 
 		case WM_SIZE:
 		{
-			if(Window.Width != (uint16)LOWORD(lParam) || Window.Height != (uint16)HIWORD(lParam))
+			if(Win32Window.Width != (uint16)LOWORD(lParam) ||
+			   Win32Window.Height != (uint16)HIWORD(lParam))
 			{
-				Window.Width = (uint16)LOWORD(lParam);
-				Window.Height = (uint16)HIWORD(lParam);
-				OpenGLRHISetViewport(Window.Width, Window.Height);
+				Win32Window.Width = (uint16)LOWORD(lParam);
+				Win32Window.Height = (uint16)HIWORD(lParam);
+				RendererSetViewport(Win32Window.Width, Win32Window.Height);
 
 				AG_LOG_DEBUG(
 					"Window: Client area has been resized (%ux%u) and context viewport updated.",
-					Window.Width, Window.Height);
+					Win32Window.Width, Win32Window.Height);
 			}
 
 			return (0);
@@ -220,7 +157,7 @@ void PlatformInitConsole()
 
 		if(consoleOutput != INVALID_HANDLE_VALUE)
 		{
-			Console.Handle = consoleOutput;
+			Win32Console.Handle = consoleOutput;
 			LogSetOutputCallback(Win32ConsoleLogOutputCallback);
 			return;
 		}
@@ -229,33 +166,20 @@ void PlatformInitConsole()
 	PlatformError("Couldn't initialize the console, error %lu.", GetLastError());
 }
 
-void* PlatformGetOpenGLFunction(const char* name)
-{
-	void* funcAddress = (void*)wglGetProcAddress(name);
-	if(funcAddress == 0 || (funcAddress == (void*)0x1) || (funcAddress == (void*)0x2) ||
-	   (funcAddress == (void*)0x3) || (funcAddress == (void*)-1))
-	{
-		HMODULE glModule = LoadLibraryA("Opengl32.dll");
-		funcAddress = (void*)GetProcAddress(glModule, name);
-	}
-
-	return (funcAddress);
-}
-
 void PlatformCreateWindow(const char* title, uint16 width, uint16 height)
 {
-	snprintf(Window.Title, sizeof(Window.Title), "%s", title);
-	Window.Width = width;
-	Window.Height = height;
+	snprintf(Win32Window.Title, sizeof(Win32Window.Title), "%s", title);
+	Win32Window.Width = width;
+	Win32Window.Height = height;
 
-	Window.Instance = GetModuleHandleA(nullptr);
+	Win32Window.Instance = GetModuleHandleA(nullptr);
 
 	WNDCLASSA windowClass = {};
 	windowClass.style = CS_OWNDC | CS_HREDRAW | CS_VREDRAW;
 	windowClass.lpfnWndProc = Win32WindowProc;
-	windowClass.hInstance = Window.Instance;
+	windowClass.hInstance = Win32Window.Instance;
 	windowClass.hCursor = LoadCursorA(nullptr, IDC_ARROW);
-	windowClass.lpszClassName = Window.ClassName;
+	windowClass.lpszClassName = Win32Window.ClassName;
 
 	if(!RegisterClassA(&windowClass))
 	{
@@ -263,31 +187,23 @@ void PlatformCreateWindow(const char* title, uint16 width, uint16 height)
 	}
 
 	RECT rect = {};
-	rect.right = (LONG)Window.Width;
-	rect.bottom = (LONG)Window.Height;
+	rect.right = (LONG)Win32Window.Width;
+	rect.bottom = (LONG)Win32Window.Height;
 	DWORD style = WS_OVERLAPPEDWINDOW | WS_VISIBLE;
 	AdjustWindowRect(&rect, style, FALSE);
 
-	Window.Handle =
-		CreateWindowExA(0, Window.ClassName, Window.Title, style, CW_USEDEFAULT, CW_USEDEFAULT,
-						(int)(rect.right - rect.left), (int)(rect.bottom - rect.top), nullptr,
-						nullptr, Window.Instance, nullptr);
+	Win32Window.Handle =
+		CreateWindowExA(0, Win32Window.ClassName, Win32Window.Title, style, CW_USEDEFAULT,
+						CW_USEDEFAULT, (int)(rect.right - rect.left), (int)(rect.bottom - rect.top),
+						nullptr, nullptr, Win32Window.Instance, nullptr);
 
-	if(!Window.Handle)
+	if(!Win32Window.Handle)
 	{
 		PlatformError("Couldn't create the window, error %lu.", GetLastError());
 	}
-
-	OpenGLRHIContextInfo contextInfo = OpenGLRHIGetContextInfo();
-
-	AG_LOG_INFO("Window: Created \"%s\" with a client area of %ux%u and an OpenGL context (%u.%u, "
-				"%s Profile%s).",
-				Window.Title, Window.Width, Window.Height, contextInfo.MajorVersion,
-				contextInfo.MinorVersion, contextInfo.Profile,
-				(contextInfo.ForwardCompatible) ? ", Forward Compatible" : "");
 }
 
-void PlatformGameLoop()
+void PlatformLoop()
 {
 	Win32Running = true;
 	while(Win32Running)
@@ -309,9 +225,7 @@ void PlatformGameLoop()
 			break;
 		}
 
-		AppUpdate();
-
-		AppRender();
-		SwapBuffers(Window.DeviceContext);
+		RendererClear(0.63f, 0.87f, 1.0f, 1.0f);
+		RendererSwapBuffers();
 	}
 }
