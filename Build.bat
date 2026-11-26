@@ -21,7 +21,6 @@ set "COMMON_COMPILE_FLAGS=/nologo /std:c++14 /permissive- /Zi /W4 /WX /wd4505 /G
 set "INCLUDES=/I"%~dp0Src" /I"%~dp0External""
 set "COMMON_LINKER_FLAGS=/link /nologo /INCREMENTAL:NO /DEBUG"
 set "COMMON_MACROS=/DAG_RHI_OPENGL=1"
-set "RELEASE_MACROS="
 set "COMMON_LIBS=Kernel32.lib User32.lib Gdi32.lib Opengl32.lib"
 
 if "%BUILD%"=="debug" (
