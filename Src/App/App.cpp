@@ -1,18 +1,5 @@
 #include "App.h"
 
-#include "Renderer/Renderer.h"
-
-bool AppInit()
+void AppUpdateAndRender()
 {
-	return (true);
-}
-
-void AppUpdate()
-{
-}
-
-void AppRender()
-{
-	RendererBegin();
-	RendererEnd();
 }

@@ -21,7 +21,7 @@ struct GLRHIContextInfo
 	GLint MajorVersion;
 	GLint MinorVersion;
 	char Profile[16];
-	bool ForwardCompatible;
+	bool IsForwardCompatible;
 };
 
 static struct
@@ -70,6 +70,7 @@ static void* GLRHIGetOpenGLFunction(const char* name)
 
 	return (funcAddress);
 #else
+	(void)name;
 	return (nullptr);
 #endif
 }
@@ -124,11 +125,11 @@ static void GLRHIGetContextInfo(GLRHIContextInfo* contextInfo)
 	glGetIntegerv(GL_CONTEXT_FLAGS, &flagsMask);
 	if(flagsMask & GL_CONTEXT_FLAG_FORWARD_COMPATIBLE_BIT)
 	{
-		contextInfo->ForwardCompatible = true;
+		contextInfo->IsForwardCompatible = true;
 	}
 }
 
-bool RHIInit(void* windowHandle, uint16 width, uint16 height)
+bool RHIInit(void* windowHandle, uint16 windowWidth, uint16 windowHeight)
 {
 #if AG_PLATFORM_WINDOWS
 	PIXELFORMATDESCRIPTOR desiredPixelFormat = {};
@@ -188,17 +189,17 @@ bool RHIInit(void* windowHandle, uint16 width, uint16 height)
 	}
 
 	GLRHILoadFunctions();
-	RHIResize(width, height);
+	RHISetViewport(windowWidth, windowHeight);
 
 	GLRHIGetContextInfo(&GLRHIState.ContextInfo);
 	AG_LOG_DEBUG("RHI: Created an OpenGL context (%u.%u, %s Profile%s).",
 				 GLRHIState.ContextInfo.MajorVersion, GLRHIState.ContextInfo.MinorVersion,
 				 GLRHIState.ContextInfo.Profile,
-				 (GLRHIState.ContextInfo.ForwardCompatible) ? ", Forward Compatible" : "");
+				 (GLRHIState.ContextInfo.IsForwardCompatible) ? ", Forward Compatible" : "");
 
 	return (true);
 #else
-	(void)windowHandle;
+	(void)windowHandle, (void)windowWidth, (void)windowHeight;
 	return (false);
 #endif
 }
@@ -212,15 +213,18 @@ bool RHIShutdown()
 		return (false);
 	}
 
+	GLRHIState.WindowHandle = nullptr;
+	GLRHIState.WindowDeviceContext = nullptr;
+
 	return (true);
 #else
 	return (false);
 #endif
 }
 
-void RHIResize(uint16 width, uint16 height)
+void RHISetViewport(uint16 windowWidth, uint16 windowHeight)
 {
-	glViewport(0, 0, width, height);
+	glViewport(0, 0, windowWidth, windowHeight);
 }
 
 void RHISubmit(const RHICommandList* commandList)

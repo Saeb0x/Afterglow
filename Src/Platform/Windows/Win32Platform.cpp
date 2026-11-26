@@ -2,7 +2,7 @@
 
 #include "Core/Log.h"
 #include "Core/Assert.h"
-#include "Renderer/Renderer.h"
+#include "RHI/RHI.h"
 #include "App/App.h"
 
 #include <stdarg.h>
@@ -12,7 +12,7 @@
 #define NOMINMAX
 #include <windows.h>
 
-static bool Win32Running;
+static bool Win32IsRunning;
 
 static struct
 {
@@ -39,7 +39,7 @@ static void Win32ConsoleLogOutputCallback(LogVerbosity verbosity, const char* te
 
 static void Win32Cleanup()
 {
-	if(!RendererShutdown() || !DestroyWindow(Win32Window.Handle) ||
+	if(!RHIShutdown() || !DestroyWindow(Win32Window.Handle) ||
 	   !UnregisterClass(Win32Window.ClassName, Win32Window.Instance))
 	{
 		PlatformError("Couldn't cleanup resources, error %lu.", GetLastError());
@@ -55,14 +55,9 @@ static LRESULT CALLBACK Win32WindowProc(HWND window, UINT message, WPARAM wParam
 			AG_LOG_DEBUG("Window: Created \"%s\" with a client area of %ux%u.", Win32Window.Title,
 						 Win32Window.Width, Win32Window.Height);
 
-			if(!RendererInit((void*)window, Win32Window.Width, Win32Window.Height))
+			if(!RHIInit((void*)window, Win32Window.Width, Win32Window.Height))
 			{
-				PlatformError("Couldn't initialize the renderer, error %lu.", GetLastError());
-			}
-
-			if(!AppInit())
-			{
-				PlatformError("Couldn't initialize the app.");
+				PlatformError("Couldn't initialize the RHIm, error %lu.", GetLastError());
 			}
 
 			return (0);
@@ -82,7 +77,7 @@ static LRESULT CALLBACK Win32WindowProc(HWND window, UINT message, WPARAM wParam
 			{
 				Win32Window.Width = LOWORD(lParam);
 				Win32Window.Height = HIWORD(lParam);
-				RendererResize(Win32Window.Width, Win32Window.Height);
+				RHISetViewport(Win32Window.Width, Win32Window.Height);
 
 				AG_LOG_DEBUG(
 					"Window: Client area has been resized (%ux%u) and context viewport updated.",
@@ -209,27 +204,26 @@ void PlatformCreateWindow(const char* title, uint16 width, uint16 height)
 
 void PlatformLoop()
 {
-	Win32Running = true;
-	while(Win32Running)
+	Win32IsRunning = true;
+	while(Win32IsRunning)
 	{
 		MSG message;
 		while(PeekMessageA(&message, nullptr, 0, 0, PM_REMOVE))
 		{
 			if(message.message == WM_QUIT)
 			{
-				Win32Running = false;
+				Win32IsRunning = false;
 			}
 
 			TranslateMessage(&message);
 			DispatchMessageA(&message);
 		}
 
-		if(!Win32Running)
+		if(!Win32IsRunning)
 		{
 			break;
 		}
 
-		AppUpdate();
-		AppRender();
+		AppUpdateAndRender();
 	}
 }

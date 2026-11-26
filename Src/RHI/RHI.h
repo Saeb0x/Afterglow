@@ -31,9 +31,9 @@ struct RHICommandList
 	usize Capacity;
 };
 
-bool RHIInit(void* windowHandle, uint16 width, uint16 height);
+bool RHIInit(void* windowHandle, uint16 windowWidth, uint16 windowHeight);
 bool RHIShutdown();
-void RHIResize(uint16 width, uint16 height);
+void RHISetViewport(uint16 windowWidth, uint16 windowHeight);
 
 inline void RHIPushCommand(RHICommand command, RHICommandList* commandList)
 {
