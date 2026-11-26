@@ -3,11 +3,11 @@
 
 #include "Core/Types.h"
 
-bool RendererInit(void* windowHandle);
+bool RendererInit(void* windowHandle, uint16 width, uint16 height);
 bool RendererShutdown();
+void RendererResize(uint16 width, uint16 height);
 
-void RendererSetViewport(uint16 width, uint16 height);
-void RendererClear(real32 red, real32 green, real32 blue, real32 alpha);
-void RendererSwapBuffers();
+void RendererBegin();
+void RendererEnd();
 
 #endif

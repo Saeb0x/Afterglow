@@ -3,11 +3,50 @@
 
 #include "Core/Types.h"
 
-bool RHIInit(void* windowHandle);
-bool RHIShutdown();
+enum RHICommandType
+{
+	RHICOMMANDTYPE_CLEAR
+};
 
-void RHISetViewport(uint16 width, uint16 height);
-void RHIClear(real32 red, real32 green, real32 blue, real32 alpha);
-void RHISwapBuffers();
+struct RHICommand
+{
+	RHICommandType Type;
+
+	union
+	{
+		struct
+		{
+			real32 Red;
+			real32 Green;
+			real32 Blue;
+			real32 Alpha;
+		} Clear;
+	};
+};
+
+struct RHICommandList
+{
+	RHICommand* Commands;
+	usize Count;
+	usize Capacity;
+};
+
+bool RHIInit(void* windowHandle, uint16 width, uint16 height);
+bool RHIShutdown();
+void RHIResize(uint16 width, uint16 height);
+
+inline void RHIPushCommand(RHICommand command, RHICommandList* commandList)
+{
+	if(commandList->Count < commandList->Capacity)
+	{
+		commandList->Commands[commandList->Count++] = command;
+	}
+}
+inline void RHIResetCommandList(RHICommandList* commandList)
+{
+	commandList->Count = 0;
+}
+void RHISubmit(const RHICommandList* commandList);
+void RHIPresent();
 
 #endif

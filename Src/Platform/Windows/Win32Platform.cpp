@@ -3,6 +3,7 @@
 #include "Core/Log.h"
 #include "Core/Assert.h"
 #include "Renderer/Renderer.h"
+#include "App/App.h"
 
 #include <stdarg.h>
 #include <stdio.h>
@@ -54,11 +55,15 @@ static LRESULT CALLBACK Win32WindowProc(HWND window, UINT message, WPARAM wParam
 			AG_LOG_DEBUG("Window: Created \"%s\" with a client area of %ux%u.", Win32Window.Title,
 						 Win32Window.Width, Win32Window.Height);
 
-			if(!RendererInit((void*)window))
+			if(!RendererInit((void*)window, Win32Window.Width, Win32Window.Height))
 			{
 				PlatformError("Couldn't initialize the renderer, error %lu.", GetLastError());
 			}
-			RendererSetViewport(Win32Window.Width, Win32Window.Height);
+
+			if(!AppInit())
+			{
+				PlatformError("Couldn't initialize the app.");
+			}
 
 			return (0);
 		}
@@ -73,12 +78,11 @@ static LRESULT CALLBACK Win32WindowProc(HWND window, UINT message, WPARAM wParam
 
 		case WM_SIZE:
 		{
-			if(Win32Window.Width != (uint16)LOWORD(lParam) ||
-			   Win32Window.Height != (uint16)HIWORD(lParam))
+			if(Win32Window.Width != LOWORD(lParam) || Win32Window.Height != HIWORD(lParam))
 			{
-				Win32Window.Width = (uint16)LOWORD(lParam);
-				Win32Window.Height = (uint16)HIWORD(lParam);
-				RendererSetViewport(Win32Window.Width, Win32Window.Height);
+				Win32Window.Width = LOWORD(lParam);
+				Win32Window.Height = HIWORD(lParam);
+				RendererResize(Win32Window.Width, Win32Window.Height);
 
 				AG_LOG_DEBUG(
 					"Window: Client area has been resized (%ux%u) and context viewport updated.",
@@ -113,9 +117,9 @@ void PlatformError(const char* format, ...)
 	va_end(arguments);
 
 	AG_LOG_ERROR("Platform: %s",
-				 (errorMessageLength < 0 || errorMessageLength >= (int)sizeof(errorMessage))
-					 ? format
-					 : errorMessage);
+				 (errorMessageLength > 0 || errorMessageLength < (int)sizeof(errorMessage))
+					 ? errorMessage
+					 : format);
 
 	if(IsDebuggerPresent())
 	{
@@ -123,9 +127,9 @@ void PlatformError(const char* format, ...)
 	}
 
 	MessageBoxA(nullptr,
-				((errorMessageLength < 0 || errorMessageLength >= (int)sizeof(errorMessage))
-					 ? format
-					 : errorMessage),
+				(errorMessageLength > 0 || errorMessageLength < (int)sizeof(errorMessage)
+					 ? errorMessage
+					 : format),
 				"Afterglow", MB_OK | MB_ICONERROR);
 	ExitProcess(1);
 }
@@ -194,8 +198,8 @@ void PlatformCreateWindow(const char* title, uint16 width, uint16 height)
 
 	Win32Window.Handle =
 		CreateWindowExA(0, Win32Window.ClassName, Win32Window.Title, style, CW_USEDEFAULT,
-						CW_USEDEFAULT, (int)(rect.right - rect.left), (int)(rect.bottom - rect.top),
-						nullptr, nullptr, Win32Window.Instance, nullptr);
+						CW_USEDEFAULT, (rect.right - rect.left), (rect.bottom - rect.top), nullptr,
+						nullptr, Win32Window.Instance, nullptr);
 
 	if(!Win32Window.Handle)
 	{
@@ -225,7 +229,7 @@ void PlatformLoop()
 			break;
 		}
 
-		RendererClear(0.63f, 0.87f, 1.0f, 1.0f);
-		RendererSwapBuffers();
+		AppUpdate();
+		AppRender();
 	}
 }

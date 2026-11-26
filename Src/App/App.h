@@ -1,7 +1,7 @@
 #if !defined(AG_APP_H)
 #define AG_APP_H
 
-void AppInit();
+bool AppInit();
 void AppUpdate();
 void AppRender();
 

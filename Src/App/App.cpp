@@ -1,7 +1,10 @@
 #include "App.h"
 
-void AppInit()
+#include "Renderer/Renderer.h"
+
+bool AppInit()
 {
+	return (true);
 }
 
 void AppUpdate()
@@ -10,4 +13,6 @@ void AppUpdate()
 
 void AppRender()
 {
+	RendererBegin();
+	RendererEnd();
 }

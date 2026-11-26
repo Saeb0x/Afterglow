@@ -1,17 +1,24 @@
 #include "Renderer.h"
 
-#if AG_RHI_OPENGL
-#include "RHI/OpenGL/OpenGLRHI.cpp"
-#else
-#error "Afterglow: An RHI must be selected at compile-time."
-#endif
+#include "RHI/OpenGL/GLRHI.cpp"
 
-bool RendererInit(void* windowHandle)
+#define AG_RENDERER_MAX_COMMANDS 64
+
+static struct
 {
-	if(!RHIInit(windowHandle))
+	RHICommand Commands[AG_RENDERER_MAX_COMMANDS];
+	RHICommandList CommandList;
+} RendererState;
+
+bool RendererInit(void* windowHandle, uint16 width, uint16 height)
+{
+	if(!RHIInit(windowHandle, width, height))
 	{
 		return (false);
 	}
+
+	RendererState.CommandList.Commands = RendererState.Commands;
+	RendererState.CommandList.Capacity = AG_RENDERER_MAX_COMMANDS;
 
 	return (true);
 }
@@ -26,17 +33,20 @@ bool RendererShutdown()
 	return (true);
 }
 
-void RendererSetViewport(uint16 width, uint16 height)
+void RendererResize(uint16 width, uint16 height)
 {
-	RHISetViewport(width, height);
+	RHIResize(width, height);
 }
 
-void RendererClear(real32 red, real32 green, real32 blue, real32 alpha)
+void RendererBegin()
 {
-	RHIClear(red, green, blue, alpha);
+	RHIResetCommandList(&RendererState.CommandList);
+	RHICommand clearCommand = {RHICOMMANDTYPE_CLEAR, {0.63f, 0.87f, 1.0f, 1.0f}};
+	RHIPushCommand(clearCommand, &RendererState.CommandList);
 }
 
-void RendererSwapBuffers()
+void RendererEnd()
 {
-	RHISwapBuffers();
+	RHISubmit(&RendererState.CommandList);
+	RHIPresent();
 }
