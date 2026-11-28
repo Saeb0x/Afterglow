@@ -5,6 +5,7 @@
 #include "Utility.h"
 #include "Assert.h"
 #include "Log.h"
+#include "Platform/Platform.h"
 
 struct StackAllocator
 {
@@ -14,10 +15,10 @@ struct StackAllocator
 	uint8* UpperHeap;
 };
 
-enum class StackAllocatorHeap : uint8
+enum StackAllocatorHeap
 {
-	Lower = 0,
-	Upper
+	STACKALLOCATORHEAP_LOWER,
+	STACKALLOCATORHEAP_UPPER
 };
 
 struct StackAllocatorFrame
@@ -26,11 +27,12 @@ struct StackAllocatorFrame
 	StackAllocatorHeap Heap;
 };
 
-inline bool StackAllocatorInit(StackAllocator* allocator, void* memory, usize size)
+inline bool StackAllocatorInit(StackAllocator* allocator, usize size)
 {
 	AG_ASSERT(allocator);
 	AG_ASSERT(size > 0);
 
+	void* memory = PlatformAllocateMemory(size);
 	if(!memory)
 	{
 		AG_ASSERT(false);
@@ -48,6 +50,8 @@ inline bool StackAllocatorInit(StackAllocator* allocator, void* memory, usize si
 inline void StackAllocatorShutdown(StackAllocator* allocator)
 {
 	AG_ASSERT(allocator);
+
+	PlatformFreeMemory((void*)allocator->Base);
 
 	allocator->Base = nullptr;
 	allocator->Cap = nullptr;
@@ -68,7 +72,7 @@ inline void* StackAllocatorAllocate(StackAllocator* allocator, StackAllocatorHea
 	usize upper = (usize)allocator->UpperHeap;
 
 	void* memory;
-	if(heap == StackAllocatorHeap::Upper)
+	if(heap == STACKALLOCATORHEAP_UPPER)
 	{
 		if(size > upper - lower)
 		{
@@ -128,8 +132,8 @@ inline usize StackAllocatorGetUsedMemory(StackAllocator* allocator)
 inline usize StackAllocatorGetHeapUsedMemory(StackAllocator* allocator, StackAllocatorHeap heap)
 {
 	AG_ASSERT(allocator);
-	return ((heap == StackAllocatorHeap::Upper) ? (usize)(allocator->Cap - allocator->UpperHeap)
-												: (usize)(allocator->LowerHeap - allocator->Base));
+	return ((heap == STACKALLOCATORHEAP_UPPER) ? (usize)(allocator->Cap - allocator->UpperHeap)
+											   : (usize)(allocator->LowerHeap - allocator->Base));
 }
 
 inline StackAllocatorFrame StackAllocatorGetFrame(StackAllocator* allocator,
@@ -139,7 +143,7 @@ inline StackAllocatorFrame StackAllocatorGetFrame(StackAllocator* allocator,
 
 	StackAllocatorFrame frame;
 	frame.Heap = heap;
-	frame.Mark = (heap == StackAllocatorHeap::Upper) ? allocator->UpperHeap : allocator->LowerHeap;
+	frame.Mark = (heap == STACKALLOCATORHEAP_UPPER) ? allocator->UpperHeap : allocator->LowerHeap;
 
 	return (frame);
 }
@@ -150,7 +154,7 @@ inline void StackAllocatorReleaseFrame(StackAllocator* allocator, StackAllocator
 
 	// NOTE(saeb): Frames must be released newest first; releasing an older frame and then a newer
 	// one would move the heap back over memory that was already given back.
-	if(frame.Heap == StackAllocatorHeap::Upper)
+	if(frame.Heap == STACKALLOCATORHEAP_UPPER)
 	{
 		AG_ASSERT(frame.Mark >= allocator->UpperHeap && frame.Mark <= allocator->Cap);
 		allocator->UpperHeap = frame.Mark;
